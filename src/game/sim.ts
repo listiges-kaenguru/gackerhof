@@ -589,11 +589,16 @@ export function refreshOffers(s: GameState) {
   s.offersDay = s.day;
   const offers: MarketOffer[] = [];
   const kinds: MarketOffer['kind'][] = ['brutei', 'kueken', 'junghenne', 'junghenne', 'legehenne', 'legehenne', 'hahn'];
-  const n = intBetween(s, 6, 8);
+  const n = intBetween(s, 7, 9);
   const breeds = Object.keys(BREEDS) as (keyof typeof BREEDS)[];
+  // Jede Woche fest dabei: Junghenne und Legehenne (Legehybride) sowie ein Hahn und Bruteier
+  // in wechselnder Rasse. Der Rest ist Zufall.
+  const fixed: [MarketOffer['kind'], keyof typeof BREEDS | null][] = [
+    ['junghenne', 'hybrid'], ['legehenne', 'hybrid'], ['hahn', null], ['brutei', null],
+  ];
   for (let i = 0; i < n; i++) {
-    const kind = i < 2 ? (i === 0 ? 'junghenne' : 'legehenne') : pick(s, kinds);
-    const breed = i < 2 ? 'hybrid' : pick(s, breeds);
+    const kind = i < fixed.length ? fixed[i][0] : pick(s, kinds);
+    const breed = (i < fixed.length ? fixed[i][1] : null) ?? pick(s, breeds);
     const base = BREEDS[breed].prices[kind];
     const price = Math.max(1, Math.round(base * between(s, 0.85, 1.2) * 2) / 2);
     const qty = kind === 'brutei' ? intBetween(s, 6, 12) : kind === 'hahn' ? intBetween(s, 1, 2) : intBetween(s, 2, 6);

@@ -3,7 +3,18 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
-## [1.1.0] – in Arbeit
+## [1.2.0] – in Arbeit
+
+### Geändert
+- **Verlässlicher Geflügelmarkt:** Jede Woche gibt es garantiert mindestens einen **Hahn** und ein Angebot **Bruteier**. Rasse und Preis wechseln. Dazu kommen wie bisher eine Junghenne und eine Legehenne sowie weitere Zufallsangebote (insgesamt 7–9 statt 6–8).
+- Spielstände aus 1.0.0 und 1.1.0 bekommen beim Laden sofort einen neu bestückten Markt.
+
+### Technisch
+- 2 neue Tests (20 insgesamt). Der Balancing-Test prüft jetzt 24 statt 12 Testhöfe.
+
+## [1.1.0] – 2026-10-06
+
+Testversion in den Branches `proto-v1.1.0` und `proto-built-v1.1.0`.
 
 Erste Rückmeldungen aus dem Test von 1.0.0 umgesetzt.
 

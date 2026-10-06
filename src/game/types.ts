@@ -150,6 +150,8 @@ export interface GameState {
   eggPrice: number;
   offers: MarketOffer[];
   offersDay: number;
+  /** 2 = Markt mit festem Hahn- und Brutei-Angebot (ab 1.2.0) */
+  marketVersion?: number;
 
   foxAlertDay: number; // Tag, an dem Spuren gesehen wurden (Gefahr in der Nacht darauf)
   marderAlertDay: number;

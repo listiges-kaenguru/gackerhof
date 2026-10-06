@@ -44,6 +44,7 @@ export function newGame(opts: { farmName: string; difficulty: Difficulty; plot: 
     eggPrice: 0.5,
     offers: [],
     offersDay: -99,
+    marketVersion: 2,
     foxAlertDay: -1,
     marderAlertDay: -1,
     hawkAlertDay: -1,
@@ -167,6 +168,11 @@ function migrate(s: GameState): GameState {
   s.toasts = [];
   s.banners ??= [];
   s.celebrations ??= [];
+  if (!s.marketVersion) {
+    // Ältere Spielstände: Markt sofort neu bestücken (mit Hahn und Bruteiern)
+    s.marketVersion = 2;
+    s.offersDay = -99;
+  }
   return s;
 }
 

@@ -9,7 +9,7 @@ import {
   eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, living, lockedOut, marderSafe, outsideAnimals,
   ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
 } from '../game/helpers';
-import { advanceHour } from '../game/sim';
+import { advanceHour, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
 import type { Animal, Difficulty, GameState } from '../game/types';
 import { portrait } from './art';
@@ -385,7 +385,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
               ${o.qty > 1 ? `<button class="btn small" data-act="offer:${o.id}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
             </div></div>`;
         }).join('')}</section>`).join('') : '<p class="muted">Alles ausverkauft.</p>') +
-        `<p class="muted">Neue Angebote in ${next} Tag${next === 1 ? '' : 'en'}. Aus Bruteiern schlüpfen etwa zur Hälfte Hähne.</p>`;
+        `<p class="muted">Neue Angebote in ${next} Tag${next === 1 ? '' : 'en'}. Jede Woche gibt es mindestens einen Hahn und Bruteier. Aus Bruteiern schlüpfen etwa zur Hälfte Hähne.</p>`;
     }
     const eggs = eggCount(s.eggs);
     const he = s.hatchEggs.length;
@@ -734,6 +734,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       const loaded = importSave(txt);
       if (!loaded) return toast('Diese Datei ist kein gültiger Spielstand.', 'bad');
       s = loaded;
+      if (s.offersDay < 0) refreshOffers(s);
       save(s);
       ui.panel = null;
       toast('Spielstand geladen.', 'good');

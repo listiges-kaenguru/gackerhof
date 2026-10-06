@@ -76,6 +76,7 @@ function startScreen() {
 
 function begin(s: ReturnType<typeof newGame>) {
   root.onclick = null;
+  if (s.offersDay < 0) refreshOffers(s);
   startApp(root, s, startScreen);
 }
 
