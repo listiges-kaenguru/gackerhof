@@ -1,0 +1,12 @@
+{
+  "name": "Gackerhof",
+  "short_name": "Gackerhof",
+  "description": "Baue deinen eigenen Hühnerhof auf.",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdf6e3",
+  "theme_color": "#7cc35a",
+  "lang": "de",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

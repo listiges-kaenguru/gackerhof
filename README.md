@@ -1,0 +1,50 @@
+# 🐔 Gackerhof
+
+Ein Aufbauspiel rund um die Hühnerhaltung, spielbar im Browser auf Desktop und Smartphone.
+Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt deinen eigenen Hühnerhof auf.
+
+- 📄 Spielkonzept: [`KONZEPT.md`](KONZEPT.md)
+- 🎨 Grafikstil-Entwürfe: [`docs/stil-beispiele.html`](docs/stil-beispiele.html) (gewählt: Stil A, Cartoon)
+
+## Was schon drin ist (Prototyp v0.1)
+
+- Startbildschirm mit Hofname, 3 Schwierigkeitsgraden und 3 Grundstücken
+- Hof als animierte Cartoon-Szene mit Tageszeiten, Jahreszeiten, Wetter und Schnee
+- Shop mit Zaun, Stall, Tränken, Futterstellen, Fuchs- und Greifvogelschutz, Erweiterungen, Automatik und Gimmicks (Hüte, Deko)
+- Geflügelmarkt mit wöchentlich wechselnden Händlern: Bruteier, Küken, Junghennen, Legehennen (mit Gesundheitscheck) und Hähne in 5 Rassen
+- Lebenszyklus vom Ei über Küken und Junghuhn bis zum alten Huhn, mit Tod durch Altersschwäche
+- Bedürfnisse (Hunger, Durst, Gesundheit, Wohlbefinden) und Krankheiten (Milben, Würmer, Atemwegsinfekt, Kokzidiose) mit Medikamenten und Wartezeiten
+- Fuchs, Habicht und Marder mit Vorwarnung, Ratten an offenen Futterstellen
+- Brüten mit Brutapparat oder Glucke; mit Hahn werden Eier zu Bruteiern
+- Verkauf von Eiern, Bruteiern, Mist, Tieren und Ausrüstung, dazu Schlachter, Hofladen und kostenpflichtige Entsorgung toter Tiere
+- Zufallsereignisse (Dorffest, Lieferengpass, Stallpflicht, Geschenke von Opa Heinz), Kapitel mit Zielen, Tagebuch und Hof-Ruf
+- Automatisches Speichern, Export und Import des Spielstands, offline spielbar (PWA)
+
+## Steuerung
+
+- Tippen oder Klicken auf Tiere, Eier, Tränke, Futterstelle und Stall
+- Schnellaktionen unten, Menüs in der unteren Leiste
+- Auf dem Handy im Hochformat: Hof seitlich wischen
+- Tastatur: `E` Eier · `W` Wasser · `F` Futter · `K` Klappe · `M` Ausmisten · `Leertaste` Pause · `1`/`2`/`3` Tempo
+
+## Entwicklung
+
+```bash
+npm install
+npm run dev      # Entwicklungsserver auf http://localhost:5173
+npm test         # Tests für Spiellogik und Balancing
+npm run build    # Produktions-Build nach dist/
+```
+
+Aufbau:
+
+| Ordner | Inhalt |
+|---|---|
+| `src/game/` | Spiellogik ohne Grafik: Daten, Simulation, Aktionen, Speichern |
+| `src/ui/` | Oberfläche: Cartoon-Grafiken (SVG), Hof-Szene, Panels |
+| `tests/` | Vitest-Tests, u. a. ein simulierter Spieler über 60 Tage |
+
+## Veröffentlichen
+
+Der Workflow `.github/workflows/pages.yml` baut das Spiel bei jedem Push auf `main` und veröffentlicht es auf GitHub Pages.
+Dazu einmalig im Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen.
