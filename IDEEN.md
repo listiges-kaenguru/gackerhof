@@ -31,7 +31,8 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Wechselweide** gegen Würmer
 - **Stalllicht im Winter** für mehr Eier (mit Stromkosten)
 - **Hühner-Album** zum Sammeln aller Rassen und Farbvarianten
-- **Hühner im Stall** die Zahl der Hühner im Stall erhöht sich erst, wenn die Hühner auch im UI im Stall verschwunden sind. Somit werden Hühner auch einzeln ausgesperrt, wenn die Klappe vorher zu ist. Bisher ist bei erreichter 
+- **Hühner im Stall** die Zahl der Hühner im Stall erhöht sich erst, wenn die Hühner auch im UI im Stall verschwunden sind. Somit werden Hühner auch einzeln ausgesperrt, wenn die Klappe vorher zu ist. Bisher ist bei erreichter Uhrzeit alles auf einmal drin.
+- **Überbelegter Stall** Überbelegung führt zu mit höherer Wahrscheinlichkeit zu Krankheiten. Es kann nicht mehr als 20 Prozent der Kapazität überbelegt sein. Übrige Tiere passen nicht rein und sind die Nacht draußen. Abhängig von **Hühner im Stall**.
 
 ## Oberfläche & Präsentation
 
