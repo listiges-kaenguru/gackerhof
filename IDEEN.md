@@ -31,6 +31,7 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Wechselweide** gegen Würmer
 - **Stalllicht im Winter** für mehr Eier (mit Stromkosten)
 - **Hühner-Album** zum Sammeln aller Rassen und Farbvarianten
+- **Hühner im Stall** die Zahl der Hühner im Stall erhöht sich erst, wenn die Hühner auch im UI im Stall verschwunden sind. Somit werden Hühner auch einzeln ausgesperrt, wenn die Klappe vorher zu ist. Bisher ist bei erreichter 
 
 ## Oberfläche & Präsentation
 
