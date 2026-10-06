@@ -1,6 +1,7 @@
 // Abgeleitete Werte aus dem Spielstand (keine Seiteneffekte außer log/toast).
 import {
-  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, PLOTS, ROOST_HOUR, SEASONS,
+  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
+  ROOST_HOUR, ROOST_WINDOW, SEASONS, WALK_MINUTES,
 } from './data';
 import type { Animal, GameState, LogEntry, Season, Stage } from './types';
 
@@ -76,8 +77,8 @@ export function foxProtection(s: GameState): number {
   if (!s.equip.fence) return 0;
   let p = ITEM[s.equip.fence].fox ?? 0;
   if (s.equip.fence === 'enetz' && has(s, 'geraet')) p = 0.85;
-  if (has(s, 'untergrab')) p += 0.1;
-  if (has(s, 'licht')) p += 0.05;
+  // Zusatzschutz genau mit den Werten, die der Shop anzeigt
+  for (const id of ['untergrab', 'licht']) if (has(s, id)) p += ITEM[id].fox ?? 0;
   return Math.min(0.97, p);
 }
 export function hawkProtection(s: GameState): number {
@@ -106,23 +107,66 @@ export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
 export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);
 /** Draußen bei geschlossener Klappe: ausgesperrt */
 export const lockedOut = (s: GameState) => (s.doorOpen ? [] : outsideAnimals(s));
-export const isDaytime = (h: number) => h >= 6 && h < ROOST_HOUR;
+export const isDaytime = (h: number) => h >= 6 && h < 20;
+/** Uhrzeit in Minuten seit Mitternacht */
+export const minuteOfDay = (s: GameState) => s.hour * 60 + (s.minute ?? 0);
+/** Individuelle Schlafenszeit: jedes Huhn geht zu seiner Zeit, scheue früher, neugierige später */
+export function roostTime(a: Animal): number {
+  let off = (a.id * 37) % (ROOST_WINDOW - 20);
+  if (a.personality === 'scheu') off -= 10;
+  if (a.personality === 'neugierig' || a.personality === 'mutig') off += 15;
+  return ROOST_HOUR * 60 + Math.max(0, Math.min(ROOST_WINDOW, off));
+}
+/** Ankunft im Stall nach dem Fußweg */
+export const roostArrival = (a: Animal) => roostTime(a) + WALK_MINUTES;
+export const outTime = (a: Animal) => 6 * 60 + ((a.id * 53) % OUT_WINDOW);
+/** Ist das Huhn gerade auf dem Weg in den Stall? */
+export function headingIn(s: GameState, a: Animal): boolean {
+  const t = minuteOfDay(s);
+  return !!a.outside && s.doorOpen && (t >= roostTime(a) || t < 6 * 60);
+}
+/** So viele Tiere passen höchstens in den Stall */
+export const maxInside = (s: GameState) => Math.floor(coopCap(s) * MAX_OVERCROWD);
 export const eventActive = (s: GameState, id: string) => s.events.some(e => e.id === id && e.until >= s.day);
 
-/** Hof-Ruf in Sternen (1–5) */
-export function stars(s: GameState): number {
+export interface StarFactor {
+  label: string;
+  value: string;
+  points: number; // Beitrag zum Hof-Ruf
+  max: number; // bestmöglicher Beitrag
+  tip: string;
+}
+/** Hof-Ruf aufgeschlüsselt: Grundwert 3 Sterne plus/minus diese Faktoren */
+export function starFactors(s: GameState): StarFactor[] {
   const f = living(s);
-  if (f.length === 0) return 3;
-  let score = 3;
+  if (f.length === 0) return [];
   const avgHealth = f.reduce((t, a) => t + a.health, 0) / f.length;
   const avgWell = f.reduce((t, a) => t + a.wellbeing, 0) / f.length;
-  if (avgHealth > 80) score += 0.75; else if (avgHealth < 50) score -= 1;
-  if (avgWell > 70) score += 0.75; else if (avgWell < 40) score -= 0.75;
   const c = crowding(s);
-  if (c <= 0.8) score += 0.5; else if (c > 1) score -= 1;
-  if (s.cleanliness > 60) score += 0.5; else if (s.cleanliness < 30) score -= 1;
   const recent = s.stats.deathsRecent.filter(d => d > s.day - 30).length;
-  if (recent >= 3) score -= 1.5; else if (recent >= 1) score -= 0.5;
+  return [
+    { label: 'Gesundheit', value: `Ø ${Math.round(avgHealth)} %`, max: 0.75,
+      points: avgHealth > 80 ? 0.75 : avgHealth < 50 ? -1 : 0,
+      tip: 'Über 80 %: Futter und Wasser nie ausgehen lassen, Krankheiten früh behandeln.' },
+    { label: 'Wohlbefinden', value: `Ø ${Math.round(avgWell)} %`, max: 0.75,
+      points: avgWell > 70 ? 0.75 : avgWell < 40 ? -0.75 : 0,
+      tip: 'Über 70 %: tagsüber Auslauf, Platz, Schatten, Mehlwürmer, nicht zu viele Hähne.' },
+    { label: 'Platz', value: `${Math.round(c * 100)} % belegt`, max: 0.5,
+      points: c <= 0.8 ? 0.5 : c > 1 ? -1 : 0,
+      tip: 'Höchstens 80 % von Stall und Auslauf belegen. Größerer Stall oder Auslauf hilft.' },
+    { label: 'Sauberkeit', value: `${Math.round(s.cleanliness)} %`, max: 0.5,
+      points: s.cleanliness > 60 ? 0.5 : s.cleanliness < 30 ? -1 : 0,
+      tip: 'Über 60 %: regelmäßig ausmisten (Einstreu im Shop).' },
+    { label: 'Todesfälle (30 Tage)', value: String(recent), max: 0,
+      points: recent >= 3 ? -1.5 : recent >= 1 ? -0.5 : 0,
+      tip: 'Jeder Verlust durch Raubtiere, Krankheit oder Vernachlässigung kostet Ansehen. Altersschwäche zählt nicht.' },
+  ];
+}
+/** Hof-Ruf in Sternen (1–5) */
+export function stars(s: GameState): number {
+  const factors = starFactors(s);
+  if (!factors.length) return 3;
+  const score = 3 + factors.reduce((t, x) => t + x.points, 0);
   return Math.max(1, Math.min(5, Math.round(score)));
 }
 

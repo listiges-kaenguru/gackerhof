@@ -2,7 +2,7 @@
 // die Tiere bewegen sich in jedem Frame.
 import { BREEDS, CONDITIONS } from '../game/data';
 import {
-  drinkerCap, eggCount, feederCap, frozen, has, isDaytime, season, stage,
+  drinkerCap, eggCount, feederCap, frozen, has, headingIn, isDaytime, season, stage,
 } from '../game/helpers';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
@@ -327,7 +327,8 @@ export class Scene {
         region = { x0: msp.x - 26, x1: msp.x + 26, y0: msp.y + 2, y1: msp.y + 14 };
       } else if (mother && s.equip.coop) wantInside = true;
       else region = { x0: 120, x1: 225, y0: 226, y1: 254 };
-    } else if (!a.outside) {
+    } else if (!a.outside || headingIn(s, a)) {
+      // drinnen oder auf dem Heimweg
       wantInside = !!s.equip.coop;
       if (!s.equip.coop) region = { x0: 125, x1: 225, y0: 220, y1: 254 };
     } else {
@@ -336,7 +337,8 @@ export class Scene {
     }
     // Wege zwischen Stall und Auslauf laufen im Spieltempo, damit sie rechtzeitig ankommen
     const transit = wantInside || (region === YARD && sp.x < GATE.x + 8);
-    const pace = this.speed <= 0 ? 0 : transit ? Math.max(1, this.speed) * 1.6 : Math.min(this.speed, 2);
+    // Heimweg muss in die Laufzeit der Simulation passen (ca. 25 Spielminuten)
+    const pace = this.speed <= 0 ? 0 : transit ? Math.max(1, this.speed) * 3.5 : Math.min(this.speed, 2);
     const speed = (sp.kind === 'chick' ? 0.035 : 0.025) * dtMs * pace;
 
     if (wantInside) {
@@ -345,11 +347,12 @@ export class Scene {
         sp.tx = GATE.x - 10; sp.ty = GATE.y;
       } else if (!sp.inside) {
         sp.tx = geo.door[0]; sp.ty = geo.door[1] + 4;
-        if (dist(sp) < 4) {
+        // erst verschwinden, wenn das Huhn laut Simulation wirklich drin ist (sonst wartet es an der Klappe)
+        if (dist(sp) < 4 && !a.outside) {
           sp.inside = true;
         }
       }
-    } else if (sp.inside) {
+    } else if (sp.inside && a.outside) {
       sp.inside = false;
       sp.x = geo.door[0]; sp.y = geo.door[1] + 6;
       const p = rndIn(region!);

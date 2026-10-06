@@ -1,15 +1,15 @@
 // Benutzeroberfläche: Kopfzeile, Hinweise, Schnellaktionen, Navigation, Panels, Dialoge.
 import * as A from '../game/actions';
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DISPOSAL_COST, HATS, HEALTH_CHECK_COST, ITEM, ITEMS, MS_PER_HOUR, PERSONALITIES,
+  BREEDS, CONDITIONS, DIFFICULTIES, DISPOSAL_COST, HATS, HEALTH_CHECK_COST, ITEM, ITEMS, MS_PER_MINUTE, PERSONALITIES,
   PLOTS, SEASON_NAMES, SHOP_CATS, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
 } from '../game/data';
 import {
   age, ageText, animalValue, daysText, butcherValue, chicks, coopCap, crowding, dayOfSeason, dead, diff, drinkerCap, eggCount,
-  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, living, lockedOut, marderSafe, outsideAnimals,
+  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, living, lockedOut, marderSafe, maxInside, outsideAnimals, starFactors,
   ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
 } from '../game/helpers';
-import { advanceHour, refreshOffers } from '../game/sim';
+import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
 import type { Animal, Difficulty, GameState } from '../game/types';
 import { portrait } from './art';
@@ -23,7 +23,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const ui = {
     panel: null as Panel | null,
     shopCat: 'gehege' as ShopCat,
-    marketTab: 'kaufen' as 'kaufen' | 'verkaufen',
+    marketTab: 'kaufen' as 'kaufen' | 'verkaufen' | 'auftraege',
     animalId: null as number | null,
     modal: null as Modal | null,
     confirm: '' as string,
@@ -79,11 +79,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const phaseIcon = isNight(s.hour) ? '🌙' : s.temperature >= 28 ? '🥵' : s.temperature <= 0 ? '❄️' : s.hour < 8 ? '🌅' : s.hour >= 18 ? '🌇' : '☀️';
     const speeds: [0 | 1 | 2 | 4, string, string][] = [[0, '⏸', 'Pause'], [1, '▶', 'Normal'], [2, '⏩', 'Schnell'], [4, '⏭', 'Sehr schnell']];
     setHtml(hud, 'hud', `
-      <div class="hud-farm"><span class="farm-name">${esc(s.farmName)}</span><span class="stars" title="Hof-Ruf">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></span></div>
+      <div class="hud-farm"><span class="farm-name">${esc(s.farmName)}</span><button class="stars" data-act="open:hof" title="Hof-Ruf: antippen für Details" aria-label="Hof-Ruf ${st} von 5 Sternen">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></button></div>
       <div class="hud-chips">
         <span class="chip money ${s.money < 20 ? 'low' : ''}" title="Geld">💰 ${euro(s.money)}</span>
         <span class="chip" title="Datum">📅 Tag ${dayOfSeason(s)} · ${SEASON_NAMES[season(s)]}${year(s) > 1 ? ` · J${year(s)}` : ''}</span>
-        <span class="chip" title="Uhrzeit und Wetter">${phaseIcon} ${String(s.hour).padStart(2, '0')}:00 · ${s.temperature} °C</span>
+        <span class="chip" title="Uhrzeit und Wetter">${phaseIcon} ${String(s.hour).padStart(2, '0')}:${String(Math.floor((s.minute ?? 0) / 10) * 10).padStart(2, '0')} · ${s.temperature} °C</span>
       </div>
       <div class="speed" role="group" aria-label="Spieltempo">
         ${speeds.map(([v, icon, label]) => `<button data-act="speed:${v}" class="${s.speed === v ? 'on' : ''}" title="${label}" aria-label="${label}">${icon}</button>`).join('')}
@@ -104,6 +104,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (s.foxAlertDay === s.day && f.length) out.push({ icon: '🦊', text: `Fuchs in der Nähe! Schutz ${Math.round(foxProtection(s) * 100)} %`, act: 'open:hof', kind: 'bad' });
     if (s.hawkAlertDay === s.day && s.hour < 15 && outsideAnimals(s).length) out.push({ icon: '🦅', text: 'Habicht! Hühner reinlocken', act: 'lure', kind: 'bad' });
     const locked = lockedOut(s);
+    const outNight = !isDaytime(s.hour) && s.doorOpen ? outsideAnimals(s).filter(x => !x.dead) : [];
+    if (outNight.length && (s.hour >= 21 || s.hour < 6)) out.push({ icon: '🏠', text: `Stall voll: ${outNight.length} schlafen draußen`, act: 'open:hof', kind: 'bad' });
+    const ords = s.orders ?? [];
+    if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
     if (locked.length && !(s.hawkAlertDay === s.day && s.hour < 15)) out.push({ icon: '🚪', text: `${locked.length === 1 ? `${locked[0].name} ist` : `${locked.length} Hühner sind`} ausgesperrt: reinlocken`, act: 'lure', kind: isDaytime(s.hour) ? 'warn' : 'bad' });
     if (s.marderAlertDay === s.day && !marderSafe(s)) out.push({ icon: '🦡', text: 'Marder in der Nähe!', act: 'open:shop:fuchs', kind: 'bad' });
     if (f.length && isNight(s.hour) && s.doorOpen && !has(s, 'autoklappe')) out.push({ icon: '🚪', text: 'Klappe ist nachts offen!', act: 'door', kind: 'bad' });
@@ -250,20 +254,27 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const coop = s.equip.coop ? ITEM[s.equip.coop] : null;
     const st = stars(s);
     const f = flock(s);
-    const tips: string[] = [];
-    if (crowding(s) > 1) tips.push('Zu viele Tiere für Stall oder Auslauf');
-    if (s.cleanliness < 60) tips.push('Stall ist nicht sauber');
-    if (living(s).some(a => a.health < 60)) tips.push('Einige Tiere sind geschwächt');
-    if (s.stats.deathsRecent.length) tips.push('Kürzliche Todesfälle');
+    const factors = starFactors(s);
+    const sign = (p: number) => (p > 0 ? `<b class="good">+${String(p).replace('.', ',')}</b>` : p < 0 ? `<b class="bad">${String(p).replace('.', ',')}</b>` : '<b class="muted">±0</b>');
     return `
       <section class="card">
-        <h3>⭐ Hof-Ruf: ${'★'.repeat(st)}${'☆'.repeat(5 - st)}</h3>
-        <p class="muted">${tips.length ? 'Verbessern: ' + tips.join(' · ') : 'Gute Tierhaltung zahlt sich aus: bessere Preise im Hofladen.'}</p>
+        <h3>⭐ Hof-Ruf: <span class="stars-big">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></span></h3>
+        <p class="muted">Jeder Hof startet mit 3 Sternen. Gute Haltung bringt Pluspunkte, Probleme kosten Sterne.</p>
+        ${factors.length ? `<table class="stars-table">${factors.map(x => `<tr class="${x.points < 0 ? 'neg' : x.points >= x.max && x.max > 0 ? 'pos' : ''}">
+          <td>${x.points < 0 ? '⚠️' : x.points >= x.max && x.max > 0 ? '✅' : '➖'} ${x.label}</td><td>${x.value}</td><td>${sign(x.points)}</td></tr>
+          ${x.points < x.max ? `<tr class="tip"><td colspan="3">💡 ${x.tip}</td></tr>` : ''}`).join('')}</table>`
+        : '<p>Sobald Tiere auf dem Hof leben, wird der Ruf berechnet.</p>'}
+        <p><b>Was bringen Sterne?</b></p>
+        <ul class="perks">
+          <li>🏪 Der Hofladen verkauft pro Tag 2 + 3 × Sterne Eier (jetzt ${2 + st * 3}).</li>
+          <li>📋 Mehr Kundenaufträge, und sie zahlen besser (je Stern über 3 +10 %).</li>
+          <li>🏆 Kapitel 3 verlangt mindestens 3 Sterne.</li>
+        </ul>
       </section>
       <section class="card">
         <h3>🏠 Stall ${coop ? `<small>${coop.name}</small>` : ''}</h3>
         ${coop ? `
-          <p>Plätze: <b>${f.length} / ${coopCap(s)}</b> ${f.length > coopCap(s) ? '<span class="bad">überbelegt!</span>' : ''} · Auslauf: <b>${runCap(s) || '–'}</b> Plätze</p>
+          <p>Plätze: <b>${f.length} / ${coopCap(s)}</b> ${f.length > coopCap(s) ? `<span class="bad">überbelegt! Höchstens ${maxInside(s)} passen hinein.</span>` : ''} · Auslauf: <b>${runCap(s) || '–'}</b> Plätze</p>
           ${meter('Sauberkeit', s.cleanliness, '🧹')}
           <p>🐔 Im Stall: <b>${f.filter(a => !a.outside).length}</b> · Im Auslauf: <b>${outsideAnimals(s).length}</b>${lockedOut(s).length ? ' <span class="bad">(ausgesperrt!)</span>' : ''}</p>
           <div class="row">
@@ -271,7 +282,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             <button class="btn" data-act="lure" ${outsideAnimals(s).length ? '' : 'disabled'}>🌾 Hühner reinlocken</button>
             <button class="btn" data-act="clean">🧹 Ausmisten <small>(Einstreu: ${s.inventory.einstreu ?? 0})</small></button>
           </div>
-          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Ab 20 Uhr gehen die Hühner von selbst in den Stall. Danach die Klappe schließen, morgens wieder öffnen. Wer die Klappe zu früh schließt, sperrt Hühner aus!</p>'}`
+          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Zwischen 19 und etwa 20:45 Uhr gehen die Hühner nacheinander von selbst in den Stall. Erst danach die Klappe schließen, morgens wieder öffnen. Wer die Klappe zu früh schließt, sperrt Hühner aus!</p>'}`
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
       <section class="card">
@@ -360,9 +371,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
 
   /* ---------------- Markt ---------------- */
   function panelMarket(): string {
-    const tabsHtml = `<div class="seg"><button class="${ui.marketTab === 'kaufen' ? 'on' : ''}" data-act="mtab:kaufen">Kaufen</button><button class="${ui.marketTab === 'verkaufen' ? 'on' : ''}" data-act="mtab:verkaufen">Verkaufen</button></div>`;
+    const nOrders = (s.orders ?? []).length;
+    const tabsHtml = `<div class="seg"><button class="${ui.marketTab === 'kaufen' ? 'on' : ''}" data-act="mtab:kaufen">Kaufen</button><button class="${ui.marketTab === 'verkaufen' ? 'on' : ''}" data-act="mtab:verkaufen">Verkaufen</button><button class="${ui.marketTab === 'auftraege' ? 'on' : ''}" data-act="mtab:auftraege">Aufträge${nOrders ? ` <b class="count">${nOrders}</b>` : ''}</button></div>`;
     const trend = s.eggPrice >= 0.55 ? '↑' : s.eggPrice <= 0.45 ? '↓' : '→';
     const info = `<p class="infobar">🥚 Eierpreis heute: <b>${euro(s.eggPrice)}</b> ${trend} · 🏠 Platz im Stall: <b>${Math.max(0, coopCap(s) - flock(s).length)}</b> frei</p>`;
+    if (ui.marketTab === 'auftraege') return tabsHtml + panelOrders();
     if (ui.marketTab === 'kaufen') {
       const kindName = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
       const kindIcon = (o: { kind: string; breed: keyof typeof BREEDS }) => o.kind === 'brutei' ? '🥚'
@@ -393,7 +406,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     return tabsHtml + info + `
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
-        ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier</button></span></div>` : ''}
+        ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
         ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * 2)}</button></div>` : ''}
         ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
       </section>
@@ -405,6 +418,33 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             ${stage(s, a) !== 'kueken' ? confirmBtn(`butcher:${a.id}`, `Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich?', 'small') : ''}</div>
         </div>`).join('') : '<p class="muted">Keine Tiere.</p>'}
       </section>`;
+  }
+
+  function panelOrders(): string {
+    const list = s.orders ?? [];
+    if (!list.length) return `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
+      <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren). Sie zahlen deutlich mehr als der Markt.</p>`;
+    const eggsHave = eggCount(s.eggs) + s.hatchEggs.length;
+    return list.map(o => {
+      const what = o.kind === 'eier' ? `🥚 ${o.qty} Eier` : o.kind === 'junghenne' ? `🐔 ${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}` : `🍲 ${o.qty} Suppenh${o.qty > 1 ? 'ühner' : 'uhn'} (Henne ab 2 Jahren)`;
+      const left = o.dueDay - s.day;
+      let have: string, can: boolean;
+      if (o.kind === 'eier') {
+        can = eggsHave >= o.qty;
+        have = `Im Lager: ${eggsHave} Eier`;
+      } else {
+        const animals = A.orderAnimals(s, o.kind);
+        can = animals.length >= o.qty;
+        have = can ? `Liefert: ${animals.slice(0, o.qty).map(a => esc(a.name)).join(', ')}` : `Passende Tiere: ${animals.length}`;
+      }
+      const market = o.kind === 'eier' ? o.qty * s.eggPrice : 0;
+      return `<section class="card order">
+        <h3>${esc(o.customer)}</h3>
+        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(Markt: ca. ${euro(market)})</small>` : ''}</p>
+        <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
+        ${o.kind === 'eier' ? confirmBtn(`order:${o.id}`, 'Liefern', 'Wirklich liefern?', can ? 'primary' : '') : confirmBtn(`order:${o.id}`, 'Liefern', 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+      </section>`;
+    }).join('');
   }
 
   /* ---------------- Tiere ---------------- */
@@ -485,7 +525,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     return `
       <section class="card"><h3>🥚 Eier</h3>
         <p>${eggs} Speiseeier${eggList ? ` (${eggList})` : ''} · Wert ${euro(eggValue(s, s.eggs))}</p>
-        <p>${s.hatchEggs.length} Bruteier</p>
+        <p>${s.hatchEggs.length} Bruteier (mit Hahn gelegt, zum Ausbrüten oder Verkaufen)</p>
+        <p><b>Zusammen: ${eggs + s.hatchEggs.length} Eier im Lager</b></p>
         <div class="row"><button class="btn" data-act="collect">Im Nest einsammeln</button><button class="btn primary" data-act="open:markt:verkaufen">Verkaufen</button></div>
         ${has(s, 'hofladen') ? `<p class="muted">🏪 Der Hofladen verkauft jeden Tag bis zu ${2 + stars(s) * 3} Eier zum 1,5-fachen Preis.</p>` : ''}
       </section>
@@ -577,7 +618,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       html = `<h2>So funktioniert's</h2>
         <ul class="steps">
           <li>⏱️ 1 Spieltag dauert 3 Minuten. Mit ⏩ und ⏭ läuft die Zeit schneller, mit ⏸ hältst du sie an.</li>
-          <li>🚪 Ab 20 Uhr gehen die Hühner von selbst in den Stall. Schließ die Klappe erst danach, sonst sperrst du sie aus. Mit „Reinlocken“ holst du sie jederzeit mit etwas Futter herein.</li>
+          <li>🚪 Zwischen 19 und etwa 20:45 Uhr gehen die Hühner nacheinander in den Stall. Schließ die Klappe erst, wenn alle drin sind (Zähler am Stall), sonst sperrst du einzelne aus. Mit „Reinlocken“ holst du sie jederzeit mit etwas Futter herein.</li>
+          <li>🏠 In den Stall passen höchstens 120 % seiner Plätze. Überzählige Hühner schlafen draußen, und Überbelegung macht krank.</li>
+          <li>⭐ Der Hof-Ruf (Sterne oben) steigt mit gesunden, zufriedenen Tieren, Platz und Sauberkeit. Antippen zeigt die Details.</li>
           <li>🐔 Tippe auf ein Tier für seinen Steckbrief. Symbole über den Tieren zeigen Probleme: 💧 Durst, 🌾 Hunger, 🐜 Milben, 🤧 Schnupfen, 🪱 Würmer.</li>
           <li>🥚 Tippe auf die Eier am Stall, die Tränke oder den Futtertrog für schnelle Aktionen.</li>
           <li>🦊 Fuchs, 🦅 Habicht und 🦡 Marder kündigen sich immer an. Reagiere schnell!</li>
@@ -624,7 +667,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     ui.panel = p;
     ui.confirm = '';
     if (p === 'shop' && sub) ui.shopCat = sub as ShopCat;
-    if (p === 'markt' && sub) ui.marketTab = sub as 'kaufen' | 'verkaufen';
+    if (p === 'markt' && sub) ui.marketTab = sub as 'kaufen' | 'verkaufen' | 'auftraege';
     renderPanel(true);
     panelBody.scrollTop = 0;
     renderTabs();
@@ -687,6 +730,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'sellEggs': return result(A.sellEggs(s));
       case 'sellHatch': return result(A.sellHatchEggs(s, a1 === 'food'));
       case 'sellManure': return result(A.sellManure(s));
+      case 'order': return result(A.fulfillOrder(s, Number(a1)));
       case 'animal': ui.animalId = Number(a1); return openPanel('tier');
       case 'dispose': { const r = A.disposeBody(s, Number(a1)); if (r.ok) ui.panel = 'tiere'; return result(r); }
       case 'sellAnimal': { const r = A.sellAnimal(s, Number(a1)); if (r.ok && ui.panel === 'tier') ui.panel = 'tiere'; return result(r); }
@@ -780,6 +824,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     renderModal();
   }
 
+  const flockSig = () => s.animals.map(a => (a.outside ? 1 : 0)).join('') + s.doorOpen;
   let last = performance.now();
   let acc = 0;
   let raf = 0;
@@ -795,12 +840,16 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (speed > 0 && !s.gameOver) {
       acc += dt * speed;
       let n = 0;
-      while (acc >= MS_PER_HOUR && n < 6) {
-        acc -= MS_PER_HOUR;
-        advanceHour(s);
-        ticked = true;
+      const hourBefore = s.hour;
+      const flockBefore = flockSig();
+      while (acc >= MS_PER_MINUTE && n < 360) {
+        acc -= MS_PER_MINUTE;
+        advanceMinute(s);
         n++;
       }
+      if (n && !pointerDown) renderHud();
+      // Volle Aktualisierung bei Stundenwechsel oder wenn Hühner rein-/rausgehen
+      ticked = s.hour !== hourBefore || flockSig() !== flockBefore;
     }
     if (ticked) {
       for (const t of s.toasts.splice(0)) toast(t.text, t.kind);

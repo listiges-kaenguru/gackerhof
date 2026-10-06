@@ -12,8 +12,16 @@ export const SEASON_NAMES: Record<Season, string> = {
 };
 /** Echtzeit-Millisekunden pro Spielstunde bei Tempo 1× (1 Spieltag = 3 Minuten) */
 export const MS_PER_HOUR = 7500;
-/** Ab dieser Stunde gehen die Hühner von selbst in den Stall (Dämmerung) */
-export const ROOST_HOUR = 20;
+export const MS_PER_MINUTE = MS_PER_HOUR / 60;
+/** Ab 19 Uhr gehen die Hühner nach und nach von selbst in den Stall (bis ca. 20:45) */
+export const ROOST_HOUR = 19;
+export const ROOST_WINDOW = 80; // Minuten, über die sich die Hühner verteilen
+/** So lange (Spielminuten) braucht ein Huhn vom Auslauf bis in den Stall */
+export const WALK_MINUTES = 25;
+/** Morgens kommen die Hühner nach und nach ab 6 Uhr heraus */
+export const OUT_WINDOW = 60;
+/** Mehr als 120 % der Stallplätze passen nicht hinein */
+export const MAX_OVERCROWD = 1.2;
 
 /** Lebensphasen in Spieltagen ab Schlupf */
 export const AGE = {
@@ -342,4 +350,11 @@ export const BUTCHER_PER_KG = 4.5;
 export const BUTCHER_FEE = 4;
 export const HEALTH_CHECK_COST = 3;
 export const MANURE_PRICE = 2;
+export const CUSTOMERS = {
+  eier: ['Bäckerei Krause', 'Café Sonnenschein', 'Kita Pusteblume', 'Hotel Seeblick', 'Frau Meier von nebenan'],
+  junghenne: ['Familie Schulz', 'Herr Albrecht', 'Schulgarten der Grundschule', 'Familie Nowak'],
+  suppenhuhn: ['Gasthaus Zur Linde', 'Oma Gerda', 'Restaurant Hirschen'],
+};
+/** Ab diesem Alter (Spieltage) gilt eine Henne als Suppenhuhn */
+export const SOUP_AGE = 240;
 export const SELLERS = ['Händler Brandt', 'Frau Lindner', 'Geflügelhof Petersen', 'Herr Yılmaz', 'Familie Kowalski'];

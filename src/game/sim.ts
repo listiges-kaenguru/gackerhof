@@ -1,18 +1,33 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  AGE, BREEDS, CONDITIONS, DAYS_PER_SEASON, ITEM, ROOST_HOUR, SEASON_NAMES, SELLERS,
+  AGE, BREEDS, CONDITIONS, CUSTOMERS, DAYS_PER_SEASON, ITEM, SEASON_NAMES, SELLERS, SOUP_AGE,
 } from './data';
 import {
   addMoney, adultRoosters, age, chicks, crowding, diff, eventActive, flock, foxProtection,
-  frozen, has, hawkProtection, isDaytime, isSenior, living, lockedOut, log, marderSafe, outsideAnimals, plot, ratSafe, round2,
+  frozen, has, hawkProtection, isSenior, living, lockedOut, log, marderSafe, maxInside, minuteOfDay, outsideAnimals, outTime,
+  plot, ratSafe, roostArrival, round2,
   season, shade, stage, stars, autoWater, drinkerCap, feederCap,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { chapterGoals, CHAPTERS, createAnimal, targetWeight } from './state';
 import type { Animal, Celebration, ConditionId, GameState, MarketOffer } from './types';
 
+/** Feinster Takt: eine Spielminute. Die Hühner bewegen sich minutengenau, alles andere läuft stündlich. */
+export function advanceMinute(s: GameState) {
+  if (s.gameOver) return;
+  const m = (s.minute ?? 0) + 1;
+  if (m >= 60) {
+    advanceHour(s);
+  } else {
+    s.minute = m;
+    moveFlock(s);
+  }
+}
+
+/** Eine volle Spielstunde weiter (setzt die Minute auf 0) */
 export function advanceHour(s: GameState) {
   if (s.gameOver) return;
+  s.minute = 0;
   s.hour++;
   if (s.hour >= 24) {
     s.hour = 0;
@@ -27,8 +42,7 @@ export function advanceHour(s: GameState) {
     case 10: hawkAlert(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
     case 19: if (s.day <= 5 && s.doorOpen && !has(s, 'autoklappe') && flock(s).length) log(s, '🌇 Es dämmert. Denk daran, abends die Hühnerklappe zu schließen!', 'warn', true); break;
-    case ROOST_HOUR: roost(s); break;
-    case 21: evening(s); break;
+    case 21: roost(s); evening(s); break;
     case 23: nightPredators(s); break;
   }
   checkGoals(s);
@@ -137,20 +151,41 @@ export const chickFreezing = (s: GameState, a: Animal) =>
  * Wo sind die Hühner? Tagsüber gehen sie durch die offene Klappe in den Auslauf,
  * in der Dämmerung von selbst zurück in den Stall – aber nur, wenn die Klappe offen ist.
  */
-function moveFlock(s: GameState) {
-  const day = isDaytime(s.hour);
-  for (const a of flock(s)) {
-    if (a.broodingUntil > s.day || !s.equip.coop) { a.outside = false; continue; }
-    if (!s.equip.fence) { a.outside = false; continue; }
-    if (s.doorOpen) a.outside = day;
+export function moveFlock(s: GameState) {
+  const t = minuteOfDay(s);
+  const all = flock(s);
+  let inside = all.filter(a => !a.outside).length;
+  const cap = maxInside(s);
+  for (const a of all) {
+    if (a.broodingUntil > s.day || !s.equip.coop || !s.equip.fence) {
+      if (a.outside) inside++;
+      a.outside = false;
+      continue;
+    }
     // Klappe zu: Wer drinnen ist, bleibt drinnen; wer draußen ist, bleibt ausgesperrt
+    if (!s.doorOpen) continue;
+    const wantsOut = t >= outTime(a) && t < roostArrival(a) && t >= 6 * 60;
+    if (wantsOut && !a.outside) {
+      a.outside = true;
+      inside--;
+    } else if (!wantsOut && a.outside && (t >= roostArrival(a) || t < 6 * 60)) {
+      // angekommen – aber nur, wenn noch Platz im Stall ist
+      if (inside < cap) {
+        a.outside = false;
+        inside++;
+      }
+    }
   }
 }
 
 function roost(s: GameState) {
-  const out = lockedOut(s);
-  if (out.length) {
-    log(s, `🚪 ${out.length === 1 ? `${out[0].name} steht` : `${out.length} Hühner stehen`} vor der verschlossenen Klappe und ${out.length === 1 ? 'kommt' : 'kommen'} nicht in den Stall! Klappe öffnen oder mit Futter reinlocken.`, 'bad', true);
+  const out = outsideAnimals(s);
+  if (!out.length) return;
+  const names = (list: Animal[]) => (list.length === 1 ? `${list[0].name} steht` : `${list.length} Hühner stehen`);
+  if (s.doorOpen) {
+    log(s, `🏠 Der Stall ist voll! ${names(out)} draußen und ${out.length === 1 ? 'muss' : 'müssen'} die Nacht im Freien verbringen. Mehr als ${maxInside(s)} Tiere passen nicht hinein.`, 'bad', true);
+  } else {
+    log(s, `🚪 ${names(out)} vor der verschlossenen Klappe und ${out.length === 1 ? 'kommt' : 'kommen'} nicht in den Stall! Klappe öffnen oder mit Futter reinlocken.`, 'bad', true);
   }
 }
 
@@ -256,6 +291,7 @@ function newDay(s: GameState) {
   // Ereignisse
   randomEvents(s);
   s.events = s.events.filter(e => e.until >= s.day);
+  orders(s);
 
   // Markt erneuert sich wöchentlich
   if (s.day - s.offersDay >= 7) refreshOffers(s);
@@ -325,7 +361,8 @@ function diseases(s: GameState) {
   const wet = plot(s).wet;
   const mobil = s.equip.coop === 'mobil' ? 0.5 : 1;
   const crowd = crowding(s);
-  const crowdF = crowd > 1 ? 1 + (crowd - 1) * 2 : 1;
+  // Überbelegung: Krankheiten breiten sich deutlich schneller aus
+  const crowdF = crowd > 1 ? 1 + (crowd - 1) * 5 : 1;
   const all = living(s);
 
   for (const a of all) {
@@ -442,7 +479,11 @@ function evening(s: GameState) {
 }
 
 function layEggs(s: GameState) {
-  const rooster = adultRoosters(s).length > 0;
+  const roosters = adultRoosters(s).length;
+  const rooster = roosters > 0;
+  // Befruchtungsquote: Ein Hahn schafft gut 10 Hennen
+  const hens = flock(s).filter(a => a.sex === 'henne' && stage(s, a) === 'erwachsen').length;
+  const fertility = Math.min(0.9, (0.9 * roosters * 10) / Math.max(1, hens));
   const se = season(s);
   const seasonF = { fruehling: 1.1, sommer: 1, herbst: 0.6, winter: 0.45 }[se];
   let laid = 0;
@@ -464,7 +505,7 @@ function layEggs(s: GameState) {
     if (a.withdrawalUntil >= s.day) {
       s.blockedEggs++;
     } else if (rooster) {
-      s.nestHatchEggs.push({ breed: a.breed, fertile: chance(s, 0.85) });
+      s.nestHatchEggs.push({ breed: a.breed, fertile: chance(s, fertility) });
     } else {
       s.nestEggs[a.breed] = (s.nestEggs[a.breed] ?? 0) + 1;
     }
@@ -557,21 +598,67 @@ function randomEvents(s: GameState) {
   if (r < 0.03) {
     if (eventActive(s, 'dorffest')) return;
     s.events.push({ id: 'dorffest', until: s.day + 2 });
-    log(s, '🎪 Dorffest! Für 3 Tage zahlen die Leute auf dem Markt fast doppelt so viel für Eier.', 'good', true);
+    log(s, '🎪 Dorffest! Für 3 Tage zahlen die Leute auf dem Markt fast doppelt so viel für Eier.', 'good');
+    celebrate(s, { emoji: '🎪', title: 'Dorffest!', lines: ['Im Dorf wird 3 Tage lang gefeiert.', '🥚 Die Leute zahlen auf dem Markt fast doppelt so viel für Eier.', 'Tipp: Sammle jetzt fleißig Eier und verkaufe sie, solange das Fest läuft.'] });
   } else if (r < 0.055) {
     if (eventActive(s, 'futterteuer')) return;
     s.events.push({ id: 'futterteuer', until: s.day + 4 });
-    log(s, '📦 Lieferengpass beim Landhandel: Futter kostet 5 Tage lang 50 % mehr.', 'warn', true);
+    log(s, '📦 Lieferengpass beim Landhandel: Futter kostet 5 Tage lang 50 % mehr.', 'warn');
+    celebrate(s, { emoji: '📦', title: 'Lieferengpass beim Landhandel', lines: ['Futter (Körner, Legemehl, Kükenstarter) kostet 5 Tage lang 50 % mehr.', 'Tipp: Wer noch Vorrat im Lager hat, ist jetzt fein raus. Sonst nur kleine Mengen kaufen.'] });
   } else if (r < 0.075) {
     if ((se !== 'herbst' && se !== 'winter') || eventActive(s, 'stallpflicht')) return;
     s.events.push({ id: 'stallpflicht', until: s.day + 6 });
-    log(s, `📢 Stallpflicht wegen Vogelgrippe für 7 Tage! Die Hühner dürfen nicht in den offenen Auslauf${has(s, 'netz') ? '. Dein Volierennetz zählt als geschlossener Auslauf.' : '. Halte die Klappe geschlossen, sonst droht ein Bußgeld.'}`, 'warn', true);
+    log(s, `📢 Stallpflicht wegen Vogelgrippe für 7 Tage! Die Hühner dürfen nicht in den offenen Auslauf${has(s, 'netz') ? '. Dein Volierennetz zählt als geschlossener Auslauf.' : '. Halte die Klappe geschlossen, sonst droht ein Bußgeld.'}`, 'warn');
+    celebrate(s, { emoji: '📢', title: 'Stallpflicht wegen Vogelgrippe', lines: [
+      'Das Veterinäramt ordnet für 7 Tage Stallpflicht an: Die Hühner dürfen nicht in den offenen Auslauf.',
+      has(s, 'netz') ? '✅ Dein Volierennetz zählt als geschlossener Auslauf. Du musst nichts tun.' : '🚪 Halte die Klappe geschlossen (Hühner vorher reinlocken). Bei einer Kontrolle droht sonst ein Bußgeld von 40 €.',
+      'Eingesperrte Hühner sind etwas unglücklicher. Das legt sich nach der Stallpflicht wieder.',
+    ] });
   } else if (r < 0.085) {
     const b = pick(s, ['marans', 'brahma', 'seide', 'sussex'] as const);
     for (let i = 0; i < 4; i++) s.hatchEggs.push({ breed: b, fertile: chance(s, 0.8) });
     log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier der Rasse ${BREEDS[b].name}!`, 'good');
     celebrate(s, { emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier der Rasse ${BREEDS[b].name} mitgebracht!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
   }
+}
+
+/* ================================================================== */
+/* Kundenaufträge                                                     */
+/* ================================================================== */
+function orders(s: GameState) {
+  s.orders ??= [];
+  // abgelaufene Aufträge
+  for (const o of s.orders.filter(x => x.dueDay < s.day)) {
+    log(s, `📋 Auftrag verpasst: ${o.customer} hat sich anderswo eingedeckt.`, 'warn', true);
+  }
+  s.orders = s.orders.filter(x => x.dueDay >= s.day);
+  if (s.day < 4 || s.orders.length >= 3 || !flock(s).length) return;
+  // Ein guter Ruf bringt mehr Kundschaft
+  if (!chance(s, 0.15 + stars(s) * 0.05)) return;
+  const juniors = flock(s).some(a => stage(s, a) !== 'erwachsen');
+  const kinds: ('eier' | 'junghenne' | 'suppenhuhn')[] = ['eier', 'eier', 'eier', 'junghenne', 'suppenhuhn'];
+  if (juniors) kinds.push('junghenne');
+  if (flock(s).some(a => a.sex === 'henne' && age(s, a) >= SOUP_AGE)) kinds.push('suppenhuhn', 'suppenhuhn');
+  const kind = pick(s, kinds);
+  const bonus = 1 + (stars(s) - 3) * 0.1;
+  const o = { id: s.nextId++, customer: pick(s, CUSTOMERS[kind]), kind, qty: 0, reward: 0, dueDay: 0 };
+  if (kind === 'eier') {
+    o.qty = intBetween(s, 1, 5) * 6;
+    o.reward = Math.round(o.qty * 0.5 * between(s, 1.5, 1.9) * bonus);
+    o.dueDay = s.day + intBetween(s, 3, 6);
+  } else if (kind === 'junghenne') {
+    o.qty = intBetween(s, 1, 3);
+    o.reward = Math.round(o.qty * between(s, 26, 34) * bonus);
+    o.dueDay = s.day + intBetween(s, 6, 12);
+  } else {
+    o.qty = intBetween(s, 1, 2);
+    o.reward = Math.round(o.qty * between(s, 13, 17) * bonus);
+    o.dueDay = s.day + intBetween(s, 4, 8);
+  }
+  s.orders.push(o);
+  const what = { eier: `${o.qty} Eier`, junghenne: `${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}`, suppenhuhn: `${o.qty} Suppenhuhn${o.qty > 1 ? 'hühner' : ''}` }[kind]
+    .replace('Suppenhuhnhühner', 'Suppenhühner');
+  log(s, `📋 Neuer Auftrag: ${o.customer} möchte ${what} für ${o.reward} € (bis Tag ${o.dueDay}).`, 'good', true);
 }
 
 function stallpflichtCheck(s: GameState) {

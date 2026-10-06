@@ -3,18 +3,46 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
-## [1.2.0] – in Arbeit
+## [0.2.0] – in Arbeit
+
+Ab dieser Version zählen Prototypen mit **0.x.x**. Die bisherigen Testversionen hießen noch 1.0.0 und 1.1.0. Umgesetzt sind die „Verbesserungen aus Test“ aus der Ideen-Liste.
+
+### Neu
+- **Kundenaufträge** als neue Einnahmequelle (Markt → Aufträge):
+  - Bäckerei, Café, Gasthaus und andere Kunden bestellen Eier, Junghennen oder Suppenhühner (Hennen ab 2 Jahren).
+  - Sie zahlen deutlich mehr als der Markt, haben aber eine Frist.
+  - Bis zu 3 Aufträge gleichzeitig. Ein besserer Hof-Ruf bringt mehr Aufträge und bessere Bezahlung.
+- **Hof-Ruf erklärt:** Die Sterne in der Kopfzeile lassen sich antippen. Die Hofübersicht zeigt jeden Faktor (Gesundheit, Wohlbefinden, Platz, Sauberkeit, Todesfälle) mit Wert, Punkten und einem Tipp. Dazu steht, was Sterne bringen.
+- **Ereignisse zum Bestätigen:** Dorffest, Lieferengpass und Stallpflicht erscheinen als Dialog mit Erklärung und Tipp.
+- **Uhrzeit mit Minuten** in der Kopfzeile.
 
 ### Geändert
-- **Verlässlicher Geflügelmarkt:** Jede Woche gibt es garantiert mindestens einen **Hahn** und ein Angebot **Bruteier**. Rasse und Preis wechseln. Dazu kommen wie bisher eine Junghenne und eine Legehenne sowie weitere Zufallsangebote (insgesamt 7–9 statt 6–8).
-- Spielstände aus 1.0.0 und 1.1.0 bekommen beim Laden sofort einen neu bestückten Markt.
+- **Hühner gehen einzeln in den Stall:**
+  - Jedes Huhn hat seine eigene Zeit zwischen 19 und etwa 20:45 Uhr. Scheue gehen früher, mutige und neugierige später.
+  - Ein Huhn läuft zuerst zur Klappe und ist erst dann im Stall. Erst dann zählt auch der Zähler am Stall hoch.
+  - Wer die Klappe zwischendurch schließt, sperrt nur die Nachzügler aus. Morgens kommen die Hühner nach und nach heraus.
+- **Überbelegung:** In den Stall passen höchstens 120 % seiner Plätze. Überzählige Hühner schlafen draußen (Kälte, Fuchsgefahr). Ein Hinweis meldet das. Überbelegung lässt Krankheiten außerdem deutlich häufiger ausbrechen und sich schneller ausbreiten.
+- **Bruteier:**
+  - Die Befruchtungsquote hängt jetzt vom Verhältnis Hahn zu Hennen ab: Ein Hahn schafft gut 10 Hennen, maximal 90 %.
+  - Beim Verkauf als Speiseeier steht jetzt der Preis dabei.
+  - Die Sammelmeldung nennt die Gesamtzahl und die Aufteilung, das Lager zeigt die Summe aller Eier.
+- Ein Auftrag mit Eiern zählt auch für das Kapitelziel „Eier verkaufen“.
+
+### Behoben
+- **Fuchsschutz:** Der Untergrabschutz zählte intern nur +10 %, angezeigt waren +15 %. Jetzt gilt überall der Wert aus dem Shop (Kapitel 2: 20 % → 35 %).
+
+### Aus 1.2.0 (nie als Testversion veröffentlicht)
+- **Verlässlicher Geflügelmarkt:** Jede Woche gibt es garantiert mindestens einen Hahn und ein Angebot Bruteier, Rasse und Preis wechseln. Insgesamt sind es 7–9 Angebote.
+- Ältere Spielstände bekommen beim Laden sofort einen neu bestückten Markt.
 
 ### Technisch
-- 2 neue Tests (20 insgesamt). Der Balancing-Test prüft jetzt 24 statt 12 Testhöfe.
+- Die Simulation läuft im Minutentakt (Hühner) und im Stundentakt (alles andere).
+- 8 neue Tests (26 insgesamt): einzelnes Heimgehen, Nachzügler aussperren, Stallgrenze, Aufträge, Suppenhühner, Sterne und Fuchsschutz, Markt mit Hahn und Bruteiern. Der Balancing-Test prüft 24 Testhöfe.
+- Spielstände aus 1.0.0 und 1.1.0 lassen sich weiter laden.
 
 ## [1.1.0] – 2026-10-06
 
-Testversion in den Branches `proto-v1.1.0` und `proto-built-v1.1.0`.
+Testversion in den Branches `proto-v1.1.0` und `proto-built-v1.1.0` (nach heutiger Zählung 0.1.1).
 
 Erste Rückmeldungen aus dem Test von 1.0.0 umgesetzt.
 
@@ -43,7 +71,7 @@ Erste Rückmeldungen aus dem Test von 1.0.0 umgesetzt.
 
 ## [1.0.0] – 2026-10-06
 
-Erster spielbarer Prototyp (Branches `proto-v1.0.0` und `proto-built-v1.0.0`).
+Erster spielbarer Prototyp (Branches `proto-v1.0.0` und `proto-built-v1.0.0`, nach heutiger Zählung 0.1.0).
 
 - Startbildschirm mit Hofname, 3 Schwierigkeitsgraden und 3 Grundstücken
 - Hof als animierte Cartoon-Szene mit Tageszeiten, Jahreszeiten, Wetter und Schnee

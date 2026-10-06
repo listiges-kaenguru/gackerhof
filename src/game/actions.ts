@@ -1,15 +1,15 @@
 // Alles, was der Spieler tun kann. Jede Aktion liefert ein Ergebnis mit Meldung zurück.
 import {
-  BREEDS, CONDITIONS, DISPOSAL_COST, HEALTH_CHECK_COST, ITEM, MANURE_PRICE, SUPPLY, DIFFICULTIES,
+  BREEDS, CONDITIONS, DISPOSAL_COST, HEALTH_CHECK_COST, ITEM, MANURE_PRICE, SOUP_AGE, SUPPLY, DIFFICULTIES,
 } from './data';
 import {
   addMoney, animalValue, butcherValue, coopCap, diff, drinkerCap, eggCount, eggValue, eventActive, feederCap,
-  flock, frozen, has, isDaytime, living, log, outsideAnimals, round2, stage,
+  age, flock, frozen, has, isDaytime, living, log, maxInside, outsideAnimals, round2, stage,
 } from './helpers';
 import { chance, intBetween } from './rng';
-import { addCondition } from './sim';
+import { addCondition, moveFlock } from './sim';
 import { createAnimal } from './state';
-import type { ConditionId, Difficulty, FeedId, GameState } from './types';
+import type { Animal, ConditionId, Difficulty, FeedId, GameState } from './types';
 
 export interface Result { ok: boolean; msg: string }
 const ok = (msg: string): Result => ({ ok: true, msg });
@@ -126,8 +126,8 @@ export function toggleDoor(s: GameState): Result {
   if (!s.equip.coop) return fail('Du hast noch keinen Stall.');
   s.doorOpen = !s.doorOpen;
   if (s.doorOpen) {
-    // Ausgesperrte Hühner nutzen die Gelegenheit; tagsüber gehen alle raus
-    for (const a of flock(s)) if (a.broodingUntil <= s.day && s.equip.fence) a.outside = isDaytime(s.hour);
+    // Ausgesperrte Hühner nutzen die Gelegenheit, tagsüber geht es nach draußen
+    moveFlock(s);
     return ok(isDaytime(s.hour) ? 'Klappe auf: Die Hühner dürfen raus.' : 'Klappe auf: Die Hühner gehen in den Stall.');
   }
   const out = outsideAnimals(s);
@@ -145,9 +145,12 @@ export function lureIn(s: GameState): Result {
   const bait = (['koerner', 'legemehl', 'mehlwuermer'] as const).find(id => (s.inventory[id] ?? 0) >= (id === 'mehlwuermer' ? 1 : 0.2));
   if (!bait) return fail('Ohne Futter oder Mehlwürmer im Lager lassen sich die Hühner nicht locken.');
   s.inventory[bait] = round2(s.inventory[bait] - (bait === 'mehlwuermer' ? 1 : 0.2));
-  for (const a of out) a.outside = false;
+  const free = Math.max(0, maxInside(s) - (flock(s).length - out.length));
+  const lured = out.slice(0, free);
+  for (const a of lured) a.outside = false;
   s.doorOpen = false;
-  return ok(`Mit ${bait === 'mehlwuermer' ? 'Mehlwürmern' : 'ein paar Körnern'} gelockt: ${out.length} Hühner sind im Stall, die Klappe ist zu.`);
+  const left = out.length - lured.length;
+  return ok(`Mit ${bait === 'mehlwuermer' ? 'Mehlwürmern' : 'ein paar Körnern'} gelockt: ${lured.length} Hühner sind im Stall, die Klappe ist zu.${left ? ` ⚠️ ${left} passen nicht mehr hinein, der Stall ist voll!` : ''}`);
 }
 
 export function refillWater(s: GameState): Result {
@@ -181,11 +184,12 @@ export function collectEggs(s: GameState): Result {
   s.nestEggs = {};
   s.nestHatchEggs = [];
   s.blockedEggs = 0;
+  const total = n + h + b;
   const parts = [];
+  if (h) parts.push(`${h} Brutei${h > 1 ? 'er' : ''} (mit Hahn gelegt)`);
   if (n) parts.push(`${n} Speiseei${n > 1 ? 'er' : ''}`);
-  if (h) parts.push(`${h} Brutei${h > 1 ? 'er' : ''} (vom Hahn befruchtet)`);
-  let msg = `🥚 Eingesammelt: ${parts.join(' und ') || 'keine verkaufbaren Eier'}.`;
-  if (b) msg += ` ${b} Ei${b > 1 ? 'er' : ''} mit Medikamenten-Wartezeit entsorgt.`;
+  if (b) parts.push(`${b} mit Medikamenten-Wartezeit (entsorgt)`);
+  const msg = `🥚 ${total} Ei${total > 1 ? 'er' : ''} eingesammelt${parts.length > 1 || b ? `: ${parts.join(', ')}` : h ? ' – alles Bruteier, weil ein Hahn dabei ist' : ''}.`;
   return ok(msg);
 }
 
@@ -341,15 +345,17 @@ export function sellEggs(s: GameState): Result {
 export function hatchEggValue(s: GameState): number {
   return round2(s.hatchEggs.reduce((t, e) => t + BREEDS[e.breed].prices.brutei * 0.7, 0) * diff(s).sellBonus);
 }
+export function hatchEggFoodValue(s: GameState): number {
+  const map: Record<string, number> = {};
+  for (const e of s.hatchEggs) map[e.breed] = (map[e.breed] ?? 0) + 1;
+  return eggValue(s, map);
+}
 export function sellHatchEggs(s: GameState, asFood = false): Result {
   const n = s.hatchEggs.length;
   if (!n) return fail('Keine Bruteier im Lager.');
   let v: number;
-  if (asFood) {
-    const map: Record<string, number> = {};
-    for (const e of s.hatchEggs) map[e.breed] = (map[e.breed] ?? 0) + 1;
-    v = eggValue(s, map);
-  } else v = hatchEggValue(s);
+  if (asFood) v = hatchEggFoodValue(s);
+  else v = hatchEggValue(s);
   addMoney(s, v);
   s.hatchEggs = [];
   s.stats.eggsSold += n;
@@ -386,6 +392,46 @@ export function setUnderHen(s: GameState, henId: number): Result {
   a.broodingUntil = s.day + 7;
   a.broodyUntil = 0;
   return ok(`${a.name} brütet jetzt ${k} Eier aus. Schlupf in 7 Tagen.`);
+}
+
+/* ---------------- Kundenaufträge ---------------- */
+/** Welche Tiere würden für einen Auftrag geliefert? (gesund, ohne Wartezeit, brütet nicht) */
+export function orderAnimals(s: GameState, kind: 'junghenne' | 'suppenhuhn'): Animal[] {
+  return living(s).filter(a => a.sex === 'henne' && !a.broodEggs.length && a.withdrawalUntil < s.day &&
+    !a.conditions.some(c => c.severity > 30) &&
+    (kind === 'junghenne' ? stage(s, a) === 'junghuhn' : age(s, a) >= SOUP_AGE))
+    .sort((x, y) => (kind === 'suppenhuhn' ? age(s, y) - age(s, x) : 0));
+}
+
+export function fulfillOrder(s: GameState, orderId: number): Result {
+  const o = (s.orders ?? []).find(x => x.id === orderId);
+  if (!o) return fail('Auftrag nicht mehr verfügbar.');
+  if (o.kind === 'eier') {
+    const have = eggCount(s.eggs) + s.hatchEggs.length;
+    if (have < o.qty) return fail(`Dafür brauchst du ${o.qty} Eier im Lager, du hast ${have}.`);
+    let need = o.qty;
+    // zuerst Speiseeier, dann Bruteier
+    for (const k of Object.keys(s.eggs)) {
+      const n = Math.min(need, s.eggs[k]);
+      s.eggs[k] -= n;
+      need -= n;
+    }
+    if (need > 0) s.hatchEggs.splice(0, need);
+    s.stats.eggsSold += o.qty;
+  } else {
+    const list = orderAnimals(s, o.kind).slice(0, o.qty);
+    if (list.length < o.qty) {
+      return fail(o.kind === 'junghenne'
+        ? `Dafür brauchst du ${o.qty} gesunde Junghennen, du hast ${list.length}.`
+        : `Dafür brauchst du ${o.qty} gesunde Hennen ab 2 Jahren, du hast ${list.length}.`);
+    }
+    const ids = new Set(list.map(a => a.id));
+    s.animals = s.animals.filter(a => !ids.has(a.id));
+  }
+  addMoney(s, o.reward);
+  s.orders = (s.orders ?? []).filter(x => x !== o);
+  log(s, `📋 Auftrag erledigt: ${o.customer} zahlt ${o.reward} €.`, 'good');
+  return ok(`Geliefert! ${o.customer} zahlt ${o.reward} €. Danke!`);
 }
 
 /* ---------------- Sonstiges ---------------- */

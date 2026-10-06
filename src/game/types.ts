@@ -90,6 +90,15 @@ export interface GameEvent {
   until: number;
 }
 
+export interface Order {
+  id: number;
+  customer: string;
+  kind: 'eier' | 'junghenne' | 'suppenhuhn';
+  qty: number;
+  reward: number;
+  dueDay: number;
+}
+
 export interface Celebration {
   emoji: string;
   title: string;
@@ -110,6 +119,8 @@ export interface GameState {
   seed: number;
   day: number; // ab 1
   hour: number; // 0..23
+  /** Minute innerhalb der Stunde (ab 0.2.0) */
+  minute?: number;
   money: number;
   debt: number;
   loanUsed: boolean;
@@ -157,6 +168,8 @@ export interface GameState {
   marderAlertDay: number;
   hawkAlertDay: number;
   events: GameEvent[];
+  /** Kundenaufträge (ab 0.2.0) */
+  orders?: Order[];
 
   stats: {
     eggsSold: number;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
-import { foxProtection, flock, living, stage } from '../src/game/helpers';
-import { advanceHour, refreshOffers } from '../src/game/sim';
+import { foxProtection, flock, living, stage, starFactors, stars } from '../src/game/helpers';
+import { advanceHour, advanceMinute, refreshOffers } from '../src/game/sim';
 import { createAnimal, importSave, newGame } from '../src/game/state';
 import type { GameState } from '../src/game/types';
 
@@ -72,6 +72,9 @@ describe('Grundlagen', () => {
 
   it('gut versorgte Hennen legen Eier und bringen Geld', () => {
     const s = starter(3);
+    s.money += 900; // sicherer Stall, damit nur das Legen geprüft wird
+    A.buyItem(s, 'gartenhaus');
+    s.money -= 900 - 850 + 28;
     A.buySupply(s, 'koerner', 2);
     for (let i = 0; i < 3; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
     days(s, 20, careTaker);
@@ -167,18 +170,49 @@ describe('Markt', () => {
 describe('Klappe und Stall', () => {
   function flockOf(n: number) {
     const s = starter(11);
+    s.money += 300;
+    A.buyItem(s, 'kleintier'); // 6 Plätze
     A.buySupply(s, 'koerner', 2);
     for (let i = 0; i < n; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
     return s;
   }
   const until = (s: GameState, hour: number) => { while (s.hour !== hour) advanceHour(s); };
 
-  it('tagsüber draußen, ab 20 Uhr von selbst im Stall', () => {
-    const s = flockOf(3);
+  it('tagsüber draußen, abends einzeln nacheinander in den Stall', () => {
+    const s = flockOf(6);
     until(s, 12);
     expect(flock(s).every(a => a.outside)).toBe(true);
-    until(s, 20);
+    until(s, 19);
+    // minutengenau: die Hühner kommen nicht alle gleichzeitig an
+    const arrivals = new Set<number>();
+    while (s.hour < 21) {
+      const before = flock(s).filter(a => a.outside).length;
+      advanceMinute(s);
+      if (flock(s).filter(a => a.outside).length < before) arrivals.add(s.hour * 60 + (s.minute ?? 0));
+    }
+    expect(arrivals.size).toBeGreaterThan(2);
     expect(flock(s).every(a => !a.outside)).toBe(true);
+  });
+
+  it('Klappe zwischendurch zu: nur die Nachzügler sind ausgesperrt', () => {
+    const s = flockOf(6);
+    until(s, 19);
+    while (flock(s).filter(a => !a.outside).length < 2) advanceMinute(s);
+    A.toggleDoor(s);
+    const inside = flock(s).filter(a => !a.outside).length;
+    until(s, 22);
+    expect(inside).toBeGreaterThanOrEqual(2);
+    expect(inside).toBeLessThan(6);
+    expect(flock(s).filter(a => a.outside).length).toBe(6 - inside);
+  });
+
+  it('überbelegter Stall: höchstens 120 %, der Rest schläft draußen', () => {
+    const s = flockOf(0); // Kleintierstall: 6 Plätze -> höchstens 7 drin
+    for (let i = 0; i < 9; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+    until(s, 12);
+    until(s, 22);
+    expect(flock(s).filter(a => !a.outside).length).toBe(7);
+    expect(s.log.some(l => l.text.includes('Stall ist voll'))).toBe(true);
   });
 
   it('zu früh geschlossene Klappe sperrt die Hühner aus', () => {
@@ -221,6 +255,55 @@ describe('Klappe und Stall', () => {
     }
     expect(lostOut).toBeGreaterThan(20);
     expect(lostIn).toBeLessThan(3);
+  });
+});
+
+describe('Kundenaufträge', () => {
+  it('Aufträge kommen herein und lassen sich mit Eiern erfüllen', () => {
+    const s = starter(4);
+    A.buySupply(s, 'koerner', 3);
+    for (let i = 0; i < 4; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+    let seen = false;
+    for (let d = 0; d < 30 && !seen; d++) {
+      days(s, 1, careTaker);
+      seen = (s.orders ?? []).length > 0;
+    }
+    expect(seen).toBe(true);
+    const o = { id: 999, customer: 'Test', kind: 'eier' as const, qty: 6, reward: 9, dueDay: s.day + 3 };
+    s.orders = [o];
+    s.eggs = { hybrid: 4 };
+    s.hatchEggs = [{ breed: 'hybrid', fertile: true }, { breed: 'hybrid', fertile: false }];
+    const money = s.money;
+    expect(A.fulfillOrder(s, 999).ok).toBe(true);
+    expect(s.money).toBe(money + 9);
+    expect(s.eggs.hybrid + s.hatchEggs.length).toBe(0);
+  });
+
+  it('Suppenhuhn-Auftrag liefert nur ältere, gesunde Hennen', () => {
+    const s = starter();
+    const old = createAnimal(s, 'sussex', { sex: 'henne', ageDays: 300 });
+    const young = createAnimal(s, 'sussex', { sex: 'henne', ageDays: 50 });
+    s.animals.push(old, young);
+    s.orders = [{ id: 5, customer: 'Gasthaus', kind: 'suppenhuhn', qty: 1, reward: 15, dueDay: s.day + 3 }];
+    expect(A.fulfillOrder(s, 5).ok).toBe(true);
+    expect(s.animals.map(a => a.id)).toEqual([young.id]);
+  });
+});
+
+describe('Hof-Ruf', () => {
+  it('erklärt die Sterne über einzelne Faktoren', () => {
+    const s = starter();
+    s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+    const f = starFactors(s);
+    expect(f.map(x => x.label)).toContain('Sauberkeit');
+    expect(stars(s)).toBe(Math.max(1, Math.min(5, Math.round(3 + f.reduce((t, x) => t + x.points, 0)))));
+  });
+
+  it('Fuchsschutz zählt genau so hoch wie im Shop angegeben', () => {
+    const s = starter();
+    const before = foxProtection(s);
+    A.buyItem(s, 'untergrab');
+    expect(Math.round((foxProtection(s) - before) * 100)).toBe(15);
   });
 });
 

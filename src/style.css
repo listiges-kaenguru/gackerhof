@@ -411,3 +411,19 @@ label.btn input { display: none; }
 @media (prefers-reduced-motion: reduce) { .goals-pill.flash, .goals-card li.fresh button { animation: none; } }
 @media (max-width: 620px) { .banners { top: 42%; } }
 .notice:hover { filter: brightness(1.08); }
+
+/* ---------------- Hof-Ruf & Aufträge ---------------- */
+button.stars { background: none; border: 0; padding: 2px 4px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+button.stars:hover { background: #fff3c4; }
+.stars-big { color: #f2a900; letter-spacing: 2px; }
+.stars-big .off { color: #d9cdb3; }
+.stars-table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 6px 0; }
+.stars-table td { padding: 4px 4px; border-top: 1px dashed var(--line); }
+.stars-table td:nth-child(2) { color: var(--muted); white-space: nowrap; }
+.stars-table td:last-child { text-align: right; width: 44px; }
+.stars-table tr.tip td { border-top: 0; padding-top: 0; color: var(--muted); font-size: .82rem; }
+.stars-table tr.neg td:first-child { color: var(--red); font-weight: 600; }
+.perks { margin: 4px 0 0; padding-left: 18px; font-size: .9rem; }
+.perks li { margin: 3px 0; }
+.card.order h3 { margin-bottom: 2px; }
+.seg .count { font-size: .75rem; }
