@@ -42,6 +42,7 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Geld verdienen** Mehr Möglichkeiten, Geld zu verdienen
 - **Hof-Sterne** Funktion besser erklären und auf Möglichkeiten zur Verbesserung hinweisen.
 - **Events** wie Dorffeste besser ankündigen. Am besten mit Hinweis zum Bestätigen.
+- **Eier zählen** nicht immer robust. Einmal passiert: Es sind 4 Eier aus dem Nest gesammelt, 3 werden im Markt als Brutei zum Verkauf angeboten.
 
 
 ## Oberfläche & Präsentation
