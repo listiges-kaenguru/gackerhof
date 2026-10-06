@@ -277,6 +277,22 @@ Ein Hof-Ruf von 1 bis 5 Sternen ergibt sich aus Platz pro Tier, Gesundheit, Ster
 - Nach etwa 20–30 Minuten Spielzeit sollte das erste größere Upgrade (z. B. ein Kleintierstall) erreichbar sein
 - Pleite? Wenn das Geld unter 0 € fällt, gibt es einen **Kleinkredit** von Opa Heinz (einmalig, zinslos) und danach einen Bankkredit mit Zinsen. Ein echtes Game Over tritt erst ein, wenn keine Tiere mehr da sind und kein Geld für einen Neustart. Dann folgt eine freundliche Bilanz mit „Nochmal versuchen“
 
+### 9.5 Schwierigkeitsgrade
+Der Schwierigkeitsgrad wird beim Start eines neuen Hofs gewählt. Während des Spiels kann man ihn nur **herabsetzen**, nicht erhöhen.
+
+| Stellschraube                   | 🌼 Leicht            | 🐔 Mittel (realistisch) | 🦊 Schwer                     |
+|---------------------------------|----------------------|-------------------------|-------------------------------|
+| Startgeld                       | 650 €                | 400 €                   | 250 €                         |
+| Bedürfnisse sinken              | 30 % langsamer       | normal                  | 20 % schneller                |
+| Raubtier-Angriffe               | halb so oft, längere Vorwarnung | normal       | 50 % häufiger, kürzere Vorwarnung |
+| Krankheiten                     | seltener, verlaufen langsamer | normal         | häufiger, stecken schneller an |
+| Markt- und Futterpreise         | stabil, Verkauf +15 % | schwankend             | stark schwankend              |
+| Tierarzt / Medikamente          | −25 %                | normal                  | +25 %                         |
+| Tod durch Vernachlässigung      | Tier wird erst schwer krank (letzte Chance) | normal | normal                 |
+| Hilfe in der Not                | Kredit von Opa Heinz, Tipps bei Problemen | Kredit von Opa Heinz | nur Bankkredit mit Zinsen |
+
+Die im Konzept genannten Preise und Werte entsprechen dem Schwierigkeitsgrad **Mittel**.
+
 ---
 
 ## 10. Erweiterungen und Fortschritt
@@ -499,11 +515,13 @@ Der Markt zeigt immer an, **wie viel Platz noch frei ist**. Man kann also nicht 
 
 ---
 
-## 16. Offene Fragen an dich
+## 16. Entscheidungen
 
-1. **Zeit beim Schließen:** Passt „der Hof ruht, solange das Spiel zu ist“? Oder soll die Zeit (begrenzt) weiterlaufen?
-2. **Schlachter-Darstellung:** Ich habe es bewusst dezent geplant (Menüaktion mit Erlös, keine Bilder). Passt das?
-3. **Grafikstil:** Freundlich-bunter Flat-/Cartoon-Stil oder eher Pixel-Art?
-4. **Name des Spiels:** „Gackerhof“ als Arbeitstitel oder hast du einen Wunschnamen?
-5. **Sprache:** Nur Deutsch, oder soll die Technik von Anfang an mehrsprachig vorbereitet sein?
-6. **Schwierigkeit:** Ein Schwierigkeitsgrad oder wählbar (z. B. „Gemütlich“ mit mehr Startgeld und weniger Füchsen, „Realistisch“)?
+| Frage                     | Entscheidung                                                                 |
+|---------------------------|------------------------------------------------------------------------------|
+| Zeit beim Schließen       | ✅ Der Hof ruht, solange das Spiel geschlossen ist                           |
+| Schlachter-Darstellung    | ✅ Dezent: nur Menüaktion mit Erlös, keine Bilder                            |
+| Schwierigkeitsgrade       | ✅ Leicht, Mittel (realistisch), Schwer (siehe 9.5)                          |
+| Grafikstil                | ⏳ Offen. Beispiele unter [`docs/stil-beispiele.html`](docs/stil-beispiele.html) |
+| Name des Spiels           | ⏳ „Gackerhof“ bleibt vorerst Arbeitstitel                                   |
+| Sprache                   | ⏳ Deutsch. Texte werden trotzdem zentral gesammelt, damit eine Übersetzung später möglich bleibt |
