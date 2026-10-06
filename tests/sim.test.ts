@@ -12,7 +12,7 @@ const days = (s: GameState, n: number, each?: (s: GameState) => void) => {
     // ein sorgfältiger Spieler schließt abends die Klappe
     if (each && s.hour === 21 && s.doorOpen) A.toggleDoor(s);
     // … und reagiert auf die Habicht-Warnung
-    if (each && s.hour === 11 && s.hawkAlertDay === s.day && s.doorOpen) A.toggleDoor(s);
+    if (each && s.hour === 11 && s.hawkAlertDay === s.day) A.lureIn(s);
   }
 };
 
@@ -140,6 +140,93 @@ describe('Grundlagen', () => {
     A.buyItem(s, 'kleintier');
     expect(A.buyOffer(s, o.id).ok).toBe(true);
     expect(flock(s).length).toBe(1);
+  });
+});
+
+describe('Klappe und Stall', () => {
+  function flockOf(n: number) {
+    const s = starter(11);
+    A.buySupply(s, 'koerner', 2);
+    for (let i = 0; i < n; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+    return s;
+  }
+  const until = (s: GameState, hour: number) => { while (s.hour !== hour) advanceHour(s); };
+
+  it('tagsüber draußen, ab 20 Uhr von selbst im Stall', () => {
+    const s = flockOf(3);
+    until(s, 12);
+    expect(flock(s).every(a => a.outside)).toBe(true);
+    until(s, 20);
+    expect(flock(s).every(a => !a.outside)).toBe(true);
+  });
+
+  it('zu früh geschlossene Klappe sperrt die Hühner aus', () => {
+    const s = flockOf(3);
+    until(s, 17);
+    const r = A.toggleDoor(s);
+    expect(r.msg).toContain('ausgesperrt');
+    until(s, 22);
+    expect(flock(s).filter(a => a.outside).length).toBe(3);
+    expect(s.log.some(l => l.text.includes('verschlossenen Klappe'))).toBe(true);
+  });
+
+  it('Reinlocken holt die Hühner mit Futter in den Stall', () => {
+    const s = flockOf(3);
+    until(s, 12);
+    const before = s.inventory.koerner;
+    expect(A.lureIn(s).ok).toBe(true);
+    expect(flock(s).every(a => !a.outside)).toBe(true);
+    expect(s.doorOpen).toBe(false);
+    expect(s.inventory.koerner).toBeLessThan(before);
+  });
+
+  it('ausgesperrte Hühner sind dem Fuchs ausgeliefert, eingesperrte nicht', () => {
+    let lostOut = 0, lostIn = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      for (const lockOut of [true, false]) {
+        const s = starter(seed);
+        s.money = 5000;
+        A.buyItem(s, 'gartenhaus');
+        for (let i = 0; i < 3; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+        until(s, 12);
+        if (lockOut) A.toggleDoor(s);
+        until(s, 21);
+        if (!lockOut) A.toggleDoor(s);
+        s.foxAlertDay = s.day;
+        until(s, 0);
+        const lost = 3 - flock(s).length;
+        if (lockOut) lostOut += lost; else lostIn += lost;
+      }
+    }
+    expect(lostOut).toBeGreaterThan(20);
+    expect(lostIn).toBeLessThan(3);
+  });
+});
+
+describe('Küken', () => {
+  it('Küken ohne Wärmelampe frieren und sterben', () => {
+    const s = starter();
+    A.buySupply(s, 'kuekenstarter', 2);
+    const c = createAnimal(s, 'sussex', { ageDays: 0 });
+    s.animals.push(c);
+    days(s, 4, s2 => { A.refillWater(s2); });
+    expect(c.dead).toBe(true);
+    expect(s.log.some(l => l.text.includes('frieren'))).toBe(true);
+  });
+});
+
+describe('Erfolge', () => {
+  it('erreichte Ziele erscheinen als Banner, ein Kapitel als Feier mit Belohnung', () => {
+    const s = starter();
+    advanceHour(s);
+    expect(s.banners.length).toBe(4); // Zaun, Stall, Tränke, Futterstelle
+    for (let i = 0; i < 3; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 40 }));
+    s.stats.eggsSold = 10;
+    const money = s.money;
+    advanceHour(s);
+    expect(s.chapter).toBe(2);
+    expect(s.money).toBe(money + 50);
+    expect(s.celebrations[0].title).toContain('Kapitel 1');
   });
 });
 

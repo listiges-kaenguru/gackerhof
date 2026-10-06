@@ -6,7 +6,7 @@ import {
 } from '../game/data';
 import {
   age, ageText, animalValue, daysText, butcherValue, chicks, coopCap, crowding, dayOfSeason, dead, diff, drinkerCap, eggCount,
-  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isNight, living, marderSafe,
+  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, living, lockedOut, marderSafe, outsideAnimals,
   ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
 } from '../game/helpers';
 import { advanceHour } from '../game/sim';
@@ -16,7 +16,7 @@ import { portrait } from './art';
 import { Scene, esc } from './scene';
 
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'lager' | 'mehr';
-interface Modal { kind: 'report' | 'intro' | 'gameover' | 'help'; lines?: string[] }
+interface Modal { kind: 'report' | 'intro' | 'gameover' | 'help' | 'celebrate'; lines?: string[] }
 
 export function startApp(root: HTMLElement, initial: GameState, onNewGame: () => void) {
   let s = initial;
@@ -37,6 +37,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <main class="stage">
         <div class="scene-host"></div>
         <div class="alerts" aria-live="polite"></div>
+        <div class="banners" aria-live="polite"></div>
         <div class="toasts" aria-live="polite"></div>
       </main>
       <div class="quickbar"></div>
@@ -48,6 +49,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <div class="modal-wrap" hidden><div class="modal"></div></div>
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector(sel) as T;
+  const bannersEl = $('.banners');
   const hud = $('.hud'), alertsEl = $('.alerts'), toastsEl = $('.toasts'), quick = $('.quickbar'), tabs = $('.tabs');
   const panel = $('.panel'), panelTitle = $('.panel-head h2'), panelBody = $('.panel-body'), backBtn = $<HTMLButtonElement>('.back');
   const modalWrap = $('.modal-wrap'), modalEl = $('.modal');
@@ -91,7 +93,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     else if (!living(s).length && !dead(s).length) out.push({ icon: '🐣', text: 'Tipp: Hühner auf dem Markt kaufen', act: 'open:markt', kind: 'info' });
     for (const a of dead(s)) out.push({ icon: '🕊️', text: `${a.name} entsorgen (${DISPOSAL_COST} €)`, act: `animal:${a.id}`, kind: 'bad' });
     if (s.foxAlertDay === s.day && f.length) out.push({ icon: '🦊', text: `Fuchs in der Nähe! Schutz ${Math.round(foxProtection(s) * 100)} %`, act: 'open:hof', kind: 'bad' });
-    if (s.hawkAlertDay === s.day && s.hour < 15 && s.doorOpen) out.push({ icon: '🦅', text: 'Habicht! Klappe schließen', act: 'door', kind: 'bad' });
+    if (s.hawkAlertDay === s.day && s.hour < 15 && outsideAnimals(s).length) out.push({ icon: '🦅', text: 'Habicht! Hühner reinlocken', act: 'lure', kind: 'bad' });
+    const locked = lockedOut(s);
+    if (locked.length && !(s.hawkAlertDay === s.day && s.hour < 15)) out.push({ icon: '🚪', text: `${locked.length === 1 ? `${locked[0].name} ist` : `${locked.length} Hühner sind`} ausgesperrt: reinlocken`, act: 'lure', kind: isDaytime(s.hour) ? 'warn' : 'bad' });
     if (s.marderAlertDay === s.day && !marderSafe(s)) out.push({ icon: '🦡', text: 'Marder in der Nähe!', act: 'open:shop:fuchs', kind: 'bad' });
     if (f.length && isNight(s.hour) && s.doorOpen && !has(s, 'autoklappe')) out.push({ icon: '🚪', text: 'Klappe ist nachts offen!', act: 'door', kind: 'bad' });
     if (s.equip.drinker && (f.length || ch.length) && frozen(s)) out.push({ icon: '🧊', text: 'Tränke gefroren', act: 'water', kind: 'bad' });
@@ -108,7 +112,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (sick.length) out.push({ icon: CONDITIONS[sick[0].conditions[0].id].emoji, text: `${sick.length === 1 ? `${sick[0].name} ist krank` : `${sick.length} Tiere krank`}`, act: sick.length === 1 ? `animal:${sick[0].id}` : 'open:tiere', kind: 'warn' });
     const nest = eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
     if (nest) out.push({ icon: '🥚', text: `${nest} Ei${nest > 1 ? 'er' : ''} im Nest`, act: 'collect', kind: 'good' });
-    if (f.length && !s.doorOpen && s.hour >= 7 && s.hour < 19 && !(eventActive(s, 'stallpflicht') && !has(s, 'netz')) && s.hawkAlertDay !== s.day) out.push({ icon: '🚪', text: 'Klappe öffnen', act: 'door', kind: 'info' });
+    if (f.length && !s.doorOpen && !locked.length && s.hour >= 7 && s.hour < 19 && !(eventActive(s, 'stallpflicht') && !has(s, 'netz')) && s.hawkAlertDay !== s.day) out.push({ icon: '🚪', text: 'Klappe öffnen', act: 'door', kind: 'info' });
     if (s.equip.coop && s.cleanliness < 35) out.push({ icon: '🧹', text: 'Stall ausmisten', act: 'clean', kind: 'warn' });
     if (crowding(s) > 1) out.push({ icon: '😤', text: 'Zu eng! Mehr Platz schaffen', act: 'open:hof', kind: 'warn' });
     for (const a of living(s).filter(x => x.broodyUntil >= s.day)) out.push({ icon: '🪺', text: `${a.name} ist brütig`, act: `animal:${a.id}`, kind: 'good' });
@@ -206,11 +210,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         ${coop ? `
           <p>Plätze: <b>${f.length} / ${coopCap(s)}</b> ${f.length > coopCap(s) ? '<span class="bad">überbelegt!</span>' : ''} · Auslauf: <b>${runCap(s) || '–'}</b> Plätze</p>
           ${meter('Sauberkeit', s.cleanliness, '🧹')}
+          <p>🐔 Im Stall: <b>${f.filter(a => !a.outside).length}</b> · Im Auslauf: <b>${outsideAnimals(s).length}</b>${lockedOut(s).length ? ' <span class="bad">(ausgesperrt!)</span>' : ''}</p>
           <div class="row">
             <button class="btn" data-act="door">${s.doorOpen ? '🚪 Klappe schließen' : '🚪 Klappe öffnen'}</button>
+            <button class="btn" data-act="lure" ${outsideAnimals(s).length ? '' : 'disabled'}>🌾 Hühner reinlocken</button>
             <button class="btn" data-act="clean">🧹 Ausmisten <small>(Einstreu: ${s.inventory.einstreu ?? 0})</small></button>
           </div>
-          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Abends Klappe schließen, morgens öffnen. Nachts kommt der Fuchs.</p>'}`
+          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Ab 20 Uhr gehen die Hühner von selbst in den Stall. Danach die Klappe schließen, morgens wieder öffnen. Wer die Klappe zu früh schließt, sperrt Hühner aus!</p>'}`
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
       <section class="card">
@@ -478,8 +484,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <label class="btn">📂 Importieren<input type="file" accept="application/json,.json" data-import hidden></label>
           ${confirmBtn('newgame', '🆕 Neues Spiel', 'Wirklich? Der Hof geht verloren!', 'danger')}
         </div>
-        <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
-      </section>`;
+        <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · L Reinlocken · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
+      </section>
+      <p class="version">Gackerhof Version ${__APP_VERSION__}</p>`;
   }
 
   /* ---------------- Dialoge ---------------- */
@@ -499,6 +506,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         </ol>
         <p class="muted">Du hast ${euro(s.money)}. Das ist nicht viel, also überleg gut, was du zuerst kaufst.</p>
         <button class="btn primary big" data-act="modal-ok">Los geht's!</button>`;
+    } else if (ui.modal.kind === 'celebrate') {
+      const c = s.celebrations[0];
+      html = c ? `<div class="celebrate"><div class="burst">${c.emoji}</div><h2>${esc(c.title)}</h2>${c.lines.map(l => `<p>${esc(l)}</p>`).join('')}
+        <button class="btn primary big" data-act="modal-ok">${s.celebrations.length > 1 ? 'Weiter' : 'Super!'}</button></div>` : '';
     } else if (ui.modal.kind === 'report') {
       html = `<div class="opa">🌅</div><h2>Morgenbericht</h2>${(ui.modal.lines ?? []).map(l => `<p>${esc(l)}</p>`).join('')}<button class="btn primary big" data-act="modal-ok">Weiter</button>`;
     } else if (ui.modal.kind === 'gameover') {
@@ -510,7 +521,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     } else if (ui.modal.kind === 'help') {
       html = `<h2>So funktioniert's</h2>
         <ul class="steps">
-          <li>⏱️ 1 Spieltag dauert eine Minute. Mit ⏩ und ⏭ läuft die Zeit schneller, mit ⏸ hältst du sie an.</li>
+          <li>⏱️ 1 Spieltag dauert 3 Minuten. Mit ⏩ und ⏭ läuft die Zeit schneller, mit ⏸ hältst du sie an.</li>
+          <li>🚪 Ab 20 Uhr gehen die Hühner von selbst in den Stall. Schließ die Klappe erst danach, sonst sperrst du sie aus. Mit „Reinlocken“ holst du sie jederzeit mit etwas Futter herein.</li>
           <li>🐔 Tippe auf ein Tier für seinen Steckbrief. Symbole über den Tieren zeigen Probleme: 💧 Durst, 🌾 Hunger, 🐜 Milben, 🤧 Schnupfen, 🪱 Würmer.</li>
           <li>🥚 Tippe auf die Eier am Stall, die Tränke oder den Futtertrog für schnelle Aktionen.</li>
           <li>🦊 Fuchs, 🦅 Habicht und 🦡 Marder kündigen sich immer an. Reagiere schnell!</li>
@@ -521,6 +533,18 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <button class="btn primary big" data-act="modal-ok">Verstanden</button>`;
     }
     if (cache.modal !== html) { modalEl.innerHTML = html; cache.modal = html; }
+  }
+
+  /** Auffälliges Banner für erreichte Ziele */
+  function showBanner(goals: string[]) {
+    const el = document.createElement('button');
+    el.className = 'banner';
+    el.innerHTML = `<span class="medal">🏅</span><span><b>${goals.length > 1 ? `${goals.length} Ziele erreicht!` : 'Ziel erreicht!'}</b><br>${goals.map(esc).join('<br>')}</span>`;
+    el.addEventListener('click', () => el.remove());
+    bannersEl.append(el);
+    while (bannersEl.children.length > 2) bannersEl.firstElementChild!.remove();
+    setTimeout(() => el.classList.add('out'), 6500);
+    setTimeout(() => el.remove(), 7200);
   }
 
   function toast(text: string, kind: 'info' | 'good' | 'warn' | 'bad' = 'info') {
@@ -581,12 +605,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'help': ui.modal = { kind: 'help' }; return renderModal();
       case 'modal-ok':
         if (ui.modal?.kind === 'report') s.report = null;
-        ui.modal = null;
+        if (ui.modal?.kind === 'celebrate') s.celebrations.shift();
+        ui.modal = s.celebrations.length ? { kind: 'celebrate' } : null;
         return renderModal();
       case 'collect': return result(A.collectEggs(s));
       case 'water': return result(A.refillWater(s));
       case 'feed': return result(A.refillFeed(s, a1 as 'koerner' | 'legemehl' | undefined));
       case 'door': return result(A.toggleDoor(s));
+      case 'lure': return result(A.lureIn(s));
       case 'clean': return result(A.cleanCoop(s));
       case 'treat':
         if (a1) return result(A.treat(s, Number(a1), a2 as never, a3));
@@ -658,7 +684,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const onKey = (e: KeyboardEvent) => {
     if ((e.target as HTMLElement).tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
-    const map: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean' };
+    const map: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean', l: 'lure' };
     if (map[k]) { handle(map[k], document.body); e.preventDefault(); }
     else if (k === ' ') { s.speed = s.speed ? 0 : ui.lastSpeed; renderHud(); e.preventDefault(); }
     else if (k === '1' || k === '2' || k === '3') { const v = ([1, 2, 4] as const)[Number(k) - 1]; ui.lastSpeed = v; s.speed = v; renderHud(); }
@@ -717,12 +743,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     }
     if (ticked) {
       for (const t of s.toasts.splice(0)) toast(t.text, t.kind);
+      if (s.banners.length) showBanner(s.banners.splice(0));
       if (s.report && s.hour >= 6 && !ui.modal) ui.modal = { kind: 'report', lines: s.report };
+      if (s.celebrations.length && !ui.modal) ui.modal = { kind: 'celebrate' };
       if (s.gameOver) ui.modal = { kind: 'gameover' };
       if (s.day !== lastSavedDay) { save(s); lastSavedDay = s.day; }
       refreshAll();
     }
-    scene.tick(s, speed > 0 ? dt * Math.min(speed, 2) : 0);
+    scene.tick(s, dt, speed);
     raf = requestAnimationFrame(frame);
   }
   const onHide = () => { if (document.hidden) save(s); };

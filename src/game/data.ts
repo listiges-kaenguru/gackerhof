@@ -10,8 +10,10 @@ export const SEASONS: Season[] = ['fruehling', 'sommer', 'herbst', 'winter'];
 export const SEASON_NAMES: Record<Season, string> = {
   fruehling: 'Frühling', sommer: 'Sommer', herbst: 'Herbst', winter: 'Winter',
 };
-/** Echtzeit-Millisekunden pro Spielstunde bei Tempo 1× (1 Spieltag = 60 s) */
-export const MS_PER_HOUR = 2500;
+/** Echtzeit-Millisekunden pro Spielstunde bei Tempo 1× (1 Spieltag = 3 Minuten) */
+export const MS_PER_HOUR = 7500;
+/** Ab dieser Stunde gehen die Hühner von selbst in den Stall (Dämmerung) */
+export const ROOST_HOUR = 20;
 
 /** Lebensphasen in Spieltagen ab Schlupf */
 export const AGE = {

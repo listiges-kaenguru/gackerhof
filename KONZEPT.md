@@ -37,7 +37,7 @@ Du startest mit 400 € und einer leeren Wiese. Du baust Schritt für Schritt ei
 **Ein typischer Spieltag:**
 1. 🌅 **Morgens:** Hühnerklappe öffnen, Wasser und Futter prüfen
 2. ☀️ **Tagsüber:** Eier einsammeln, auf Warnsymbole reagieren, kranke Tiere behandeln, einkaufen und verkaufen
-3. 🌇 **Abends:** Hühner gehen von selbst in den Stall. Klappe schließen, sonst kommt nachts der Fuchs
+3. 🌇 **Abends:** Ab 20 Uhr gehen die Hühner von selbst in den Stall. Danach Klappe schließen, sonst kommt nachts der Fuchs. Wer die Klappe zu früh schließt, sperrt Hühner aus. Mit etwas Futter lassen sie sich jederzeit reinlocken
 4. 🌙 **Nachts:** Gefahrenphase. Tagesabrechnung mit Eiern, Einnahmen und Vorfällen
 
 Später nimmt die **Automatisierung** (automatische Klappe, Futterautomat, Bachpumpe) diese Routine ab. Der Spieler kümmert sich dann mehr um Planung, Zucht und Handel. So entsteht ein natürlicher Fortschritt vom „Hühner-Hüter“ zum „Hof-Manager“.
@@ -48,7 +48,7 @@ Später nimmt die **Automatisierung** (automatische Klappe, Futterautomat, Bachp
 
 | Einstellung        | Wert                                                      |
 |--------------------|-----------------------------------------------------------|
-| 1 Spieltag         | ca. 60 Sekunden Echtzeit bei Tempo 1×                     |
+| 1 Spieltag         | ca. 3 Minuten Echtzeit bei Tempo 1×                       |
 | Tempo              | ⏸ Pause · ▶ 1× · ⏩ 2× · ⏭ 4×                           |
 | Tageszeiten        | Morgen, Tag, Abend, Nacht (Licht und Farben ändern sich)  |
 | Jahreszeiten       | 1 Jahreszeit = 30 Spieltage, also 1 Spieljahr = 120 Tage  |
@@ -68,7 +68,7 @@ Später nimmt die **Automatisierung** (automatische Klappe, Futterautomat, Bachp
 | Älteres Tier   | ab 3. Jahr           | ab ca. Tag 360       | Weniger Eier, anfälliger                      |
 | Lebensende     | 6–10 Jahre           | ca. Tag 600–900      | Zufallsbasiert, Pflege verlängert das Leben   |
 
-Bei 1× Tempo dauert ein Hühnerleben damit etwa 10–15 Spielstunden. Man erlebt also Generationen, aber nicht in fünf Minuten.
+Bei 1× Tempo dauert ein Hühnerleben damit etwa 30–45 Stunden Echtzeit. Man erlebt also Generationen, aber nicht in fünf Minuten.
 
 ---
 

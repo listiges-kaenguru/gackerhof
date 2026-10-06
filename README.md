@@ -4,9 +4,11 @@ Ein Aufbauspiel rund um die Hühnerhaltung, spielbar im Browser auf Desktop und 
 Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt deinen eigenen Hühnerhof auf.
 
 - 📄 Spielkonzept: [`KONZEPT.md`](KONZEPT.md)
+- 📝 Änderungen je Version: [`CHANGELOG.md`](CHANGELOG.md)
+- 💡 Ideen für später: [`IDEEN.md`](IDEEN.md)
 - 🎨 Grafikstil-Entwürfe: [`docs/stil-beispiele.html`](docs/stil-beispiele.html) (gewählt: Stil A, Cartoon)
 
-## Was schon drin ist (Prototyp v0.1)
+## Was schon drin ist
 
 - Startbildschirm mit Hofname, 3 Schwierigkeitsgraden und 3 Grundstücken
 - Hof als animierte Cartoon-Szene mit Tageszeiten, Jahreszeiten, Wetter und Schnee
@@ -25,7 +27,7 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Tippen oder Klicken auf Tiere, Eier, Tränke, Futterstelle und Stall
 - Schnellaktionen unten, Menüs in der unteren Leiste
 - Auf dem Handy im Hochformat: Hof seitlich wischen
-- Tastatur: `E` Eier · `W` Wasser · `F` Futter · `K` Klappe · `M` Ausmisten · `Leertaste` Pause · `1`/`2`/`3` Tempo
+- Tastatur: `E` Eier · `W` Wasser · `F` Futter · `K` Klappe · `L` Reinlocken · `M` Ausmisten · `Leertaste` Pause · `1`/`2`/`3` Tempo
 
 ## Entwicklung
 

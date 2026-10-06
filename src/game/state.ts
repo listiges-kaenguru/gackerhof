@@ -58,6 +58,8 @@ export function newGame(opts: { farmName: string; difficulty: Difficulty; plot: 
     log: [],
     toasts: [],
     report: null,
+    banners: [],
+    celebrations: [],
     gameOver: false,
   };
   return s;
@@ -155,12 +157,19 @@ export function load(): GameState | null {
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
     if (s.version !== SAVE_VERSION) return null;
-    s.toasts = [];
-    return s;
+    return migrate(s);
   } catch {
     return null;
   }
 }
+/** Ältere Spielstände (Prototyp 1.0.0) um neue Felder ergänzen */
+function migrate(s: GameState): GameState {
+  s.toasts = [];
+  s.banners ??= [];
+  s.celebrations ??= [];
+  return s;
+}
+
 export function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch { /* ignorieren */ }
 }
@@ -171,8 +180,7 @@ export function importSave(json: string): GameState | null {
   try {
     const s = JSON.parse(json) as GameState;
     if (s.version !== SAVE_VERSION || !Array.isArray(s.animals)) return null;
-    s.toasts = [];
-    return s;
+    return migrate(s);
   } catch {
     return null;
   }

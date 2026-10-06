@@ -1,6 +1,6 @@
 // Abgeleitete Werte aus dem Spielstand (keine Seiteneffekte außer log/toast).
 import {
-  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, PLOTS, SEASONS,
+  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, PLOTS, ROOST_HOUR, SEASONS,
 } from './data';
 import type { Animal, GameState, LogEntry, Season, Stage } from './types';
 
@@ -102,7 +102,11 @@ export const autoWater = (s: GameState) => has(s, 'pumpe') || has(s, 'leitung');
 export const frozen = (s: GameState) =>
   s.temperature < 0 && !(s.equip.drinker && ITEM[s.equip.drinker].frostSafe) && !has(s, 'leitung');
 export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
-export const hensOutside = (s: GameState) => s.doorOpen && !isNight(s.hour) && !!s.equip.fence;
+/** Tiere im Auslauf (Küken und brütende Hennen bleiben drinnen) */
+export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);
+/** Draußen bei geschlossener Klappe: ausgesperrt */
+export const lockedOut = (s: GameState) => (s.doorOpen ? [] : outsideAnimals(s));
+export const isDaytime = (h: number) => h >= 6 && h < ROOST_HOUR;
 export const eventActive = (s: GameState, id: string) => s.events.some(e => e.id === id && e.until >= s.day);
 
 /** Hof-Ruf in Sternen (1–5) */

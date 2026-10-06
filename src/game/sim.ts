@@ -1,15 +1,15 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  AGE, BREEDS, CONDITIONS, DAYS_PER_SEASON, ITEM, SEASON_NAMES, SELLERS,
+  AGE, BREEDS, CONDITIONS, DAYS_PER_SEASON, ITEM, ROOST_HOUR, SEASON_NAMES, SELLERS,
 } from './data';
 import {
   addMoney, adultRoosters, age, chicks, crowding, diff, eventActive, flock, foxProtection,
-  frozen, has, hawkProtection, hensOutside, isSenior, living, log, marderSafe, plot, ratSafe, round2,
+  frozen, has, hawkProtection, isDaytime, isSenior, living, lockedOut, log, marderSafe, outsideAnimals, plot, ratSafe, round2,
   season, shade, stage, stars, autoWater, drinkerCap, feederCap,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { chapterGoals, CHAPTERS, createAnimal, targetWeight } from './state';
-import type { Animal, ConditionId, GameState, MarketOffer } from './types';
+import type { Animal, Celebration, ConditionId, GameState, MarketOffer } from './types';
 
 export function advanceHour(s: GameState) {
   if (s.gameOver) return;
@@ -19,6 +19,7 @@ export function advanceHour(s: GameState) {
     s.day++;
     newDay(s);
   }
+  moveFlock(s);
   hourly(s);
   switch (s.hour) {
     case 6: morning(s); break;
@@ -26,6 +27,7 @@ export function advanceHour(s: GameState) {
     case 10: hawkAlert(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
     case 19: if (s.day <= 5 && s.doorOpen && !has(s, 'autoklappe') && flock(s).length) log(s, '🌇 Es dämmert. Denk daran, abends die Hühnerklappe zu schließen!', 'warn', true); break;
+    case ROOST_HOUR: roost(s); break;
     case 21: evening(s); break;
     case 23: nightPredators(s); break;
   }
@@ -82,8 +84,9 @@ function hourly(s: GameState) {
     if (a.food <= 0) dh -= 3.5; else if (a.food < 20) dh -= 1.2;
     if (a.water <= 0) dh -= 5; else if (a.water < 20) dh -= 1.8;
     for (const c of a.conditions) dh -= (c.severity / 100) * (c.id === 'schnupfen' || c.id === 'kokzidiose' ? 1.6 : 0.8);
-    if (st === 'kueken' && !has(s, 'kuekenstation') && !motherCares(s, a)) dh -= 0.9; // friert
-    if (hot && !shade(s) && !night && hensOutside(s)) dh -= 0.6;
+    if (chickFreezing(s, a)) dh -= 2.2; // friert ohne Wärmelampe oder Glucke
+    if (hot && !shade(s) && !night && a.outside) dh -= 0.6;
+    if (night && a.outside && s.temperature < 8) dh -= 0.4; // ausgesperrt in der kalten Nacht
     if (isSenior(s, a)) dh -= 0.05;
     if (dh === 0 && a.food > 50 && a.water > 50) dh = 0.6;
     a.health = clamp(a.health + dh);
@@ -92,7 +95,9 @@ function hourly(s: GameState) {
     let target = 80;
     if (crowd > 1) target -= 25 * Math.min(2, crowd - 1 + 0.5);
     if (s.cleanliness < 40) target -= 15;
-    if (!hensOutside(s) && !night && st !== 'kueken') target -= 15;
+    if (!a.outside && !night && st !== 'kueken') target -= 15; // eingesperrt
+    if (night && a.outside) target -= 30; // ausgesperrt
+    if (chickFreezing(s, a)) target -= 30;
     if (a.food < 40 || a.water < 40) target -= 20;
     if (a.conditions.some(c => c.id === 'milben')) target -= 15;
     if (hot && !shade(s)) target -= 10;
@@ -124,6 +129,34 @@ function causeOfDeath(a: Animal): string {
 }
 const motherCares = (s: GameState, a: Animal) =>
   a.motherId != null && s.animals.some(m => m.id === a.motherId && !m.dead);
+/** Küken brauchen Wärme: Kükenstation mit Wärmelampe oder eine Glucke */
+export const chickFreezing = (s: GameState, a: Animal) =>
+  !a.dead && stage(s, a) === 'kueken' && !has(s, 'kuekenstation') && !motherCares(s, a);
+
+/**
+ * Wo sind die Hühner? Tagsüber gehen sie durch die offene Klappe in den Auslauf,
+ * in der Dämmerung von selbst zurück in den Stall – aber nur, wenn die Klappe offen ist.
+ */
+function moveFlock(s: GameState) {
+  const day = isDaytime(s.hour);
+  for (const a of flock(s)) {
+    if (a.broodingUntil > s.day || !s.equip.coop) { a.outside = false; continue; }
+    if (!s.equip.fence) { a.outside = false; continue; }
+    if (s.doorOpen) a.outside = day;
+    // Klappe zu: Wer drinnen ist, bleibt drinnen; wer draußen ist, bleibt ausgesperrt
+  }
+}
+
+function roost(s: GameState) {
+  const out = lockedOut(s);
+  if (out.length) {
+    log(s, `🚪 ${out.length === 1 ? `${out[0].name} steht` : `${out.length} Hühner stehen`} vor der verschlossenen Klappe und ${out.length === 1 ? 'kommt' : 'kommen'} nicht in den Stall! Klappe öffnen oder mit Futter reinlocken.`, 'bad', true);
+  }
+}
+
+export function celebrate(s: GameState, c: Celebration) {
+  s.celebrations.push(c);
+}
 
 export function die(s: GameState, a: Animal, cause: string, predator = false) {
   a.dead = true;
@@ -196,6 +229,8 @@ function newDay(s: GameState) {
 
   diseases(s);
   brooding(s);
+  const cold = chicks(s).filter(a => chickFreezing(s, a));
+  if (cold.length) log(s, `🥶 ${cold.length} Küken frieren ohne Wärmelampe und werden schwächer! Eine Kükenstation hilft.`, 'bad', true);
 
   // Tote, nicht entsorgte Tiere erhöhen das Krankheitsrisiko
   const bodies = s.animals.filter(a => a.dead && a.deathDay! < s.day);
@@ -256,11 +291,13 @@ function finances(s: GameState) {
     if (d.opaLoan) {
       addMoney(s, 200);
       s.debt += 200;
-      log(s, '👴 Opa Heinz hilft aus: „Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“ (zinslos)', 'info', true);
+      log(s, '👴 Opa Heinz hilft aus: „Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“ (zinslos)', 'info');
+      celebrate(s, { emoji: '👴', title: 'Opa Heinz hilft aus', lines: ['„Dein Konto ist im Minus. Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“', 'Der Kredit ist zinslos. Zurückzahlen kannst du unter „Mehr → Finanzen“.', 'Diese Hilfe gibt es nur einmal!'] });
     } else {
       addMoney(s, 300);
       s.debt += 330;
-      log(s, '🏦 Die Bank gibt dir einen Kredit über 300 € (Rückzahlung 330 €).', 'info', true);
+      log(s, '🏦 Die Bank gibt dir einen Kredit über 300 € (Rückzahlung 330 €).', 'info');
+      celebrate(s, { emoji: '🏦', title: 'Bankkredit', lines: ['Dein Konto ist im Minus. Die Bank gibt dir einen Kredit über 300 €.', 'Zurückzuzahlen sind 330 €. Einen weiteren Kredit gibt es nicht.'] });
     }
     return;
   }
@@ -439,17 +476,17 @@ function layEggs(s: GameState) {
 /* Raubtiere                                                          */
 /* ================================================================== */
 function hawkAlert(s: GameState) {
-  if (!hensOutside(s) || flock(s).length === 0) return;
+  if (outsideAnimals(s).length === 0) return;
   const p = plot(s).hawk * diff(s).predator * (1 - hawkProtection(s) * 0.6);
   if (chance(s, p)) {
     s.hawkAlertDay = s.day;
-    log(s, '🦅 Ein Habicht kreist über dem Hof! Schließ die Klappe, damit die Hühner im Stall bleiben.', 'warn', true);
+    log(s, '🦅 Ein Habicht kreist über dem Hof! Locke die Hühner mit Futter in den Stall.', 'warn', true);
   }
 }
 
 function hawkAttack(s: GameState) {
-  if (s.hawkAlertDay !== s.day || !hensOutside(s)) return;
-  const victims = flock(s).filter(a => stage(s, a) === 'junghuhn' || BREEDS[a.breed].weightHen < 3);
+  if (s.hawkAlertDay !== s.day) return;
+  const victims = outsideAnimals(s).filter(a => stage(s, a) === 'junghuhn' || BREEDS[a.breed].weightHen < 3);
   if (!victims.length) return;
   if (chance(s, 0.65 * (1 - hawkProtection(s)))) {
     const v = pick(s, victims);
@@ -469,16 +506,20 @@ function nightPredators(s: GameState) {
     if (targets.length && chance(s, 0.75 * (1 - prot))) {
       // Über den Zaun gekommen – jetzt entscheidet der Stall
       const coopSafety = s.equip.coop ? ITEM[s.equip.coop].coopSafety ?? 0 : 0;
-      const exposed = s.doorOpen || !s.equip.coop;
-      if (exposed || chance(s, 1 - coopSafety)) {
-        const n = Math.min(targets.length, exposed ? intBetween(s, 1, 3) : 1);
+      const outside = lockedOut(s);
+      const exposedAll = s.doorOpen || !s.equip.coop;
+      const breach = !exposedAll && !outside.length && chance(s, 1 - coopSafety);
+      if (exposedAll || outside.length || breach) {
+        const pool = exposedAll || breach ? targets : outside;
+        const n = Math.min(pool.length, exposedAll || outside.length ? intBetween(s, 1, 3) : 1);
         const names: string[] = [];
         for (let i = 0; i < n; i++) {
-          const v = pick(s, flock(s));
+          const v = pick(s, pool.filter(a => !a.dead));
           names.push(v.name);
           die(s, v, 'vom Fuchs geholt', true);
         }
-        const why = !s.equip.fence ? 'Es gibt keinen Zaun.' : s.doorOpen ? 'Die Klappe stand offen!' : 'Er kam durch den Zaun und in den Stall.';
+        const why = !s.equip.fence ? 'Es gibt keinen Zaun.' : s.doorOpen ? 'Die Klappe stand offen!'
+          : outside.length ? 'Die Hühner waren ausgesperrt und saßen draußen vor der Klappe.' : 'Er kam durch den Zaun und in den Stall.';
         report(s, `🦊 Der Fuchs war da und hat ${names.join(', ')} geholt. ${why}`);
       } else {
         report(s, '🦊 Der Fuchs war im Gehege, aber der Stall war sicher verschlossen. Glück gehabt!');
@@ -528,12 +569,13 @@ function randomEvents(s: GameState) {
   } else if (r < 0.085) {
     const b = pick(s, ['marans', 'brahma', 'seide', 'sussex'] as const);
     for (let i = 0; i < 4; i++) s.hatchEggs.push({ breed: b, fertile: chance(s, 0.8) });
-    log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier der Rasse ${BREEDS[b].name}!`, 'good', true);
+    log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier der Rasse ${BREEDS[b].name}!`, 'good');
+    celebrate(s, { emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier der Rasse ${BREEDS[b].name} mitgebracht!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
   }
 }
 
 function stallpflichtCheck(s: GameState) {
-  if (!eventActive(s, 'stallpflicht') || has(s, 'netz') || !hensOutside(s) || !flock(s).length) return;
+  if (!eventActive(s, 'stallpflicht') || has(s, 'netz') || !outsideAnimals(s).length) return;
   if (chance(s, 0.35)) {
     addMoney(s, -40);
     log(s, '👮 Kontrolle vom Veterinäramt: Die Hühner waren trotz Stallpflicht draußen. Bußgeld 40 €.', 'bad', true);
@@ -590,16 +632,29 @@ export function checkGoals(s: GameState) {
     if (!g.done && tests[g.id]?.()) {
       g.done = true;
       changed = true;
-      log(s, `✅ Ziel erreicht: ${g.text}`, 'good', true);
+      log(s, `✅ Ziel erreicht: ${g.text}`, 'good');
+      s.banners.push(g.text);
     }
   }
   if (changed && s.goals.length && s.goals.every(g => g.done)) {
     const ch = CHAPTERS[s.chapter];
     addMoney(s, ch.reward);
-    log(s, `🏆 Kapitel ${s.chapter} „${ch.title}“ geschafft! Opa Heinz ist stolz und schenkt dir ${ch.reward} €.`, 'good', true);
+    log(s, `🏆 Kapitel ${s.chapter} „${ch.title}“ geschafft! Opa Heinz ist stolz und schenkt dir ${ch.reward} €.`, 'good');
+    const done = s.chapter;
     s.chapter++;
     s.goals = chapterGoals(s.chapter);
-    if (CHAPTERS[s.chapter]) log(s, `📖 Kapitel ${s.chapter}: „${CHAPTERS[s.chapter].title}“ beginnt.`, 'info', true);
+    const next = CHAPTERS[s.chapter];
+    if (next) log(s, `📖 Kapitel ${s.chapter}: „${next.title}“ beginnt.`, 'info');
+    celebrate(s, {
+      emoji: '🏆',
+      title: `Kapitel ${done} geschafft!`,
+      lines: [
+        `„${ch.title}“: alle Ziele erreicht.`,
+        `👴 Opa Heinz: „Donnerwetter, ich bin stolz auf dich! Hier, ${ch.reward} € für deinen Hof.“`,
+        `💰 +${ch.reward} € wurden deinem Konto gutgeschrieben.`,
+        ...(next ? [`📖 Weiter geht's mit Kapitel ${s.chapter}: „${next.title}“`, ...next.goals.map(([, t]) => `⬜ ${t}`)] : ['🎉 Das waren alle Kapitel dieser Version!']),
+      ],
+    });
   }
 }
 

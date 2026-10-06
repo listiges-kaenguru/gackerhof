@@ -2,8 +2,9 @@
 // die Tiere bewegen sich in jedem Frame.
 import { BREEDS, CONDITIONS } from '../game/data';
 import {
-  drinkerCap, eggCount, feederCap, frozen, has, hensOutside, isNight, season, stage,
+  drinkerCap, eggCount, feederCap, frozen, has, isDaytime, season, stage,
 } from '../game/helpers';
+import { chickFreezing } from '../game/sim';
 import type { Animal, GameState } from '../game/types';
 import {
   COOP_GEO, DEFS, INK, breedStyle, coopSvg, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg,
@@ -14,6 +15,8 @@ const YARD = { x0: 252, x1: 458, y0: 184, y1: 250 };
 const STATION = { x0: 18, x1: 80, y0: 240, y1: 256 };
 /** Durchgang zwischen Stall und Auslauf */
 const GATE = { x: 236, y: 208 };
+/** Hier drängen sich ausgesperrte Hühner nachts vor der Klappe */
+const HUDDLE = { x0: 246, x1: 286, y0: 198, y1: 222 };
 
 interface Sprite {
   el: SVGGElement;
@@ -124,7 +127,7 @@ export class Scene {
   }
 
   private insideCount(s: GameState) {
-    return s.animals.filter(a => !a.dead && stage(s, a) !== 'kueken' && (!hensOutside(s) || a.broodingUntil > s.day)).length;
+    return s.animals.filter(a => !a.dead && stage(s, a) !== 'kueken' && !a.outside).length;
   }
 
   private drawWorld(s: GameState, phase: string) {
@@ -249,7 +252,7 @@ export class Scene {
   private spawnPoint(s: GameState, a: Animal): [number, number] {
     const st = stage(s, a);
     if (st === 'kueken' && has(s, 'kuekenstation')) return rndIn(STATION);
-    if (hensOutside(s)) return rndIn(YARD);
+    if (a.outside) return rndIn(YARD);
     const geo = COOP_GEO[s.equip.coop ?? 'none'];
     return [geo.door[0] + (Math.random() - 0.5) * 40, geo.door[1] + 20 + Math.random() * 20];
   }
@@ -263,7 +266,9 @@ export class Scene {
   }
 
   /** Jeder Frame: Tiere bewegen */
-  tick(s: GameState, dtMs: number) {
+  /** dtMs: echte Zeit seit dem letzten Frame, speed: Spieltempo (0 = Pause) */
+  tick(s: GameState, dtMs: number, speed = 1) {
+    this.speed = speed;
     const seen = new Set<number>();
     for (const a of s.animals) {
       seen.add(a.id);
@@ -295,6 +300,8 @@ export class Scene {
     }
   }
 
+  private speed = 1;
+
   private moveSprite(s: GameState, a: Animal, sp: Sprite, dtMs: number) {
     const st = stage(s, a);
     const scale = 0.82 * (sp.kind === 'chick' ? 1 : sp.kind.startsWith('young') ? 0.78 : 1) * (a.breed === 'brahma' && st === 'erwachsen' ? 1.12 : a.breed === 'seide' ? 0.85 : 1);
@@ -307,7 +314,6 @@ export class Scene {
       return;
     }
     const geo = COOP_GEO[s.equip.coop ?? 'none'];
-    const speed = (sp.kind === 'chick' ? 0.035 : 0.025) * dtMs;
     let region: typeof YARD | null = null;
     let wantInside = false;
 
@@ -319,12 +325,17 @@ export class Scene {
         region = { x0: msp.x - 26, x1: msp.x + 26, y0: msp.y + 2, y1: msp.y + 14 };
       } else if (mother && s.equip.coop) wantInside = true;
       else region = { x0: 120, x1: 225, y0: 226, y1: 254 };
-    } else if (a.broodingUntil > s.day || !hensOutside(s)) {
+    } else if (!a.outside) {
       wantInside = !!s.equip.coop;
       if (!s.equip.coop) region = { x0: 125, x1: 225, y0: 220, y1: 254 };
     } else {
-      region = YARD;
+      // ausgesperrt in der Dämmerung/Nacht: dicht gedrängt vor dem Tor
+      region = !isDaytime(s.hour) && !s.doorOpen ? HUDDLE : YARD;
     }
+    // Wege zwischen Stall und Auslauf laufen im Spieltempo, damit sie rechtzeitig ankommen
+    const transit = wantInside || (region === YARD && sp.x < GATE.x + 8);
+    const pace = this.speed <= 0 ? 0 : transit ? Math.max(1, this.speed) * 1.6 : Math.min(this.speed, 2);
+    const speed = (sp.kind === 'chick' ? 0.035 : 0.025) * dtMs * pace;
 
     if (wantInside) {
       if (!sp.inside && sp.x > GATE.x - 4 && s.equip.fence) {
@@ -332,7 +343,7 @@ export class Scene {
         sp.tx = GATE.x - 10; sp.ty = GATE.y;
       } else if (!sp.inside) {
         sp.tx = geo.door[0]; sp.ty = geo.door[1] + 4;
-        if (dist(sp) < 4 || isNight(s.hour) && Math.random() < 0.02) {
+        if (dist(sp) < 4) {
           sp.inside = true;
         }
       }
@@ -379,6 +390,8 @@ export class Scene {
 
 function iconFor(s: GameState, a: Animal): string {
   if (a.dead) return '🕊️';
+  if (chickFreezing(s, a)) return '🥶';
+  if (a.outside && !s.doorOpen && !isDaytime(s.hour)) return '🚪';
   const worst = [...a.conditions].sort((x, y) => y.severity - x.severity)[0];
   if (a.water < 30) return '💧';
   if (a.food < 30) return '🌾';

@@ -4,7 +4,7 @@ import {
 } from './data';
 import {
   addMoney, animalValue, butcherValue, coopCap, diff, drinkerCap, eggCount, eggValue, eventActive, feederCap,
-  flock, frozen, has, living, log, round2, stage,
+  flock, frozen, has, isDaytime, living, log, outsideAnimals, round2, stage,
 } from './helpers';
 import { chance, intBetween } from './rng';
 import { addCondition } from './sim';
@@ -125,7 +125,29 @@ export function wearHat(s: GameState, id: string | null): Result {
 export function toggleDoor(s: GameState): Result {
   if (!s.equip.coop) return fail('Du hast noch keinen Stall.');
   s.doorOpen = !s.doorOpen;
-  return ok(s.doorOpen ? 'Klappe auf: Die Hühner dürfen raus.' : 'Klappe zu: Alle Hühner sind im Stall.');
+  if (s.doorOpen) {
+    // Ausgesperrte Hühner nutzen die Gelegenheit; tagsüber gehen alle raus
+    for (const a of flock(s)) if (a.broodingUntil <= s.day && s.equip.fence) a.outside = isDaytime(s.hour);
+    return ok(isDaytime(s.hour) ? 'Klappe auf: Die Hühner dürfen raus.' : 'Klappe auf: Die Hühner gehen in den Stall.');
+  }
+  const out = outsideAnimals(s);
+  if (out.length) {
+    return ok(`Klappe zu – aber ${out.length === 1 ? `${out[0].name} ist` : `${out.length} Hühner sind`} noch draußen und jetzt ausgesperrt! Mit Futter reinlocken oder Klappe wieder öffnen.`);
+  }
+  return ok('Klappe zu: Alle Hühner sind im Stall.');
+}
+
+/** Hühner mit Futter in den Stall locken und die Klappe schließen */
+export function lureIn(s: GameState): Result {
+  if (!s.equip.coop) return fail('Du hast noch keinen Stall.');
+  const out = outsideAnimals(s);
+  if (!out.length) return fail('Alle Hühner sind schon im Stall.');
+  const bait = (['koerner', 'legemehl', 'mehlwuermer'] as const).find(id => (s.inventory[id] ?? 0) >= (id === 'mehlwuermer' ? 1 : 0.2));
+  if (!bait) return fail('Ohne Futter oder Mehlwürmer im Lager lassen sich die Hühner nicht locken.');
+  s.inventory[bait] = round2(s.inventory[bait] - (bait === 'mehlwuermer' ? 1 : 0.2));
+  for (const a of out) a.outside = false;
+  s.doorOpen = false;
+  return ok(`Mit ${bait === 'mehlwuermer' ? 'Mehlwürmern' : 'ein paar Körnern'} gelockt: ${out.length} Hühner sind im Stall, die Klappe ist zu.`);
 }
 
 export function refillWater(s: GameState): Result {

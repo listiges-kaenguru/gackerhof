@@ -348,3 +348,29 @@ label.btn input { display: none; }
   .alert { font-size: .8rem; }
   .meter { grid-template-columns: 1fr 1.4fr 40px; font-size: .85rem; }
 }
+
+/* ---------------- Erfolge ---------------- */
+.banners {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; width: min(420px, calc(100% - 20px)); pointer-events: none;
+}
+.banner {
+  pointer-events: auto; display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 10px 16px; background: linear-gradient(135deg, #ffe680, #ffcf3f); border: 3px solid var(--ink); border-radius: 16px;
+  box-shadow: 0 4px 0 var(--ink); font-size: 1rem; animation: bannerin .5s cubic-bezier(.2, 1.6, .4, 1);
+  transition: opacity .6s, transform .6s;
+}
+.banner b { font-size: 1.1rem; }
+.banner .medal { font-size: 2.2rem; animation: wobble 1.2s ease-in-out infinite; }
+.banner.out { opacity: 0; transform: translateY(-20px); }
+@keyframes bannerin { from { transform: translateY(-40px) scale(.7); opacity: 0; } }
+@keyframes wobble { 50% { transform: rotate(-12deg) scale(1.1); } }
+.celebrate { text-align: center; }
+.celebrate p { text-align: left; }
+.burst {
+  font-size: 4rem; line-height: 1.2; display: inline-block; animation: burst 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px #ffcf3f);
+}
+@keyframes burst { 50% { transform: scale(1.15) rotate(6deg); } }
+.version { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .banner, .banner .medal, .burst { animation: none; } }

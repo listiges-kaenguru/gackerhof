@@ -44,6 +44,8 @@ export interface Animal {
   motherId?: number;
   /** Leicht: „letzte Chance“ wurde schon genutzt */
   lastChanceUsed?: boolean;
+  /** steht im Auslauf (true) oder sitzt im Stall (false) */
+  outside?: boolean;
   dead: boolean;
   deathCause?: string;
   deathDay?: number;
@@ -86,6 +88,12 @@ export interface LogEntry {
 export interface GameEvent {
   id: 'dorffest' | 'futterteuer' | 'stallpflicht';
   until: number;
+}
+
+export interface Celebration {
+  emoji: string;
+  title: string;
+  lines: string[];
 }
 
 export interface Goal {
@@ -166,6 +174,10 @@ export interface GameState {
   log: LogEntry[];
   /** Meldungen für das UI, die als Hinweis auftauchen sollen */
   toasts: LogEntry[];
+  /** Erreichte Ziele, die als Banner angezeigt werden */
+  banners: string[];
+  /** Wichtige Meldungen, die bestätigt werden müssen (Kapitel, Geschenke, Kredit) */
+  celebrations: Celebration[];
   /** Morgenbericht: wird nach einer Nacht mit Vorfällen angezeigt */
   report: string[] | null;
   gameOver: boolean;
