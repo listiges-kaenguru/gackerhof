@@ -38,6 +38,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <div class="scene-host"></div>
         <div class="alerts" aria-live="polite"></div>
         <div class="banners" aria-live="polite"></div>
+        <div class="goals-widget"></div>
         <div class="toasts" aria-live="polite"></div>
       </main>
       <div class="quickbar"></div>
@@ -50,6 +51,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector(sel) as T;
   const bannersEl = $('.banners');
+  const goalsEl = $('.goals-widget');
+  const stageEl = $('.stage');
+  // Kapitel-Karte: gespeicherte Wahl des Spielers, sonst je nach Platz auf- oder zugeklappt
+  const GOALS_KEY = 'gackerhof-goals-open';
+  const storedGoals = (() => { try { return localStorage.getItem(GOALS_KEY); } catch { return null; } })();
+  let goalsOpen = storedGoals ? storedGoals === '1' : null as boolean | null;
+  const goalsDefault = () => stageEl.clientWidth >= 640 && stageEl.clientHeight >= 300;
+  let lastGoalsDone = new Set(s.goals.filter(g => g.done).map(g => g.id));
   const hud = $('.hud'), alertsEl = $('.alerts'), toastsEl = $('.toasts'), quick = $('.quickbar'), tabs = $('.tabs');
   const panel = $('.panel'), panelTitle = $('.panel-head h2'), panelBody = $('.panel-body'), backBtn = $<HTMLButtonElement>('.back');
   const modalWrap = $('.modal-wrap'), modalEl = $('.modal');
@@ -119,6 +128,52 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (eventActive(s, 'stallpflicht')) out.push({ icon: '📢', text: 'Stallpflicht!', act: 'door', kind: 'warn' });
     if (eventActive(s, 'dorffest')) out.push({ icon: '🎪', text: 'Dorffest: Eier teuer!', act: 'open:markt:verkaufen', kind: 'good' });
     return out;
+  }
+
+  /** Fortschritt für Ziele mit Zählern, z. B. „4/10“ */
+  function goalProgress(id: string): [number, number] | null {
+    const p: Record<string, [number, number]> = {
+      huehner3: [flock(s).length, 3],
+      eier10: [s.stats.eggsSold, 10],
+      eier150: [s.stats.eggsSold, 150],
+      tiere10: [living(s).length, 10],
+      fuchs50: [Math.round(foxProtection(s) * 100), 50],
+      sterne3: [stars(s), 3],
+    };
+    const v = p[id];
+    return v ? [Math.min(v[0], v[1]), v[1]] : null;
+  }
+  const GOAL_ACT: Record<string, string> = {
+    zaun: 'open:shop:gehege', stall: 'open:shop:stall', traenke: 'open:shop:wasser', futter: 'open:shop:futter',
+    huehner3: 'open:markt', eier10: 'open:markt:verkaufen', hahn: 'open:markt', schlupf: 'open:lager', aufzucht: 'open:tiere',
+    fuchs50: 'open:shop:fuchs', hofladen: 'open:shop:ausbau', sterne3: 'open:hof', eier150: 'open:markt:verkaufen', tiere10: 'open:markt',
+  };
+
+  function renderGoals() {
+    const ch = CHAPTERS[s.chapter];
+    if (!ch || !s.goals.length) { setHtml(goalsEl, 'goals', ''); return; }
+    const open = goalsOpen ?? goalsDefault();
+    const done = s.goals.filter(g => g.done).length;
+    const total = s.goals.length;
+    const fresh = s.goals.filter(g => g.done && !lastGoalsDone.has(g.id)).map(g => g.id);
+    const nextId = s.goals.find(g => !g.done)?.id;
+    if (!open) {
+      setHtml(goalsEl, 'goals', `<button class="goals-pill ${fresh.length ? 'flash' : ''}" data-act="goals-toggle" aria-expanded="false" title="Ziele des Kapitels anzeigen">
+        📖 <b>${done}/${total}</b><span class="pill-label"> Ziele</span></button>`);
+      return;
+    }
+    setHtml(goalsEl, 'goals', `<section class="goals-card" aria-label="Ziele von Kapitel ${s.chapter}">
+      <header><span>📖 <b>Kapitel ${s.chapter}</b> · ${esc(ch.title)}</span>
+        <button class="goals-min" data-act="goals-toggle" aria-expanded="true" aria-label="Ziele ausblenden" title="Ausblenden">–</button></header>
+      <div class="goals-bar"><b style="width:${(done / total) * 100}%"></b></div>
+      <ul>${s.goals.map(g => {
+        const pr = !g.done ? goalProgress(g.id) : null;
+        return `<li class="${g.done ? 'done' : ''} ${g.id === nextId ? 'next' : ''} ${fresh.includes(g.id) ? 'fresh' : ''}">
+          <button data-act="${GOAL_ACT[g.id] ?? 'tab:mehr'}">${g.done ? '✅' : g.id === nextId ? '👉' : '⬜'} <span>${g.text}${pr ? ` <small>(${pr[0]}/${pr[1]})</small>` : ''}</span></button></li>`;
+      }).join('')}</ul>
+      <footer>🎁 Belohnung: ${ch.reward} € · Auch am Schaukasten auf dem Hof</footer>
+    </section>`);
+    lastGoalsDone = new Set(s.goals.filter(g => g.done).map(g => g.id));
   }
 
   function renderAlerts() {
@@ -603,6 +658,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         return renderHud();
       }
       case 'help': ui.modal = { kind: 'help' }; return renderModal();
+      case 'goals-toggle':
+        goalsOpen = !(goalsOpen ?? goalsDefault());
+        try { localStorage.setItem(GOALS_KEY, goalsOpen ? '1' : '0'); } catch { /* egal */ }
+        return renderGoals();
       case 'modal-ok':
         if (ui.modal?.kind === 'report') s.report = null;
         if (ui.modal?.kind === 'celebrate') s.celebrations.shift();
@@ -713,6 +772,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     scene.refresh(s);
     renderHud();
     renderAlerts();
+    renderGoals();
     renderQuick();
     renderTabs();
     renderPanel();
@@ -762,6 +822,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     window.removeEventListener('keydown', onKey);
     document.removeEventListener('visibilitychange', onHide);
   }
+
+  // Ohne gespeicherte Wahl passt sich die Kapitel-Karte der Bildschirmgröße an
+  new ResizeObserver(() => { if (goalsOpen === null) renderGoals(); }).observe(stageEl);
 
   refreshAll();
   raf = requestAnimationFrame(frame);

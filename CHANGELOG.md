@@ -17,6 +17,12 @@ Erste Rückmeldungen aus dem Test von 1.0.0 umgesetzt.
 - **Hühner reinlocken:** Neue Aktion im Hinweis, in der Hofübersicht und mit Taste `L`. Sie kostet etwas Körnerfutter (oder eine Portion Mehlwürmer), holt alle Hühner in den Stall und schließt die Klappe.
 - **Frierende Küken haben Folgen:** Ohne Kükenstation oder Glucke werden Küken schnell schwach und sterben nach 2–3 Tagen. Sie zeigen ein 🥶-Symbol, und jeden Morgen erscheint eine Warnung.
 - **Auffällige Erfolge:** Erreichte Ziele erscheinen als goldenes Banner. Kapitelabschluss (mit der Belohnung von Opa Heinz), Geschenke und Kredite erscheinen als Dialog, der bestätigt werden muss. Das Spiel pausiert, solange er offen ist.
+- **Kapitel-Ziele immer im Blick:**
+  - Eine Kapitel-Karte oben rechts zeigt die Ziele mit Fortschrittsbalken und Zwischenständen wie „4/10“. Das nächste offene Ziel ist hervorgehoben.
+  - Ein Tipp auf ein Ziel führt direkt zur passenden Stelle, etwa in den Shop oder auf den Markt.
+  - Auf großen Bildschirmen ist die Karte standardmäßig aufgeklappt, auf kleinen nur ein Abzeichen „📖 2/6“. Es pulsiert, sobald ein neues Ziel erreicht ist.
+  - Die Wahl des Spielers bleibt gespeichert.
+- **Schaukasten auf dem Hof:** Hinter dem Zaun steht ein Schaukasten mit dem aktuellen Kapitel, angehakten Zetteln und dem Fortschritt. Ein Tipp darauf blendet die Kapitel-Karte ein oder aus.
 - **Versionsanzeige** unter „Mehr“.
 - `CHANGELOG.md` und `IDEEN.md`.
 

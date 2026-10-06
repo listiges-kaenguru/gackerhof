@@ -5,6 +5,7 @@ import {
   drinkerCap, eggCount, feederCap, frozen, has, isDaytime, season, stage,
 } from '../game/helpers';
 import { chickFreezing } from '../game/sim';
+import { CHAPTERS } from '../game/state';
 import type { Animal, GameState } from '../game/types';
 import {
   COOP_GEO, DEFS, INK, breedStyle, coopSvg, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg,
@@ -115,7 +116,7 @@ export class Scene {
       s.plot, season(s), s.temperature <= 0, s.equip, s.extras, s.runExtensions, s.cosmetics, s.hat, s.doorOpen,
       frozen(s), s.cleanliness < 35, Math.round(s.water / Math.max(1, drinkerCap(s)) * 8), Math.round(s.feed / Math.max(1, feederCap(s)) * 8),
       s.feedType, eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs, phase, s.incubator.length, s.farmName,
-      this.insideCount(s),
+      this.insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
     ]);
     if (sig !== this.sig) {
       this.sig = sig;
@@ -199,6 +200,7 @@ export class Scene {
     if (has(s, 'hofladen')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(52 196)"><rect x="-30" y="-24" width="60" height="30" rx="2" fill="#f0d2a0"/><path d="M-34 -24 L-28 -38 H28 L34 -24 Z" fill="#d9533f"/><path d="M-34 -24 h11 l-5 -14 M-12 -24 l-3 -14 M10 -24 l3 -14 M23 -24 l5 -14" fill="none" stroke="#fff" stroke-width="2"/><text x="0" y="-5" text-anchor="middle" class="svgtxt small">Eier 🥚</text></g>`);
     if (has(s, 'kuekenstation')) extra.push(`<g data-act="open:tiere" class="clickable"><rect x="8" y="232" width="80" height="30" rx="4" fill="#f4e6c8"/><path d="M14 232 V222 H82 V232" fill="none" stroke="#777" stroke-width="2"/><path d="M48 222 V226 M42 226 H54 L51 232 H45 Z" fill="#c0392b"/><ellipse cx="48" cy="242" rx="30" ry="8" fill="#ffb36b" opacity=".35" stroke="none"/></g>`);
     if (has(s, 'brutapparat')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(66 216)"><rect x="-14" y="-12" width="28" height="18" rx="4" fill="#eef2f4"/><rect x="-9" y="-8" width="18" height="9" rx="2" fill="#ffd28a"/>${s.incubator.length ? `<text x="17" y="2" class="svgtxt small">${s.incubator.length}🥚</text>` : ''}</g>`);
+    extra.push(noticeBoard(s));
     if (snow) extra.push(`<g class="snow" fill="#fff" stroke="none">${Array.from({ length: 24 }, (_, i) => `<circle cx="${(i * 41) % 480}" cy="${(i * 67) % 160}" r="${1.5 + (i % 3)}" style="animation-delay:-${(i % 7) * 0.9}s"/>`).join('')}</g>`);
 
     this.world.innerHTML = `
@@ -386,6 +388,30 @@ export class Scene {
     sp.el.setAttribute('transform', `translate(${sp.x.toFixed(1)} ${sp.y.toFixed(1)})`);
     sp.body.setAttribute('transform', `scale(${sp.flip ? -scale : scale} ${scale})`);
   }
+}
+
+/** Schaukasten mit den Kapitel-Zielen – ein Tipp blendet die Ziel-Karte ein oder aus */
+function noticeBoard(s: GameState): string {
+  const ch = CHAPTERS[s.chapter];
+  const goals = s.goals;
+  const done = goals.filter(g => g.done).length;
+  const rows = goals.map((g, i) => {
+    const y = 109 + i * Math.min(6, 30 / Math.max(1, goals.length));
+    return `<rect x="326" y="${y - 3}" width="4" height="4" rx=".8" fill="#fff" stroke-width=".8"/>
+      ${g.done ? `<path d="M326.5 ${y - 1} l1.5 1.5 l3 -4" fill="none" stroke="#2f7d4f" stroke-width="1.4"/>` : ''}
+      <path d="M333 ${y - 1} H${g.done ? 360 : 372 - (i % 3) * 6}" fill="none" stroke="${g.done ? '#9fc79a' : '#b8ab96'}" stroke-width="1.6"/>`;
+  }).join('');
+  return `<g class="clickable notice" data-act="goals-toggle" aria-label="Schaukasten mit den Kapitel-Zielen">
+    <path d="M328 140 V164 M382 140 V164" stroke="#8a5a33" stroke-width="4"/>
+    <rect x="316" y="86" width="78" height="56" rx="3" fill="#a0683d"/>
+    <path d="M311 88 L355 72 L399 88 Z" fill="#7a3b2e"/>
+    <rect x="321" y="91" width="68" height="46" rx="2" fill="#fbf3dc"/>
+    ${ch ? `<text x="355" y="101" text-anchor="middle" class="svgtxt small">Kapitel ${s.chapter}</text>${rows}`
+      : `<text x="355" y="118" text-anchor="middle" class="svgtxt small">🏆 Alles geschafft!</text>`}
+    <rect x="321" y="91" width="68" height="46" rx="2" fill="#cfe9f7" opacity=".25" stroke-width="1.5"/>
+    ${ch ? `<g class="${done ? 'pulse' : ''}"><circle cx="392" cy="88" r="10" fill="#ffcf3f"/>
+      <text x="392" y="91.5" text-anchor="middle" class="svgtxt small">${done}/${goals.length}</text></g>` : ''}
+  </g>`;
 }
 
 function iconFor(s: GameState, a: Animal): string {

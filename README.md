@@ -27,6 +27,7 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Tippen oder Klicken auf Tiere, Eier, Tränke, Futterstelle und Stall
 - Schnellaktionen unten, Menüs in der unteren Leiste
 - Auf dem Handy im Hochformat: Hof seitlich wischen
+- Kapitel-Ziele: Karte oben rechts oder Schaukasten auf dem Hof antippen
 - Tastatur: `E` Eier · `W` Wasser · `F` Futter · `K` Klappe · `L` Reinlocken · `M` Ausmisten · `Leertaste` Pause · `1`/`2`/`3` Tempo
 
 ## Entwicklung
