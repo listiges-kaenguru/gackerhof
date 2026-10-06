@@ -36,6 +36,8 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Fuchs-Schutz** In der Aufgabe in Kapitel 2 zählt der Schutz nicht korrekt hoch. 20/50 vorhanden, Kauf von 15, Anzeige danach 30/50.
 - **Bruteier als Speiseeier** verkaufen. Für Verkauf als Speiseeier wird kein Preis angegeben (siehe Screenshot). Chance auf Bruteier prüfen und ggf. anpassen.
 <img width="412" height="358" alt="grafik" src="https://github.com/user-attachments/assets/0a577af5-4b97-4c91-8e02-ade1b39da808" />
+- **Geld verdienen** Mehr Möglichkeiten, Geld zu verdienen
+- **Hof-Sterne** Funktion besser erklären und auf Möglichkeiten zur Verbesserung hinweisen.
 
 
 ## Oberfläche & Präsentation
