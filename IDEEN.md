@@ -31,6 +31,8 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Wechselweide** gegen Würmer
 - **Stalllicht im Winter** für mehr Eier (mit Stromkosten)
 - **Hühner-Album** zum Sammeln aller Rassen und Farbvarianten
+
+## Verbesserungen aus Test
 - **Hühner im Stall** die Zahl der Hühner im Stall erhöht sich erst, wenn die Hühner auch im UI im Stall verschwunden sind. Somit werden Hühner auch einzeln ausgesperrt, wenn die Klappe vorher zu ist. Bisher ist bei erreichter Uhrzeit alles auf einmal drin.
 - **Überbelegter Stall** Überbelegung führt zu mit höherer Wahrscheinlichkeit zu Krankheiten. Es kann nicht mehr als 20 Prozent der Kapazität überbelegt sein. Übrige Tiere passen nicht rein und sind die Nacht draußen. Abhängig von **Hühner im Stall**.
 - **Fuchs-Schutz** In der Aufgabe in Kapitel 2 zählt der Schutz nicht korrekt hoch. 20/50 vorhanden, Kauf von 15, Anzeige danach 30/50.
@@ -38,6 +40,7 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 <img width="412" height="358" alt="grafik" src="https://github.com/user-attachments/assets/0a577af5-4b97-4c91-8e02-ade1b39da808" />
 - **Geld verdienen** Mehr Möglichkeiten, Geld zu verdienen
 - **Hof-Sterne** Funktion besser erklären und auf Möglichkeiten zur Verbesserung hinweisen.
+- **Events** wie Dorffeste besser ankündigen. Am besten mit Hinweis zum Bestätigen.
 
 
 ## Oberfläche & Präsentation
