@@ -6,6 +6,7 @@ import {
   addMoney, animalValue, butcherValue, coopCap, diff, drinkerCap, eggCount, eggValue, eventActive, feederCap,
   age, flock, frozen, has, isDaytime, living, log, maxInside, outsideAnimals, round2, stage,
 } from './helpers';
+import { registerAlbum } from './album';
 import { chance, intBetween } from './rng';
 import { addCondition, moveFlock } from './sim';
 import { createAnimal } from './state';
@@ -43,6 +44,8 @@ export function canBuy(s: GameState, id: string): string | null {
   if (it.requires && s.equip.fence !== it.requires) return `Braucht ${ITEM[it.requires].name}`;
   if (it.plot && it.plot !== s.plot) return 'Nur auf dem Grundstück am Bach möglich';
   if (id === 'autofutter' && !s.equip.feeder) return 'Braucht zuerst eine Futterstelle';
+  if (id === 'wechselweide' && !s.equip.fence) return 'Braucht zuerst einen Zaun';
+  if (id === 'stalllicht' && !s.equip.coop) return 'Braucht zuerst einen Stall';
   if (s.money < itemPrice(s, id)) return 'Nicht genug Geld';
   return null;
 }
@@ -215,6 +218,30 @@ export function giveTreat(s: GameState): Result {
   return ok('🪱 Mehlwürmer verstreut. Die Hühner flippen fast aus vor Freude!');
 }
 
+/** Wechselweide: Hühner auf die ausgeruhte Hälfte des Auslaufs lassen */
+export function switchPasture(s: GameState): Result {
+  if (!has(s, 'wechselweide')) return fail('Dafür brauchst du eine Wechselweide (Shop → Erweiterungen).');
+  s.pasture ??= [100, 100];
+  const from = s.pastureSide ?? 0;
+  const to = from === 0 ? 1 : 0;
+  s.pastureSide = to;
+  s.pastureSwitchDay = s.day;
+  return ok(`Weide gewechselt: Die Hühner scharren jetzt auf der ${to === 0 ? 'linken' : 'rechten'} Hälfte (${Math.round(s.pasture[to])} % frisch). Die andere Hälfte erholt sich.`);
+}
+
+export function toggleLight(s: GameState): Result {
+  if (!has(s, 'stalllicht')) return fail('Du hast kein Stalllicht.');
+  s.lightOn = s.lightOn === false;
+  return ok(s.lightOn ? '💡 Stalllicht an: Im Herbst und Winter verlängert es den Tag.' : '💡 Stalllicht aus: Die Hühner machen ihre natürliche Winterpause.');
+}
+
+export function setTutorial(s: GameState, on: boolean): Result {
+  s.tutorialOff = !on;
+  return ok(on ? 'Tutorial-Pfeile sind wieder an.' : 'Tutorial-Pfeile ausgeblendet. Unter „Mehr → Spiel“ kannst du sie wieder einschalten.');
+}
+
+export { toggleShowEntry } from './show';
+
 /* ---------------- Tiere ---------------- */
 function animal(s: GameState, id: number) {
   return s.animals.find(a => a.id === id);
@@ -297,7 +324,7 @@ export function buyOffer(s: GameState, offerId: number, qty = 1): Result {
   const names: string[] = [];
   for (let i = 0; i < qty; i++) {
     if (o.kind === 'brutei') {
-      s.hatchEggs.push({ breed: o.breed, fertile: chance(s, 0.75) });
+      s.hatchEggs.push({ breed: o.breed, variant: o.variant, fertile: chance(s, 0.75) });
       continue;
     }
     const opts = {
@@ -306,9 +333,10 @@ export function buyOffer(s: GameState, offerId: number, qty = 1): Result {
       legehenne: { ageDays: o.hiddenAge ?? 120, sex: 'henne' as const },
       hahn: { ageDays: intBetween(s, 40, 160), sex: 'hahn' as const },
     }[o.kind];
-    const a = createAnimal(s, o.breed, { ...opts, history: `Gekauft bei ${o.seller}` });
+    const a = createAnimal(s, o.breed, { ...opts, variant: o.variant, history: `Gekauft bei ${o.seller}` });
     if (o.kind === 'legehenne' && o.hiddenMites) a.conditions.push({ id: 'milben', severity: 25 });
     s.animals.push(a);
+    registerAlbum(s, a);
     names.push(a.name);
   }
   if (o.qty <= 0) s.offers = s.offers.filter(x => x !== o);

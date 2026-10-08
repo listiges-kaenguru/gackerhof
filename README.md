@@ -13,13 +13,17 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Startbildschirm mit Hofname, 3 Schwierigkeitsgraden und 3 Grundstücken
 - Hof als animierte Cartoon-Szene mit Tageszeiten, Jahreszeiten, Wetter und Schnee
 - Shop mit Zaun, Stall, Tränken, Futterstellen, Fuchs- und Greifvogelschutz, Erweiterungen, Automatik und Gimmicks (Hüte, Deko)
-- Geflügelmarkt mit wöchentlich wechselnden Händlern: Bruteier, Küken, Junghennen, Legehennen (mit Gesundheitscheck) und Hähne in 5 Rassen
+- Geflügelmarkt mit wöchentlich wechselnden Händlern: Bruteier, Küken, Junghennen, Legehennen (mit Gesundheitscheck) und Hähne in 5 Rassen mit je 3 Farbvarianten
 - Lebenszyklus vom Ei über Küken und Junghuhn bis zum alten Huhn, mit Tod durch Altersschwäche
 - Bedürfnisse (Hunger, Durst, Gesundheit, Wohlbefinden) und Krankheiten (Milben, Würmer, Atemwegsinfekt, Kokzidiose) mit Medikamenten und Wartezeiten
 - Fuchs, Habicht und Marder mit Vorwarnung, Ratten an offenen Futterstellen
 - Brüten mit Brutapparat oder Glucke; mit Hahn werden Eier zu Bruteiern
 - Verkauf von Eiern, Bruteiern, Mist, Tieren und Ausrüstung, dazu Schlachter, Hofladen und kostenpflichtige Entsorgung toter Tiere
 - Zufallsereignisse (Dorffest, Lieferengpass, Stallpflicht, Geschenke von Opa Heinz), Kapitel mit Zielen, Tagebuch und Hof-Ruf
+- Wechselweide gegen Würmer, Stalllicht für mehr Eier im Winter
+- Hühner-Album zum Sammeln aller Rassen und Farben (Farben werden vererbt)
+- Geflügelschau jede Jahreszeit mit Bewertung, Preisgeld und Pokal
+- Tutorial-Pfeile, die in den ersten Tagen auf das nächste Ziel zeigen
 - Automatisches Speichern, Export und Import des Spielstands, offline spielbar (PWA)
 
 ## Steuerung

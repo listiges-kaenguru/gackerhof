@@ -1,21 +1,24 @@
 // Benutzeroberfläche: Kopfzeile, Hinweise, Schnellaktionen, Navigation, Panels, Dialoge.
 import * as A from '../game/actions';
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DISPOSAL_COST, HATS, HEALTH_CHECK_COST, ITEM, ITEMS, MS_PER_MINUTE, PERSONALITIES,
-  PLOTS, SEASON_NAMES, SHOP_CATS, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
+  BREEDS, CONDITIONS, DIFFICULTIES, DISPOSAL_COST, HATS, HEALTH_CHECK_COST, ITEM, ITEMS, MS_PER_MINUTE, PASTURE_WARN, PERSONALITIES,
+  PLOTS, SEASON_NAMES, SHOP_CATS, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
 } from '../game/data';
 import {
-  age, ageText, animalValue, daysText, butcherValue, chicks, coopCap, crowding, dayOfSeason, dead, diff, drinkerCap, eggCount,
-  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, living, lockedOut, marderSafe, maxInside, outsideAnimals, starFactors,
-  ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
+  age, ageText, albumKey, albumTotal, animalValue, breedLabel, daysText, butcherValue, chicks, coopCap, crowding, dayOfSeason, dead, diff, drinkerCap, eggCount,
+  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, outsideAnimals, starFactors,
+  pastureNow, ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
 } from '../game/helpers';
+import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
 import type { Animal, Difficulty, GameState } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc } from './scene';
+import { tutorialStep } from './tutorial';
 
-type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'lager' | 'mehr';
+type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
+type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
 interface Modal { kind: 'report' | 'intro' | 'gameover' | 'help' | 'celebrate'; lines?: string[] }
 
 export function startApp(root: HTMLElement, initial: GameState, onNewGame: () => void) {
@@ -23,7 +26,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const ui = {
     panel: null as Panel | null,
     shopCat: 'gehege' as ShopCat,
-    marketTab: 'kaufen' as 'kaufen' | 'verkaufen' | 'auftraege',
+    marketTab: 'kaufen' as MarketTab,
+    /** Von wo das Album geöffnet wurde (für „Zurück“) */
+    albumFrom: 'tiere' as Panel,
     animalId: null as number | null,
     modal: null as Modal | null,
     confirm: '' as string,
@@ -48,6 +53,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <div class="panel-body"></div>
       </aside>
       <div class="modal-wrap" hidden><div class="modal"></div></div>
+      <div class="tut" hidden aria-live="polite">
+        <div class="tut-bubble"><span class="tut-text"></span><button data-act="tut-off" aria-label="Tutorial-Pfeile ausblenden" title="Pfeile ausblenden">✕</button></div>
+        <div class="tut-arrow" aria-hidden="true"></div>
+      </div>
     </div>`;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector(sel) as T;
   const bannersEl = $('.banners');
@@ -130,6 +139,19 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (crowding(s) > 1) out.push({ icon: '😤', text: 'Zu eng! Mehr Platz schaffen', act: 'open:hof', kind: 'warn' });
     for (const a of living(s).filter(x => x.broodyUntil >= s.day)) out.push({ icon: '🪺', text: `${a.name} ist brütig`, act: `animal:${a.id}`, kind: 'good' });
     if (eventActive(s, 'stallpflicht')) out.push({ icon: '📢', text: 'Stallpflicht!', act: 'door', kind: 'warn' });
+    const showIn = showCountdown(s);
+    if (showIn != null && showIn >= 0 && (s.show!.entries.length || living(s).some(a => !showProblem(s, a)))) {
+      const n = s.show!.entries.length;
+      out.push({ icon: '🏆', text: `${showIn === 0 ? 'Heute' : showIn === 1 ? 'Morgen' : `In ${showIn} Tagen`}: Geflügelschau${n ? ` (${n} angemeldet)` : ''}`, act: 'open:markt:schau', kind: 'good' });
+    }
+    if (f.length && s.equip.fence && pastureNow(s) < PASTURE_WARN) {
+      out.push(has(s, 'wechselweide')
+        ? { icon: '🌱', text: 'Weide abgegrast: wechseln', act: 'pasture', kind: 'warn' }
+        : { icon: '🪱', text: 'Auslauf abgegrast: mehr Würmer', act: 'open:hof', kind: 'info' });
+    }
+    if ((season(s) === 'herbst' || season(s) === 'winter') && !has(s, 'stalllicht') && s.equip.coop && f.filter(a => a.sex === 'henne').length >= 3) {
+      out.push({ icon: '💡', text: 'Kurze Tage: Stalllicht bringt mehr Eier', act: 'open:shop:ausbau', kind: 'info' });
+    }
     if (eventActive(s, 'dorffest')) out.push({ icon: '🎪', text: 'Dorffest: Eier teuer!', act: 'open:markt:verkaufen', kind: 'good' });
     return out;
   }
@@ -206,7 +228,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       ['tiere', '🐔', 'Tiere', sick ? `<b class="dot">${sick}</b>` : ''], ['lager', '📦', 'Lager', ''], ['mehr', '☰', 'Mehr', s.goals.some(g => g.done) ? '' : ''],
     ];
     setHtml(tabs, 'tabs', t.map(([id, icon, label, badge]) => {
-      const on = ui.panel === id || (id === 'tiere' && ui.panel === 'tier');
+      const on = ui.panel === id || (id === 'tiere' && ui.panel === 'tier') || (id === ui.albumFrom && ui.panel === 'album');
       return `<button data-act="tab:${id}" class="${on ? 'on' : ''}"><span class="ico">${icon}${badge}</span><span>${label}</span></button>`;
     }).join(''));
   }
@@ -223,12 +245,12 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     root.querySelector('.app')!.classList.add('has-panel');
     const titles: Record<Panel, string> = {
       hof: '🏡 Hofübersicht', shop: '🛒 Landhandel Meier', markt: '🐣 Geflügelmarkt', tiere: '🐔 Deine Tiere',
-      tier: '🐔 Steckbrief', lager: '📦 Lager', mehr: '☰ Mehr',
+      tier: '🐔 Steckbrief', album: '📒 Hühner-Album', lager: '📦 Lager', mehr: '☰ Mehr',
     };
     panelTitle.textContent = titles[ui.panel];
-    backBtn.hidden = ui.panel !== 'tier';
+    backBtn.hidden = ui.panel !== 'tier' && ui.panel !== 'album';
     const html = {
-      hof: panelHof, shop: panelShop, markt: panelMarket, tiere: panelAnimals, tier: panelAnimal, lager: panelStore, mehr: panelMore,
+      hof: panelHof, shop: panelShop, markt: panelMarket, tiere: panelAnimals, tier: panelAnimal, album: panelAlbum, lager: panelStore, mehr: panelMore,
     }[ui.panel]();
     if (cache.panel !== html || force) {
       const top = panelBody.scrollTop;
@@ -247,6 +269,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const confirmBtn = (key: string, label: string, confirmLabel: string, cls = '') =>
     `<button class="btn ${cls} ${ui.confirm === key ? 'confirm' : ''}" data-act="${key}" data-confirm="1">${ui.confirm === key ? confirmLabel : label}</button>`;
   const kindOf = (a: Animal) => (stage(s, a) === 'kueken' ? 'chick' : a.sex === 'hahn' && stage(s, a) === 'erwachsen' ? 'rooster' : 'hen') as 'hen' | 'rooster' | 'chick';
+  const pic = (a: Animal, deadPic = false) => portrait(a.breed, kindOf(a), deadPic, a.variant);
+  /** Rasse mit Farbe; Küken zeigen ihre Farbe erst als Junghuhn */
+  const breedOf = (a: Animal) => (stage(s, a) === 'kueken' ? BREEDS[a.breed].name : breedLabel(a.breed, a.variant));
 
   /* ---------------- Hof ---------------- */
   function panelHof(): string {
@@ -282,7 +307,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             <button class="btn" data-act="lure" ${outsideAnimals(s).length ? '' : 'disabled'}>🌾 Hühner reinlocken</button>
             <button class="btn" data-act="clean">🧹 Ausmisten <small>(Einstreu: ${s.inventory.einstreu ?? 0})</small></button>
           </div>
-          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Zwischen 19 und etwa 20:45 Uhr gehen die Hühner nacheinander von selbst in den Stall. Erst danach die Klappe schließen, morgens wieder öffnen. Wer die Klappe zu früh schließt, sperrt Hühner aus!</p>'}`
+          ${has(s, 'autoklappe') ? '<p class="muted">⚙️ Die automatische Klappe öffnet um 6 Uhr und schließt um 21 Uhr.</p>' : '<p class="muted">Zwischen 19 und etwa 20:45 Uhr gehen die Hühner nacheinander von selbst in den Stall. Erst danach die Klappe schließen, morgens wieder öffnen. Wer die Klappe zu früh schließt, sperrt Hühner aus!</p>'}
+          ${has(s, 'stalllicht') ? `<div class="row between"><span>💡 Stalllicht: <b>${s.lightOn === false ? 'aus' : 'an'}</b> <small class="muted">${lightActive(s) ? '· leuchtet morgens und abends, mehr Eier' : s.lightOn === false ? '' : '· wirkt nur im Herbst und Winter'}</small></span>
+            <button class="btn small" data-act="light">${s.lightOn === false ? 'Einschalten' : 'Ausschalten'}</button></div>` : ''}`
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
       <section class="card">
@@ -296,6 +323,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         </div>
         ${ratSafe(s) || !s.equip.feeder ? '' : '<p class="muted">🐀 Ratten und Spatzen bedienen sich an der offenen Futterstelle.</p>'}
       </section>
+      ${pastureCard()}
       <section class="card">
         <h3>🛡️ Schutz</h3>
         ${meter('Fuchs', fp, '🦊')}
@@ -308,6 +336,23 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p>${s.temperature} °C · ${SEASON_NAMES[season(s)]}. ${s.temperature >= 28 ? 'Heiß: viel Wasser und Schatten nötig.' : s.temperature <= 0 ? 'Frost: Die Tränke friert ein, wenn sie nicht beheizt ist.' : ''}</p>
         <p class="muted">Grundstück: ${PLOTS[s.plot].emoji} ${PLOTS[s.plot].name} (Pacht ${PLOTS[s.plot].rent} € / Monat)</p>
       </section>`;
+  }
+
+  function pastureCard(): string {
+    if (!s.equip.fence) return '';
+    const p = s.pasture ?? [100, 100];
+    const why = '<p class="muted">Scharrende Hühner zertreten das Gras, im Boden sammeln sich Wurmeier. Je abgegraster der Auslauf, desto öfter bekommen die Hühner Würmer.</p>';
+    if (!has(s, 'wechselweide')) {
+      return `<section class="card"><h3>🌱 Auslauf</h3>${meter('Weidezustand', p[0], '🌱')}${why}
+        <p class="muted">💡 Mit einer <b>Wechselweide</b> nutzen die Hühner nur eine Hälfte, die andere erholt sich.</p>
+        <button class="btn" data-act="open:shop:ausbau">Wechselweide im Shop</button></section>`;
+    }
+    const side = s.pastureSide ?? 0;
+    const since = s.day - (s.pastureSwitchDay ?? s.day);
+    return `<section class="card"><h3>🌱 Wechselweide</h3>
+      ${meter(`Links ${side === 0 ? '(genutzt)' : '(ruht)'}`, p[0], '🌱')}${meter(`Rechts ${side === 1 ? '(genutzt)' : '(ruht)'}`, p[1], '🌱')}
+      <div class="row between"><span class="muted">Gewechselt vor ${since} Tag${since === 1 ? '' : 'en'}</span><button class="btn" data-act="pasture">🔁 Weide wechseln</button></div>
+      <p class="muted">Faustregel: wechseln, wenn die genutzte Hälfte unter ${PASTURE_WARN} % fällt. Die ruhende Hälfte erholt sich jeden Tag (im Winter langsamer).</p></section>`;
   }
 
   /* ---------------- Shop ---------------- */
@@ -372,14 +417,16 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   /* ---------------- Markt ---------------- */
   function panelMarket(): string {
     const nOrders = (s.orders ?? []).length;
-    const tabsHtml = `<div class="seg"><button class="${ui.marketTab === 'kaufen' ? 'on' : ''}" data-act="mtab:kaufen">Kaufen</button><button class="${ui.marketTab === 'verkaufen' ? 'on' : ''}" data-act="mtab:verkaufen">Verkaufen</button><button class="${ui.marketTab === 'auftraege' ? 'on' : ''}" data-act="mtab:auftraege">Aufträge${nOrders ? ` <b class="count">${nOrders}</b>` : ''}</button></div>`;
+    const showIn = showCountdown(s);
+    const tabsHtml = `<div class="seg"><button class="${ui.marketTab === 'kaufen' ? 'on' : ''}" data-act="mtab:kaufen">Kaufen</button><button class="${ui.marketTab === 'verkaufen' ? 'on' : ''}" data-act="mtab:verkaufen">Verkaufen</button><button class="${ui.marketTab === 'auftraege' ? 'on' : ''}" data-act="mtab:auftraege">Aufträge${nOrders ? ` <b class="count">${nOrders}</b>` : ''}</button><button class="${ui.marketTab === 'schau' ? 'on' : ''}" data-act="mtab:schau">Schau${showIn != null && showIn >= 0 ? ' <b class="count">!</b>' : ''}</button></div>`;
     const trend = s.eggPrice >= 0.55 ? '↑' : s.eggPrice <= 0.45 ? '↓' : '→';
     const info = `<p class="infobar">🥚 Eierpreis heute: <b>${euro(s.eggPrice)}</b> ${trend} · 🏠 Platz im Stall: <b>${Math.max(0, coopCap(s) - flock(s).length)}</b> frei</p>`;
     if (ui.marketTab === 'auftraege') return tabsHtml + panelOrders();
+    if (ui.marketTab === 'schau') return tabsHtml + panelShow();
     if (ui.marketTab === 'kaufen') {
       const kindName = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
-      const kindIcon = (o: { kind: string; breed: keyof typeof BREEDS }) => o.kind === 'brutei' ? '🥚'
-        : portrait(o.breed, o.kind === 'hahn' ? 'rooster' : o.kind === 'kueken' ? 'chick' : 'hen');
+      const kindIcon = (o: { kind: string; breed: keyof typeof BREEDS; variant?: string }) => o.kind === 'brutei' ? '🥚'
+        : portrait(o.breed, o.kind === 'hahn' ? 'rooster' : o.kind === 'kueken' ? 'chick' : 'hen', false, o.variant);
       const sellers = [...new Set(s.offers.map(o => o.seller))];
       const next = 7 - (s.day - s.offersDay);
       return tabsHtml + info + (s.offers.length ? sellers.map(sel => `
@@ -392,7 +439,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             : '';
           return `<div class="offer">
             <span class="offer-ico">${kindIcon(o)}</span>
-            <div class="offer-main"><b>${kindName[o.kind]}</b> · ${BREEDS[o.breed].name}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
+            <div class="offer-main"><b>${kindName[o.kind]}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
             <div class="offer-buy">
               <button class="btn primary" data-act="offer:${o.id}:1" ${s.money < o.price ? 'disabled' : ''}>+1</button>
               ${o.qty > 1 ? `<button class="btn small" data-act="offer:${o.id}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
@@ -412,8 +459,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       </section>
       <section class="card"><h3>🐔 Tiere verkaufen</h3>
         ${living(s).length ? living(s).map(a => `<div class="offer">
-          <span class="offer-ico">${portrait(a.breed, kindOf(a))}</span>
-          <div class="offer-main"><b>${esc(a.name)}</b> · ${stageName(s, a)}<br><small>${BREEDS[a.breed].name} · ${ageText(s, a)}</small></div>
+          <span class="offer-ico">${pic(a)}</span>
+          <div class="offer-main"><b>${esc(a.name)}</b> · ${stageName(s, a)}<br><small>${breedOf(a)} · ${ageText(s, a)}</small></div>
           <div class="offer-buy">${confirmBtn(`sellAnimal:${a.id}`, `Markt ${euro(animalValue(s, a))}`, 'Wirklich?', 'small')}
             ${stage(s, a) !== 'kueken' ? confirmBtn(`butcher:${a.id}`, `Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich?', 'small') : ''}</div>
         </div>`).join('') : '<p class="muted">Keine Tiere.</p>'}
@@ -456,6 +503,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const sorted = [...dead(s), ...l.sort((a, b) => (b.conditions.length - a.conditions.length) || (a.health - b.health))];
     return `
       <p class="infobar">🐔 ${hens} Hennen · 🐓 ${roosters} Hähne · 🐥 ${ch} Küken · 🏠 ${flock(s).length}/${coopCap(s)} im Stall</p>
+      <button class="btn album-btn" data-act="album">📒 Hühner-Album <b>${Object.keys(s.album ?? {}).length}/${albumTotal()}</b></button>
       ${roosters > Math.max(1, Math.ceil(hens / 8)) ? '<p class="warnbox">🐓 Zu viele Hähne! Empfohlen ist 1 Hahn pro 8–12 Hennen, sonst gibt es Rangkämpfe.</p>' : ''}
       ${sorted.length ? `<div class="animal-list">${sorted.map(a => animalRow(a)).join('')}</div>` : '<p class="muted">Noch keine Tiere. Auf dem Geflügelmarkt gibt es Junghennen, Hähne, Küken und Bruteier.</p><button class="btn primary" data-act="open:markt">Zum Markt</button>'}
       ${s.incubator.length ? `<p class="muted">🥚 ${s.incubator.length} Eier im Brutapparat (Lager).</p>` : ''}`;
@@ -465,8 +513,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const icons = a.dead ? '🕊️' : a.conditions.map(c => CONDITIONS[c.id].emoji).join('') + (a.water < 30 ? '💧' : '') + (a.food < 30 ? '🌾' : '') + (a.broodyUntil >= s.day ? '🪺' : '') + (a.broodingUntil > s.day ? '🥚' : '');
     const h = a.dead ? 0 : a.health;
     return `<button class="animal-row ${a.dead ? 'is-dead' : ''}" data-act="animal:${a.id}">
-      ${portrait(a.breed, kindOf(a), a.dead)}
-      <span class="ar-main"><b>${esc(a.name)}</b> <small>${a.dead ? `† ${a.deathCause}` : `${stageName(s, a)} · ${BREEDS[a.breed].name} · ${ageText(s, a)}`}</small>
+      ${pic(a, a.dead)}
+      <span class="ar-main"><b>${esc(a.name)}</b> <small>${a.dead ? `† ${a.deathCause}` : `${stageName(s, a)} · ${breedOf(a)} · ${ageText(s, a)}`}</small>
         ${a.dead ? '' : `<span class="mini"><i style="width:${h}%" class="${h < 40 ? 'bad' : h < 70 ? 'warn' : ''}"></i></span>`}</span>
       <span class="ar-icons">${icons}</span></button>`;
   }
@@ -475,7 +523,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const a = s.animals.find(x => x.id === ui.animalId);
     if (!a) return '<p>Das Tier ist nicht mehr da.</p>';
     if (a.dead) {
-      return `<div class="pet-head">${portrait(a.breed, kindOf(a), true)}<div><h3>${esc(a.name)}</h3><p>${BREEDS[a.breed].name} · ${a.deathCause} (Tag ${a.deathDay})</p></div></div>
+      return `<div class="pet-head">${pic(a, true)}<div><h3>${esc(a.name)}</h3><p>${breedOf(a)} · ${a.deathCause} (Tag ${a.deathDay})</p></div></div>
         <p class="muted">Ein totes Tier kann nicht mehr geschlachtet werden. Die Tierkörperbeseitigung muss bezahlt werden. Bis dahin steigt das Krankheitsrisiko für die anderen Tiere.</p>
         <button class="btn primary" data-act="dispose:${a.id}">🕊️ Entsorgen lassen (${DISPOSAL_COST} €)</button>`;
     }
@@ -495,9 +543,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const brooding = a.broodingUntil > s.day ? `<div class="goodbox">🥚 Brütet ${a.broodEggs.length} Eier aus. Schlupf in ${a.broodingUntil - s.day} Tag(en).</div>` : '';
     const withdrawal = a.withdrawalUntil >= s.day ? `<p class="warnbox">💊 Medikamenten-Wartezeit bis Tag ${a.withdrawalUntil}: Eier werden entsorgt, Schlachten ist nicht erlaubt.</p>` : '';
     return `
-      <div class="pet-head">${portrait(a.breed, kindOf(a))}
+      <div class="pet-head">${pic(a)}
         <div><h3>${esc(a.name)} <button class="link" data-act="rename:${a.id}" aria-label="Umbenennen">✏️</button></h3>
-        <p>${BREEDS[a.breed].name} · ${sexKnown(s, a) ? (a.sex === 'henne' ? '♀ Henne' : '♂ Hahn') : 'Geschlecht noch unklar'} · ${ageText(s, a)}</p>
+        <p>${breedOf(a)} · ${sexKnown(s, a) ? (a.sex === 'henne' ? '♀ Henne' : '♂ Hahn') : 'Geschlecht und Farbe noch unklar'} · ${ageText(s, a)}</p>
         <p class="muted">${stageName(s, a)} · Persönlichkeit: ${PERSONALITIES[a.personality]}</p></div></div>
       ${broody}${brooding}${withdrawal}
       ${meter('Hunger', a.food, '🌾')}${meter('Durst', a.water, '💧')}${meter('Gesundheit', a.health, '❤️')}${meter('Wohlbefinden', a.wellbeing, '😊')}
@@ -510,6 +558,69 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         ${st !== 'kueken' ? confirmBtn(`butcher:${a.id}`, `Zum Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich zum Schlachter?') : ''}
       </div>
       <p class="muted small">Beim Schlachter gibt es Gewicht × Kilopreis abzüglich Gebühr. Kranke Tiere und Tiere in der Wartezeit werden nicht angenommen.</p>`;
+  }
+
+  /* ---------------- Geflügelschau ---------------- */
+  function panelShow(): string {
+    const sh = s.show;
+    const trophies = s.trophies ?? [];
+    const prizes = SHOW_GRADES.filter(g => g.prize).map(g => `${g.grade} (${g.min}) ${g.prize * (sh?.level ?? 1)} €`).join(' · ');
+    let head = '<p class="muted">Die nächste Schau wird bald angekündigt.</p>';
+    if (sh) {
+      const left = sh.day - s.day;
+      head = `<section class="card show-head"><h3>🏆 ${esc(sh.title)}</h3>
+        <p>Tag ${sh.day} (${SEASON_NAMES[season({ ...s, day: sh.day })]}) · ${left < 0 ? 'Termin folgt' : left === 0 ? (s.hour < 12 ? '<b>heute um 12 Uhr</b>' : 'heute') : `in <b>${left} Tag${left === 1 ? '' : 'en'}</b>`}${sh.level === 2 ? ' · <b class="good">Landesschau: doppelte Preise</b>' : ''}</p>
+        ${sh.announced ? `<p>Angemeldet: <b>${sh.entries.length}/${SHOW_MAX}</b> · Standgeld ${SHOW_FEE} € pro Tier</p>` : `<p class="muted">Die Anmeldung öffnet eine Woche vorher (Tag ${sh.day - 7}).${stars(s) >= 4 ? '' : ' Mit 4 Sternen Hof-Ruf geht es auf die Landesschau.'}</p>`}
+        <p class="muted small">Preise: ${prizes} · 🏆 Pokal für das beste Tier mit 97 Punkten (+${50 * (sh.level ?? 1)} €)</p></section>`;
+    }
+    const candidates = living(s).filter(a => BREEDS[a.breed].showBreed && stage(s, a) === 'erwachsen');
+    const rows = candidates.map(a => {
+      const why = showProblem(s, a);
+      const entered = !!sh?.entries.includes(a.id);
+      const base = showBasePoints(s, a);
+      const tips: string[] = [];
+      if (a.health < 90) tips.push('Gesundheit unter 90 %');
+      if (a.wellbeing < 80) tips.push('Wohlbefinden unter 80 % (Mehlwürmer helfen)');
+      const full = a.sex === 'hahn' ? BREEDS[a.breed].weightRooster : BREEDS[a.breed].weightHen;
+      if (a.weight / full < 0.95) tips.push('zu leicht');
+      if (s.cleanliness < 60) tips.push('Stall ausmisten (Gefieder)');
+      const btn = !sh?.announced ? '' : entered
+        ? `<button class="btn small" data-act="show:${a.id}">Abmelden</button>`
+        : `<button class="btn small primary" data-act="show:${a.id}" ${why || sh.entries.length >= SHOW_MAX || s.money < SHOW_FEE ? 'disabled' : ''}>Anmelden</button>`;
+      return `<div class="offer ${entered ? 'entered' : ''}">
+        <span class="offer-ico">${pic(a)}</span>
+        <div class="offer-main"><b>${esc(a.name)}</b>${entered ? ' <span class="tag good">angemeldet</span>' : ''}<br><small>${breedOf(a)} · ${ageText(s, a)}</small><br>
+          ${why ? `<small class="bad">${why}</small>` : `<small>Prognose: <b>${base - 1}–${Math.min(97, base + 1)} Punkte</b> (${[...new Set([gradeFor(base - 1).name, gradeFor(Math.min(97, base + 1)).name])].join(' bis ')})</small>${tips.length ? `<br><small class="muted">💡 ${tips.join(' · ')}</small>` : ''}`}</div>
+        <div class="offer-buy">${btn}</div></div>`;
+    }).join('');
+    const hybridsOnly = !candidates.length;
+    const last = s.lastShow ? `<section class="card"><h3>📋 Letzte Schau: ${esc(s.lastShow.title)} <small>Tag ${s.lastShow.day}</small></h3>
+      <ul class="stock">${s.lastShow.results.map(r => `<li><span>${r.trophy ? '🏆' : r.prize ? '🎀' : '📋'} ${esc(r.name)} <small class="muted">${breedLabel(r.breed, r.variant)}</small></span><b>${r.points} ${r.grade}${r.prize ? ` · ${r.prize} €` : ''}</b></li>`).join('')}</ul></section>` : '';
+    const shelf = trophies.length ? `<section class="card"><h3>🏆 Pokalschrank (${trophies.length})</h3>
+      <ul class="stock">${trophies.map(t => `<li><span>🏆 ${esc(t.title)}</span><b>${esc(t.animal)} <small class="muted">${breedLabel(t.breed, t.variant)}, Tag ${t.day}</small></b></li>`).join('')}</ul></section>` : '';
+    return head + `<section class="card"><h3>🐔 Deine Rassetiere</h3>
+      ${hybridsOnly ? '<p class="muted">Noch keine ausgewachsenen Rassetiere. Legehybriden sind auf Rasseschauen nicht zugelassen. Sussex, Marans, Brahma und Seidenhühner gibt es auf dem Markt oder aus Bruteiern.</p>' : rows}
+      <p class="muted small">Die Preisrichter bewerten Gesundheit, Wohlbefinden, Gewicht, Alter (beste Jahre bis 2 Jahre) und sauberes Gefieder. Dazu kommt etwas Glück.</p></section>` + last + shelf;
+  }
+
+  /* ---------------- Hühner-Album ---------------- */
+  function panelAlbum(): string {
+    const album = s.album ?? {};
+    const have = Object.keys(album).length;
+    const total = albumTotal();
+    return `<p class="infobar">📒 <b>${have}/${total}</b> Rassen und Farben entdeckt. Ein Eintrag zählt, sobald ein Tier dieser Farbe auf deinem Hof lebt. Küken zeigen ihre Farbe erst als Junghuhn.</p>
+      <div class="goals-bar album-bar"><b style="width:${(have / total) * 100}%"></b></div>
+      <p class="muted small">🎁 Alle Farben einer Rasse: 20 € · Ganzes Album: 100 €. Küken erben die Farbe von Mutter oder Vater, selten gibt es eine Überraschung.</p>
+      ${(Object.keys(BREEDS) as (keyof typeof BREEDS)[]).map(b => {
+        const def = BREEDS[b];
+        const n = def.variants.filter(v => album[`${b}:${v.id}`]).length;
+        return `<section class="card"><h3>${def.name} <small>${n}/${def.variants.length}${n === def.variants.length ? ' ✅' : ''}</small></h3>
+          <div class="album-grid">${def.variants.map(v => {
+            const e = album[`${b}:${v.id}`];
+            return `<div class="album-card ${e ? '' : 'locked'}">${portrait(b, 'hen', false, v.id)}
+              <b>${e ? v.name : '???'}</b><small>${e ? `seit Tag ${e.day} · ${esc(e.name)}` : 'noch nicht entdeckt'}</small></div>`;
+          }).join('')}</div></section>`;
+      }).join('')}`;
   }
 
   /* ---------------- Lager ---------------- */
@@ -559,6 +670,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const lower = (['leicht', 'mittel'] as Difficulty[]).filter(d => ['leicht', 'mittel', 'schwer'].indexOf(d) < ['leicht', 'mittel', 'schwer'].indexOf(s.difficulty));
     return `
       <section class="card">${goals}</section>
+      <section class="card"><h3>📒 Sammlung</h3>
+        <div class="row"><button class="btn" data-act="album">📒 Hühner-Album ${Object.keys(s.album ?? {}).length}/${albumTotal()}</button>
+        <button class="btn" data-act="open:markt:schau">🏆 Geflügelschau${(s.trophies ?? []).length ? ` · ${(s.trophies ?? []).length} Pokal${(s.trophies ?? []).length > 1 ? 'e' : ''}` : ''}</button></div>
+      </section>
       <section class="card"><h3>💶 Finanzen</h3>
         <p>Einnahmen gesamt: <b class="good">${euro(s.stats.income)}</b> · Ausgaben gesamt: <b class="bad">${euro(s.stats.expenses)}</b></p>
         <p>Nächste Monatsabrechnung in ${30 - ((s.day - 1) % 30)} Tagen: Pacht ${PLOTS[s.plot].rent} € + Strom/Wasser ca. ${euro(s.pendingCosts)}</p>
@@ -580,6 +695,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <label class="btn">📂 Importieren<input type="file" accept="application/json,.json" data-import hidden></label>
           ${confirmBtn('newgame', '🆕 Neues Spiel', 'Wirklich? Der Hof geht verloren!', 'danger')}
         </div>
+        <div class="row"><button class="btn small" data-act="${s.tutorialOff ? 'tut-on' : 'tut-off'}">${s.tutorialOff ? '👉 Tutorial-Pfeile einschalten' : '👉 Tutorial-Pfeile ausschalten'}</button></div>
         <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · L Reinlocken · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
       </section>
       <p class="version">Gackerhof Version ${__APP_VERSION__}</p>`;
@@ -599,6 +715,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <li>🐣 Auf dem <b>Geflügelmarkt</b> gibt es Junghennen, Hähne, Küken und günstige Bruteier.</li>
           <li>🚪 Morgens die Klappe öffnen, <b>abends schließen</b>. Nachts kommt der Fuchs!</li>
           <li>🥚 Eier einsammeln und verkaufen. Achte auf die Hinweise oben links.</li>
+          <li>👉 Gelbe Pfeile zeigen dir in den ersten Tagen, was als Nächstes dran ist.</li>
         </ol>
         <p class="muted">Du hast ${euro(s.money)}. Das ist nicht viel, also überleg gut, was du zuerst kaufst.</p>
         <button class="btn primary big" data-act="modal-ok">Los geht's!</button>`;
@@ -631,6 +748,61 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <button class="btn primary big" data-act="modal-ok">Verstanden</button>`;
     }
     if (cache.modal !== html) { modalEl.innerHTML = html; cache.modal = html; }
+  }
+
+  /* ---------------- Tutorial-Pfeile ---------------- */
+  const tutEl = $('.tut'), tutText = $('.tut-text');
+  let tutId = '';
+  let tutLast = 0;
+  let tutTarget: Element | null = null;
+  /** Ist das Element zu sehen und nicht von Panel, Dialog oder Hinweisen verdeckt? */
+  const visibleEl = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return false;
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return false;
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) return false;
+    // In der Szene zählt jeder Treffer auf die Szene (Gruppen haben Lücken zwischen ihren Formen)
+    return hit === el || el.contains(hit) || (!!el.closest('.scene') && !!hit.closest('.scene'));
+  };
+  function positionTutorial(force = false) {
+    const now = performance.now();
+    if (!force && now - tutLast < 120) return;
+    tutLast = now;
+    const step = ui.modal ? null : tutorialStep(s);
+    let target: Element | null = null;
+    if (step) {
+      if (step.id !== tutId) {
+        tutId = step.id;
+        // Im Hochformat die Szene so verschieben, dass das Ziel im Bild ist
+        const inScene = step.targets.map(sel => root.querySelector(sel)).find(el => el?.closest('.scene'));
+        if (inScene) scene.reveal(inScene);
+      }
+      for (const sel of step.targets) {
+        target = [...root.querySelectorAll(sel)].find(visibleEl) ?? null;
+        if (target) break;
+      }
+    } else tutId = '';
+    if (tutTarget !== target) {
+      tutTarget?.classList.remove('tut-target');
+      target?.classList.add('tut-target');
+      tutTarget = target;
+    }
+    if (!step || !target) { tutEl.hidden = true; return; }
+    tutText.textContent = step.text;
+    tutEl.hidden = false;
+    // Bei offenem Panel und Ziel außerhalb davon nur den Pfeil zeigen, damit nichts verdeckt wird
+    tutEl.classList.toggle('compact', !panel.hidden && !panel.contains(target) && getComputedStyle(panel).position === 'fixed');
+    const r = target.getBoundingClientRect();
+    const below = r.top < 150;
+    tutEl.classList.toggle('below', below);
+    const w = tutEl.offsetWidth, h = tutEl.offsetHeight;
+    const cx = r.left + r.width / 2;
+    const left = Math.max(8, Math.min(innerWidth - w - 8, cx - w / 2));
+    tutEl.style.left = `${left}px`;
+    tutEl.style.top = `${below ? r.bottom + 2 : r.top - h - 2}px`;
+    tutEl.style.setProperty('--ax', `${Math.max(16, Math.min(w - 16, cx - left))}px`);
   }
 
   /** Auffälliges Banner für erreichte Ziele */
@@ -667,7 +839,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     ui.panel = p;
     ui.confirm = '';
     if (p === 'shop' && sub) ui.shopCat = sub as ShopCat;
-    if (p === 'markt' && sub) ui.marketTab = sub as 'kaufen' | 'verkaufen' | 'auftraege';
+    if (p === 'markt' && sub) ui.marketTab = sub as MarketTab;
     renderPanel(true);
     panelBody.scrollTop = 0;
     renderTabs();
@@ -693,7 +865,15 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         if (a1 === 'stall') return openPanel('hof');
         return openPanel(a1 as Panel, a2);
       case 'close': ui.panel = null; return refreshAll();
-      case 'back': return openPanel('tiere');
+      case 'back': return openPanel(ui.panel === 'album' ? ui.albumFrom : 'tiere');
+      case 'album':
+        if (ui.panel && ui.panel !== 'album') ui.albumFrom = ui.panel === 'tier' ? 'tiere' : ui.panel;
+        return openPanel('album');
+      case 'pasture': return result(A.switchPasture(s));
+      case 'light': return result(A.toggleLight(s));
+      case 'show': return result(A.toggleShowEntry(s, Number(a1)));
+      case 'tut-off': return result(A.setTutorial(s, false));
+      case 'tut-on': return result(A.setTutorial(s, true));
       case 'speed': {
         const v = Number(a1) as 0 | 1 | 2 | 4;
         if (v) ui.lastSpeed = v as 1 | 2 | 4;
@@ -720,7 +900,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         if (a1) return result(A.treat(s, Number(a1), a2 as never, a3));
         return result(A.giveTreat(s));
       case 'shopcat': ui.shopCat = a1 as ShopCat; renderPanel(true); panelBody.scrollTop = 0; return;
-      case 'mtab': ui.marketTab = a1 as 'kaufen'; renderPanel(true); panelBody.scrollTop = 0; return;
+      case 'mtab': ui.marketTab = a1 as MarketTab; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'buy': return result(A.buyItem(s, a1));
       case 'sell': return result(A.sellItem(s, a1));
       case 'supply': return result(A.buySupply(s, a1, Number(a2)));
@@ -845,6 +1025,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     renderTabs();
     renderPanel();
     renderModal();
+    positionTutorial(true);
   }
 
   const flockSig = () => s.animals.map(a => (a.outside ? 1 : 0)).join('') + s.doorOpen;
@@ -884,6 +1065,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       refreshAll();
     }
     scene.tick(s, dt, speed);
+    if (!pointerDown) positionTutorial();
     raf = requestAnimationFrame(frame);
   }
   const onHide = () => { if (document.hidden) save(s); };

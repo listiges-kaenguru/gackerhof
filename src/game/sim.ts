@@ -1,16 +1,18 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  AGE, BREEDS, CONDITIONS, CUSTOMERS, DAYS_PER_SEASON, ITEM, SEASON_NAMES, SELLERS, SOUP_AGE,
+  AGE, BREEDS, CONDITIONS, CUSTOMERS, DAYS_PER_SEASON, ITEM, SEASON_LAY, SEASON_LAY_LIGHT, SEASON_NAMES, SELLERS, SOUP_AGE,
 } from './data';
+import { registerAlbum } from './album';
 import {
-  addMoney, adultRoosters, age, chicks, crowding, diff, eventActive, flock, foxProtection,
-  frozen, has, hawkProtection, isSenior, living, lockedOut, log, marderSafe, maxInside, minuteOfDay, outsideAnimals, outTime,
-  plot, ratSafe, roostArrival, round2,
+  addMoney, adultRoosters, age, breedLabel, chicks, crowding, diff, eventActive, flock, foxProtection,
+  frozen, has, hawkProtection, isSenior, lightActive, living, lockedOut, log, marderSafe, maxInside, minuteOfDay, outsideAnimals, outTime,
+  pastureWormFactor, plot, ratSafe, roostArrival, round2,
   season, shade, stage, stars, autoWater, drinkerCap, feederCap,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
-import { chapterGoals, CHAPTERS, createAnimal, targetWeight } from './state';
-import type { Animal, Celebration, ConditionId, GameState, MarketOffer } from './types';
+import { announceShow, ensureShow, runShow } from './show';
+import { chapterGoals, CHAPTERS, createAnimal, randomVariant, targetWeight } from './state';
+import type { Animal, Celebration, ConditionId, GameState, HatchEgg, MarketOffer } from './types';
 
 /** Feinster Takt: eine Spielminute. Die Hühner bewegen sich minutengenau, alles andere läuft stündlich. */
 export function advanceMinute(s: GameState) {
@@ -40,6 +42,7 @@ export function advanceHour(s: GameState) {
     case 6: morning(s); break;
     case 8: layEggs(s); break;
     case 10: hawkAlert(s); break;
+    case 12: runShow(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
     case 19: if (s.day <= 5 && s.doorOpen && !has(s, 'autoklappe') && flock(s).length) log(s, '🌇 Es dämmert. Denk daran, abends die Hühnerklappe zu schließen!', 'warn', true); break;
     case 21: roost(s); evening(s); break;
@@ -216,7 +219,10 @@ export function die(s: GameState, a: Animal, cause: string, predator = false) {
 function newDay(s: GameState) {
   const d = diff(s);
   // Monatsabrechnung
-  for (const id of [...s.extras, ...Object.values(s.equip)]) if (id && ITEM[id]?.power) s.pendingCosts += ITEM[id].power!;
+  for (const id of [...s.extras, ...Object.values(s.equip)]) {
+    if (id === 'stalllicht' && !lightActive(s)) continue; // Zeitschaltuhr: Strom nur im Herbst und Winter
+    if (id && ITEM[id]?.power) s.pendingCosts += ITEM[id].power!;
+  }
   if ((s.day - 1) % DAYS_PER_SEASON === 0) {
     const rent = plot(s).rent;
     const costs = round2(rent + s.pendingCosts);
@@ -255,6 +261,7 @@ function newDay(s: GameState) {
       s.stats.juniorsRaised++;
       log(s, `🐥 ${a.name} ist jetzt ein Jung${a.sex === 'hahn' ? 'hahn' : 'huhn'}. ${a.sex === 'hahn' ? 'Ein Hahn! 🐓' : 'Eine Henne! 🐔'}`, 'good', true);
       a.motherId = undefined;
+      registerAlbum(s, a);
     }
     if (ad === AGE.erwachsen) log(s, `🎉 ${a.name} ist erwachsen${a.sex === 'henne' ? ' und legt bald Eier' : ''}.`, 'good', true);
     if (ad === AGE.senior) log(s, `👵 ${a.name} kommt in die Jahre. Die Legeleistung lässt nach.`, 'info');
@@ -262,6 +269,7 @@ function newDay(s: GameState) {
     if (ad >= a.maxAge) die(s, a, 'Altersschwäche');
   }
 
+  pasture(s);
   diseases(s);
   brooding(s);
   const cold = chicks(s).filter(a => chickFreezing(s, a));
@@ -292,6 +300,8 @@ function newDay(s: GameState) {
   randomEvents(s);
   s.events = s.events.filter(e => e.until >= s.day);
   orders(s);
+  ensureShow(s);
+  announceShow(s);
 
   // Markt erneuert sich wöchentlich
   if (s.day - s.offersDay >= 7) refreshOffers(s);
@@ -375,7 +385,7 @@ function diseases(s: GameState) {
     }
     // Neue Krankheiten
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
-    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil;
+    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s);
     let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? 2 : 1) * (s.temperature < 3 ? 1.5 : 1) * (s.equip.coop === 'kiste' ? 1.6 : 1) * crowdF;
     if (st === 'kueken') {
       pMilben = 0;
@@ -397,6 +407,27 @@ function diseases(s: GameState) {
         if (chance(s, def.contagious * (c.severity / 100) * d.disease * 0.5)) addCondition(s, b, c.id, 5);
       }
     }
+  }
+}
+
+/* ================================================================== */
+/* Weide                                                              */
+/* ================================================================== */
+/**
+ * Scharrende Hühner zertreten das Gras, Wurmeier sammeln sich im Boden.
+ * Mit Wechselweide erholt sich die ruhende Hälfte, das Hühnermobil zieht ohnehin auf frisches Gras um.
+ */
+function pasture(s: GameState) {
+  s.pasture ??= [100, 100];
+  const n = s.equip.fence ? flock(s).length : 0;
+  const rotate = has(s, 'wechselweide');
+  const active = rotate ? s.pastureSide ?? 0 : 0;
+  const regrow = season(s) === 'winter' ? 0.5 : 1;
+  const wear = n ? (1.2 + 0.25 * n) * (crowding(s) > 1 ? 1.5 : 1) * Math.sqrt(plot(s).wet) * (s.equip.coop === 'mobil' ? 0.5 : 1) : 0;
+  for (const side of [0, 1] as const) {
+    const p = s.pasture[side];
+    if (side === active) s.pasture[side] = clamp(p - wear + 1 * regrow);
+    else if (rotate) s.pasture[side] = clamp(p + 4 * regrow);
   }
 }
 
@@ -442,12 +473,12 @@ function brooding(s: GameState) {
   }
 }
 
-function hatch(s: GameState, eggs: { breed: keyof typeof BREEDS; fertile: boolean }[], mother: Animal | undefined, where: string) {
+function hatch(s: GameState, eggs: HatchEgg[], mother: Animal | undefined, where: string) {
   let n = 0;
   for (const e of eggs) {
     if (!e.fertile) continue;
     if (!chance(s, 0.9)) continue; // einige Küken schaffen den Schlupf nicht
-    const c = createAnimal(s, e.breed, { ageDays: 0, history: `Geschlüpft (${where})`, motherId: mother?.id });
+    const c = createAnimal(s, e.breed, { ageDays: 0, history: `Geschlüpft (${where})`, motherId: mother?.id, variant: e.variant ?? randomVariant(s, e.breed) });
     s.animals.push(c);
     n++;
   }
@@ -485,7 +516,8 @@ function layEggs(s: GameState) {
   const hens = flock(s).filter(a => a.sex === 'henne' && stage(s, a) === 'erwachsen').length;
   const fertility = Math.min(0.9, (0.9 * roosters * 10) / Math.max(1, hens));
   const se = season(s);
-  const seasonF = { fruehling: 1.1, sommer: 1, herbst: 0.6, winter: 0.45 }[se];
+  // Stalllicht verlängert im Herbst und Winter den Tag
+  const seasonF = lightActive(s) && (se === 'herbst' || se === 'winter') ? SEASON_LAY_LIGHT[se] : SEASON_LAY[se];
   let laid = 0;
   for (const a of flock(s)) {
     if (a.sex !== 'henne' || stage(s, a) !== 'erwachsen' || a.broodingUntil > s.day) continue;
@@ -505,12 +537,21 @@ function layEggs(s: GameState) {
     if (a.withdrawalUntil >= s.day) {
       s.blockedEggs++;
     } else if (rooster) {
-      s.nestHatchEggs.push({ breed: a.breed, fertile: chance(s, fertility) });
+      s.nestHatchEggs.push({ breed: a.breed, variant: chickVariant(s, a), fertile: chance(s, fertility) });
     } else {
       s.nestEggs[a.breed] = (s.nestEggs[a.breed] ?? 0) + 1;
     }
   }
   if (laid > 0 && s.stats.eggsTotal === laid) log(s, '🥚 Das allererste Ei liegt im Nest! Tippe auf die Eier, um sie einzusammeln.', 'good', true);
+}
+
+/** Farbe der Küken: von Mutter oder Vater (gleiche Rasse), selten eine Überraschung */
+function chickVariant(s: GameState, hen: Animal): string {
+  if (chance(s, 0.05)) return randomVariant(s, hen.breed, true);
+  const fathers = adultRoosters(s).filter(r => r.breed === hen.breed);
+  const mother = hen.variant ?? BREEDS[hen.breed].variants[0].id;
+  if (!fathers.length || chance(s, 0.5)) return mother;
+  return pick(s, fathers).variant ?? BREEDS[hen.breed].variants[0].id;
 }
 
 /* ================================================================== */
@@ -616,9 +657,10 @@ function randomEvents(s: GameState) {
     ] });
   } else if (r < 0.085) {
     const b = pick(s, ['marans', 'brahma', 'seide', 'sussex'] as const);
-    for (let i = 0; i < 4; i++) s.hatchEggs.push({ breed: b, fertile: chance(s, 0.8) });
-    log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier der Rasse ${BREEDS[b].name}!`, 'good');
-    celebrate(s, { emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier der Rasse ${BREEDS[b].name} mitgebracht!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
+    const variant = randomVariant(s, b, true);
+    for (let i = 0; i < 4; i++) s.hatchEggs.push({ breed: b, variant, fertile: chance(s, 0.8) });
+    log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier: ${breedLabel(b, variant)}!`, 'good');
+    celebrate(s, { emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier mitgebracht: ${breedLabel(b, variant)}. Mal sehen, was da schlüpft!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
   }
 }
 
@@ -689,7 +731,7 @@ export function refreshOffers(s: GameState) {
     const base = BREEDS[breed].prices[kind];
     const price = Math.max(1, Math.round(base * between(s, 0.85, 1.2) * 2) / 2);
     const qty = kind === 'brutei' ? intBetween(s, 6, 12) : kind === 'hahn' ? intBetween(s, 1, 2) : intBetween(s, 2, 6);
-    const o: MarketOffer = { id: s.nextId++, kind, breed, price, qty, seller: pick(s, SELLERS) };
+    const o: MarketOffer = { id: s.nextId++, kind, breed, variant: randomVariant(s, breed), price, qty, seller: pick(s, SELLERS) };
     if (kind === 'legehenne') {
       o.hiddenAge = intBetween(s, 40, 420);
       o.hiddenMites = chance(s, 0.25);

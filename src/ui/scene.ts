@@ -2,17 +2,20 @@
 // die Tiere bewegen sich in jedem Frame.
 import { BREEDS, CONDITIONS } from '../game/data';
 import {
-  drinkerCap, eggCount, feederCap, frozen, has, headingIn, isDaytime, season, stage,
+  drinkerCap, eggCount, feederCap, frozen, has, headingIn, isDaytime, lightActive, season, stage,
 } from '../game/helpers';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
 import type { Animal, GameState } from '../game/types';
 import {
-  COOP_GEO, DEFS, INK, breedStyle, coopSvg, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg,
+  COOP_GEO, DEFS, INK, breedStyle, coopSvg, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg, trophySvg,
 } from './art';
 
 const NS = 'http://www.w3.org/2000/svg';
 const YARD = { x0: 252, x1: 458, y0: 184, y1: 250 };
+/** Wechselweide: Grenze zwischen linker und rechter Hälfte */
+const DIVIDE = 356;
+const HALVES = [{ ...YARD, x1: DIVIDE - 12 }, { ...YARD, x0: DIVIDE + 12 }];
 const STATION = { x0: 18, x1: 80, y0: 240, y1: 256 };
 /** Durchgang zwischen Stall und Auslauf */
 const GATE = { x: 236, y: 208 };
@@ -36,7 +39,10 @@ export class Scene {
   private animalsLayer: SVGGElement;
   private front: SVGGElement;
   private overlay: SVGRectElement;
+  private glow: SVGGElement;
   private sig = '';
+  /** Bereich, in dem die Hühner tagsüber scharren (bei Wechselweide nur eine Hälfte) */
+  private yard = YARD;
   private sprites = new Map<number, Sprite>();
 
   constructor(host: HTMLElement) {
@@ -53,12 +59,14 @@ export class Scene {
         <g class="animals" stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></g>
         <g class="front" stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></g>
         <rect class="nightshade" x="-400" y="-700" width="1280" height="1000" fill="#0b1530" opacity="0" pointer-events="none"/>
+        <g class="glow" pointer-events="none"></g>
       </svg>`;
     this.svg = host.querySelector('svg')!;
     this.world = this.svg.querySelector('.world')!;
     this.animalsLayer = this.svg.querySelector('.animals')!;
     this.front = this.svg.querySelector('.front')!;
     this.overlay = this.svg.querySelector('.nightshade')!;
+    this.glow = this.svg.querySelector('.glow')!;
     this.setupPan();
     new ResizeObserver(() => this.fitView()).observe(this.svg);
   }
@@ -81,6 +89,15 @@ export class Scene {
     this.applyView();
     // Höhe des sichtbaren Hofs, damit die Wisch-Pfeile auf Höhe der Szene sitzen
     (this.svg.parentElement as HTMLElement | null)?.style.setProperty('--scene-h', `${Math.min(r.height, (r.width * 270) / this.viewW).toFixed(0)}px`);
+  }
+  /** Ausschnitt so verschieben, dass ein Objekt der Szene sichtbar ist (z. B. für Tutorial-Pfeile) */
+  reveal(el: Element) {
+    if (this.viewW >= 480 || !(el instanceof SVGGraphicsElement)) return;
+    const b = el.getBBox();
+    const cx = b.x + b.width / 2;
+    if (cx > this.panX + 24 && cx < this.panX + this.viewW - 24) return;
+    this.panX = cx - this.viewW / 2;
+    this.applyView();
   }
   private applyView() {
     this.panX = Math.max(0, Math.min(480 - this.viewW, this.panX));
@@ -121,9 +138,11 @@ export class Scene {
       frozen(s), s.cleanliness < 35, Math.round(s.water / Math.max(1, drinkerCap(s)) * 8), Math.round(s.feed / Math.max(1, feederCap(s)) * 8),
       s.feedType, eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs, phase, s.incubator.length, s.farmName,
       this.insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
+      has(s, 'wechselweide'), s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
     ]);
     if (sig !== this.sig) {
       this.sig = sig;
+      this.yard = has(s, 'wechselweide') ? HALVES[s.pastureSide ?? 0] : YARD;
       this.drawWorld(s, phase);
     }
     const shade = { n: 0.5, m: 0.12, d: 0, e: 0.2 }[phase];
@@ -205,6 +224,7 @@ export class Scene {
     if (has(s, 'kuekenstation')) extra.push(`<g data-act="open:tiere" class="clickable"><rect x="8" y="232" width="80" height="30" rx="4" fill="#f4e6c8"/><path d="M14 232 V222 H82 V232" fill="none" stroke="#777" stroke-width="2"/><path d="M48 222 V226 M42 226 H54 L51 232 H45 Z" fill="#c0392b"/><ellipse cx="48" cy="242" rx="30" ry="8" fill="#ffb36b" opacity=".35" stroke="none"/></g>`);
     if (has(s, 'brutapparat')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(66 216)"><rect x="-14" y="-12" width="28" height="18" rx="4" fill="#eef2f4"/><rect x="-9" y="-8" width="18" height="9" rx="2" fill="#ffd28a"/>${s.incubator.length ? `<text x="17" y="2" class="svgtxt small">${s.incubator.length}🥚</text>` : ''}</g>`);
     extra.push(noticeBoard(s));
+    if (s.trophies?.length) extra.push(trophySvg(408, 156, s.trophies.length));
     if (snow) extra.push(`<g class="snow" fill="#fff" stroke="none">${Array.from({ length: 24 }, (_, i) => `<circle cx="${(i * 41) % 480}" cy="${(i * 67) % 160}" r="${1.5 + (i % 3)}" style="animation-delay:-${(i % 7) * 0.9}s"/>`).join('')}</g>`);
 
     this.world.innerHTML = `
@@ -213,6 +233,7 @@ export class Scene {
       ${decor}${stream}${pump}
       <path d="M-400 156 Q 240 138 880 156 V300 H-400Z" fill="${ground[0]}"/>
       <path d="M60 230 l4 -9 l3 9 M180 250 l3 -8 l3 8 M240 168 l3 -7 l3 7 M300 236 l3 -8 l3 8 M400 214 l3 -7 l3 7" fill="none" stroke="${ground[1]}" stroke-width="2"/>
+      ${s.equip.fence ? pastureSvg(s, snow) : ''}
       ${fence.back}${extra.join('')}${coop}
       ${drinkerSvg(s.equip.drinker, s.water / Math.max(1, drinkerCap(s)), frozen(s), has(s, 'pumpe') || has(s, 'leitung'))}
       ${feederSvg(s.equip.feeder, s.feed / Math.max(1, feederCap(s)), s.feedType === 'legemehl')}
@@ -221,6 +242,11 @@ export class Scene {
       ? `<g transform="translate(354 246)"><rect x="-44" y="-11" width="88" height="20" rx="4" fill="#f0d2a0"/><text x="0" y="3" text-anchor="middle" class="svgtxt small">${esc(s.farmName.slice(0, 22))}</text></g>`
       : '';
     this.front.innerHTML = `${fence.front}${sign}${playerSvg(s.hat, 106, 168)}`;
+    // Stalllicht leuchtet in der Dämmerung und nachts durchs Fenster (über der Nachtabdunklung)
+    const [wx, wy] = geo.window;
+    this.glow.innerHTML = s.equip.coop && lightActive(s) && phase !== 'd'
+      ? `<circle cx="${wx}" cy="${wy}" r="22" fill="#ffe680" opacity=".28"/><circle cx="${wx}" cy="${wy}" r="9" fill="#fff3b0" opacity=".85"/>`
+      : '';
   }
 
   /* ---------------- Tiere ---------------- */
@@ -238,7 +264,7 @@ export class Scene {
     const body = document.createElementNS(NS, 'g');
     const rooster = kind === 'rooster' || kind === 'youngrooster';
     const sym = kind === 'chick' ? 'chick' : rooster ? 'rooster' : 'hen';
-    const style = breedStyle(a.breed, rooster) + (kind === 'chick' ? ';--b:var(--cb)' : '');
+    const style = breedStyle(a.breed, rooster, a.variant) + (kind === 'chick' ? ';--b:var(--cb)' : '');
     const fluffy = BREEDS[a.breed].fluffy && sym === 'hen';
     body.innerHTML = `<g class="bob" style="${style}">${fluffy ? '<use href="#sym-fluff"/>' : ''}<use href="#sym-${sym}"/></g>`;
     const hit = document.createElementNS(NS, 'circle');
@@ -258,7 +284,7 @@ export class Scene {
   private spawnPoint(s: GameState, a: Animal): [number, number] {
     const st = stage(s, a);
     if (st === 'kueken' && has(s, 'kuekenstation')) return rndIn(STATION);
-    if (a.outside) return rndIn(YARD);
+    if (a.outside) return rndIn(this.yard);
     const geo = COOP_GEO[s.equip.coop ?? 'none'];
     return [geo.door[0] + (Math.random() - 0.5) * 40, geo.door[1] + 20 + Math.random() * 20];
   }
@@ -337,10 +363,10 @@ export class Scene {
       if (!s.equip.coop) region = { x0: 125, x1: 225, y0: 220, y1: 254 };
     } else {
       // ausgesperrt in der Dämmerung/Nacht: dicht gedrängt vor dem Tor
-      region = !isDaytime(s.hour) && !s.doorOpen ? HUDDLE : YARD;
+      region = !isDaytime(s.hour) && !s.doorOpen ? HUDDLE : this.yard;
     }
     // Wege zwischen Stall und Auslauf laufen im Spieltempo, damit sie rechtzeitig ankommen
-    const transit = wantInside || (region === YARD && sp.x < GATE.x + 8);
+    const transit = wantInside || (region === this.yard && sp.x < GATE.x + 8);
     // Heimweg muss in die Laufzeit der Simulation passen (ca. 25 Spielminuten)
     const pace = this.speed <= 0 ? 0 : transit ? Math.max(1, this.speed) * 3.5 : Math.min(this.speed, 2);
     const speed = (sp.kind === 'chick' ? 0.035 : 0.025) * dtMs * pace;
@@ -361,7 +387,7 @@ export class Scene {
       sp.x = geo.door[0]; sp.y = geo.door[1] + 6;
       const p = rndIn(region!);
       sp.tx = p[0]; sp.ty = p[1];
-    } else if (region === YARD && sp.x < GATE.x + 8) {
+    } else if (region === this.yard && sp.x < GATE.x + 8) {
       // vom Stall kommend: erst durchs Tor in den Auslauf
       if (sp.x < GATE.x - 12) { sp.tx = GATE.x - 8; sp.ty = GATE.y + (Math.random() - 0.5) * 6; }
       else { sp.tx = GATE.x + 18 + Math.random() * 30; sp.ty = GATE.y + (Math.random() - 0.5) * 20; }
@@ -395,6 +421,38 @@ export class Scene {
     sp.el.setAttribute('transform', `translate(${sp.x.toFixed(1)} ${sp.y.toFixed(1)})`);
     sp.body.setAttribute('transform', `scale(${sp.flip ? -scale : scale} ${scale})`);
   }
+}
+
+/** Auslauf: abgegraste Stellen je nach Weidezustand, bei Wechselweide Trennzaun und ruhende Hälfte */
+function pastureSvg(s: GameState, snow: boolean): string {
+  const rotate = has(s, 'wechselweide');
+  const side = rotate ? s.pastureSide ?? 0 : 0;
+  const p = s.pasture ?? [100, 100];
+  const patches = (x0: number, x1: number, state: number, seed: number) => {
+    const n = snow ? 0 : Math.round((100 - state) / 14);
+    return Array.from({ length: n }, (_, i) => {
+      const x = x0 + ((i * 47 + seed) % (x1 - x0));
+      const y = 186 + ((i * 29 + seed * 3) % 60);
+      return `<ellipse cx="${x}" cy="${y}" rx="${9 + (i % 3) * 3}" ry="${3 + (i % 2)}" fill="#b08a55" opacity=".55"/>`;
+    }).join('');
+  };
+  const lush = (x0: number, x1: number, state: number) => (snow ? '' : Array.from({ length: Math.round(state / 12) }, (_, i) => {
+    const x = x0 + 6 + ((i * 37) % (x1 - x0 - 12));
+    const y = 190 + ((i * 23) % 56);
+    return `<path d="M${x - 3} ${y} l2 -7 l1 7 M${x + 1} ${y} l2 -8 l1 8" fill="none" stroke="#3f8a2c" stroke-width="1.6"/>`;
+  }).join(''));
+  if (!rotate) return `<g stroke="none" pointer-events="none">${patches(250, 460, p[0], 11)}</g>`;
+  const [l, r] = [[244, DIVIDE - 4], [DIVIDE + 4, 468]];
+  const used = side === 0 ? l : r, rest = side === 0 ? r : l;
+  return `<g pointer-events="none">
+      <g stroke="none">${patches(used[0], used[1], p[side], 11)}</g>
+      <g>${lush(rest[0], rest[1], p[side === 0 ? 1 : 0])}</g>
+    </g>
+    <g data-act="open:hof" class="clickable">
+      <path d="M${DIVIDE} 168 V198 M${DIVIDE} 224 V262" fill="none" stroke="#c08a55" stroke-width="3" stroke-dasharray="2 5"/>
+      <path d="M${DIVIDE - 3} 198 V224 M${DIVIDE + 3} 198 V224" stroke="#c08a55" stroke-width="2"/>
+      <g transform="translate(${(rest[0] + rest[1]) / 2} 226)"><rect x="-26" y="-9" width="52" height="15" rx="3" fill="#fff6e0"/><text x="0" y="2" text-anchor="middle" class="svgtxt small">🌱 ruht</text></g>
+    </g>`;
 }
 
 /** Schaukasten mit den Kapitel-Zielen – ein Tipp blendet die Ziel-Karte ein oder aus */

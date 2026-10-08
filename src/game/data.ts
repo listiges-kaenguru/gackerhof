@@ -113,45 +113,91 @@ export interface BreedDef {
   life: [number, number];
   broody: number; // Neigung zum Brüten
   coldHardy: boolean;
+  /** Farbvarianten; die erste ist die häufigste und gilt für alte Spielstände */
+  variants: VariantDef[];
+  fluffy?: boolean;
+  /** Rassetier für Geflügelschauen (Hybriden sind nicht zugelassen) */
+  showBreed: boolean;
+  prices: { brutei: number; kueken: number; junghenne: number; legehenne: number; hahn: number };
+}
+export interface VariantDef {
+  id: string;
+  name: string;
   colors: { body: string; wing: string; neck?: string; tail?: string };
   rooster: { body: string; wing: string; neck: string; tail: string };
-  fluffy?: boolean;
-  prices: { brutei: number; kueken: number; junghenne: number; legehenne: number; hahn: number };
+  /** Farbe der Küken (Standard je Rasse) */
+  chick?: string;
 }
 export const BREEDS: Record<BreedId, BreedDef> = {
   hybrid: {
     name: 'Legehybride', desc: 'Günstig, legt sehr fleißig, lebt kürzer.',
     layRate: 0.88, eggValue: 1, weightHen: 1.9, weightRooster: 2.4, life: [480, 650], broody: 0, coldHardy: false,
-    colors: { body: '#b5652b', wing: '#7d3f17' },
-    rooster: { body: '#c4552a', wing: '#8f3416', neck: '#e8a23a', tail: '#2d5a3a' },
+    variants: [
+      { id: 'braun', name: 'braun', colors: { body: '#b5652b', wing: '#7d3f17' },
+        rooster: { body: '#c4552a', wing: '#8f3416', neck: '#e8a23a', tail: '#2d5a3a' }, chick: '#e8b25a' },
+      { id: 'weiss', name: 'weiß', colors: { body: '#f7f4ee', wing: '#e2dccf' },
+        rooster: { body: '#f7f4ee', wing: '#e2dccf', neck: '#fbf8f2', tail: '#e8e2d6' }, chick: '#fff1a8' },
+      { id: 'schwarz', name: 'schwarz', colors: { body: '#2f2a2b', wing: '#1d1a1b', neck: '#8a6a3a' },
+        rooster: { body: '#2a2526', wing: '#1a1718', neck: '#a07a3a', tail: '#1d3a2a' }, chick: '#4a4040' },
+    ],
+    showBreed: false,
     prices: { brutei: 1.5, kueken: 4, junghenne: 18, legehenne: 12, hahn: 10 },
   },
   sussex: {
     name: 'Sussex', desc: 'Robustes Zweinutzungshuhn. Ein Allrounder.',
     layRate: 0.72, eggValue: 1, weightHen: 2.8, weightRooster: 3.6, life: [600, 850], broody: 0.08, coldHardy: true,
-    colors: { body: '#f6f1e7', wing: '#d9cfbd', neck: '#3b3b3b', tail: '#2b2b2b' },
-    rooster: { body: '#f6f1e7', wing: '#d9cfbd', neck: '#3b3b3b', tail: '#222222' },
+    variants: [
+      { id: 'hell', name: 'hell', colors: { body: '#f6f1e7', wing: '#d9cfbd', neck: '#3b3b3b', tail: '#2b2b2b' },
+        rooster: { body: '#f6f1e7', wing: '#d9cfbd', neck: '#3b3b3b', tail: '#222222' } },
+      { id: 'rot', name: 'rot', colors: { body: '#b4532a', wing: '#8a3a1a', neck: '#2f2a28', tail: '#222222' },
+        rooster: { body: '#a8461f', wing: '#7d3214', neck: '#2f2a28', tail: '#1e1e1e' }, chick: '#e0a060' },
+      { id: 'porzellan', name: 'porzellanfarbig', colors: { body: '#c9874a', wing: '#f3ece0', neck: '#9a5a2a', tail: '#3a3a3a' },
+        rooster: { body: '#c27a3a', wing: '#f3ece0', neck: '#a8642e', tail: '#2a2a2a' }, chick: '#f0c27a' },
+    ],
+    showBreed: true,
     prices: { brutei: 2.5, kueken: 6, junghenne: 24, legehenne: 18, hahn: 18 },
   },
   marans: {
     name: 'Marans', desc: 'Schokobraune Eier, die mehr Geld bringen.',
     layRate: 0.58, eggValue: 2, weightHen: 2.7, weightRooster: 3.5, life: [600, 850], broody: 0.08, coldHardy: true,
-    colors: { body: '#3e3431', wing: '#262020', neck: '#b8732e' },
-    rooster: { body: '#2f2826', wing: '#1e1a19', neck: '#c4762a', tail: '#1a2e22' },
+    variants: [
+      { id: 'kupfer', name: 'schwarz-kupfer', colors: { body: '#3e3431', wing: '#262020', neck: '#b8732e' },
+        rooster: { body: '#2f2826', wing: '#1e1a19', neck: '#c4762a', tail: '#1a2e22' }, chick: '#5a4a3a' },
+      { id: 'weizen', name: 'weizenfarbig', colors: { body: '#d9a35a', wing: '#b9773a', neck: '#e8c07a' },
+        rooster: { body: '#b85a2a', wing: '#8a3e1a', neck: '#e8a23a', tail: '#1e2a22' }, chick: '#f0d08a' },
+      { id: 'kuckuck', name: 'kuckucksperber', colors: { body: '#8e8a86', wing: '#6a6662', neck: '#a8a49e' },
+        rooster: { body: '#9a9692', wing: '#75716d', neck: '#b4b0aa', tail: '#5a5652' }, chick: '#6a6462' },
+    ],
+    showBreed: true,
     prices: { brutei: 3.5, kueken: 8, junghenne: 28, legehenne: 22, hahn: 22 },
   },
   brahma: {
     name: 'Brahma', desc: 'Groß, ruhig, kältefest. Frisst viel, wenige Eier.',
     layRate: 0.42, eggValue: 1, weightHen: 4, weightRooster: 5, life: [650, 900], broody: 0.2, coldHardy: true,
-    colors: { body: '#ece3d0', wing: '#9a9184', neck: '#5c5650', tail: '#3a3632' },
-    rooster: { body: '#ece3d0', wing: '#9a9184', neck: '#5c5650', tail: '#2a2724' },
+    variants: [
+      { id: 'hell', name: 'hell', colors: { body: '#ece3d0', wing: '#9a9184', neck: '#5c5650', tail: '#3a3632' },
+        rooster: { body: '#ece3d0', wing: '#9a9184', neck: '#5c5650', tail: '#2a2724' } },
+      { id: 'dunkel', name: 'dunkel', colors: { body: '#6f6a66', wing: '#3e3a37', neck: '#e6e2da', tail: '#2a2724' },
+        rooster: { body: '#3a3634', wing: '#d8d4cc', neck: '#eeeae2', tail: '#1e1c1a' }, chick: '#8a8480' },
+      { id: 'gelb', name: 'gelb-columbia', colors: { body: '#e8c27a', wing: '#d4a85a', neck: '#5c4a30', tail: '#3a2e20' },
+        rooster: { body: '#e8b860', wing: '#d09a48', neck: '#5c4a30', tail: '#2a2218' } },
+    ],
+    showBreed: true,
     prices: { brutei: 3, kueken: 7, junghenne: 30, legehenne: 25, hahn: 25 },
   },
   seide: {
     name: 'Seidenhuhn', desc: 'Flauschig und die beste Glucke von allen.',
     layRate: 0.35, eggValue: 1.2, weightHen: 1.1, weightRooster: 1.4, life: [650, 900], broody: 0.45, coldHardy: false,
-    colors: { body: '#ffffff', wing: '#ebe6dd' }, fluffy: true,
-    rooster: { body: '#ffffff', wing: '#ebe6dd', neck: '#ffffff', tail: '#ebe6dd' },
+    variants: [
+      { id: 'weiss', name: 'weiß', colors: { body: '#ffffff', wing: '#ebe6dd' },
+        rooster: { body: '#ffffff', wing: '#ebe6dd', neck: '#ffffff', tail: '#ebe6dd' } },
+      { id: 'schwarz', name: 'schwarz', colors: { body: '#2b2729', wing: '#1e1b1c' },
+        rooster: { body: '#2b2729', wing: '#1e1b1c', neck: '#2b2729', tail: '#1e1b1c' }, chick: '#3a3436' },
+      { id: 'blau', name: 'blau', colors: { body: '#8a97a8', wing: '#6f7b8c' },
+        rooster: { body: '#8a97a8', wing: '#6f7b8c', neck: '#8a97a8', tail: '#6f7b8c' }, chick: '#b8c2ce' },
+    ],
+    showBreed: true,
+    fluffy: true,
     prices: { brutei: 3, kueken: 8, junghenne: 32, legehenne: 25, hahn: 20 },
   },
 };
@@ -261,6 +307,10 @@ export const ITEMS: ItemDef[] = [
     desc: 'Küken brauchen Wärme. Ohne Station werden sie krank.' },
   { id: 'brutapparat', cat: 'ausbau', name: 'Brutapparat (12 Eier)', price: 90, cap: 12,
     desc: 'Brütet Eier ohne Glucke aus.' },
+  { id: 'wechselweide', cat: 'ausbau', name: 'Wechselweide', price: 55,
+    desc: 'Teilt den Auslauf in zwei Hälften. Eine wird genutzt, die andere erholt sich: viel weniger Würmer.' },
+  { id: 'stalllicht', cat: 'ausbau', name: 'Stalllicht mit Zeitschaltuhr', price: 35, power: 0.12,
+    desc: 'Verlängert im Herbst und Winter den Tag im Stall: deutlich mehr Eier. Strom nur, wenn es läuft.' },
   { id: 'sandbad', cat: 'ausbau', name: 'Sandbad', price: 15, desc: 'Hühner pflegen ihr Gefieder: weniger Milben.' },
   { id: 'autofutter', cat: 'ausbau', name: 'Automatische Fütterung', price: 700,
     desc: 'Füllt die Futterstelle jeden Morgen aus dem Lager auf.' },
@@ -341,6 +391,32 @@ export const CONDITIONS: Record<ConditionId, ConditionDef> = {
     cures: [{ id: 'kokzidiostatikum', label: 'Kokzidiose-Mittel', effect: 100 }],
   },
 };
+
+/* ------------------------------------------------------------------ */
+/* Weide, Licht, Album, Geflügelschau                                 */
+/* ------------------------------------------------------------------ */
+/** Ab diesem Weidezustand (%) steigt das Wurmrisiko deutlich */
+export const PASTURE_WARN = 45;
+/** Legeleistung je Jahreszeit; mit Stalllicht im Herbst/Winter höher */
+export const SEASON_LAY = { fruehling: 1.1, sommer: 1, herbst: 0.6, winter: 0.45 } as const;
+export const SEASON_LAY_LIGHT = { herbst: 0.88, winter: 0.8 } as const;
+/** Prämien im Hühner-Album */
+export const ALBUM_BREED_BONUS = 20;
+export const ALBUM_FULL_BONUS = 100;
+/** Geflügelschau: Tag in der Jahreszeit, Ankündigung vorher, Standgeld, Höchstzahl Tiere */
+export const SHOW_DAY = 25;
+export const SHOW_NOTICE = 7;
+export const SHOW_FEE = 4;
+export const SHOW_MAX = 3;
+/** Bewertung wie auf echten Rassegeflügelschauen */
+export const SHOW_GRADES: { min: number; grade: string; name: string; prize: number }[] = [
+  { min: 97, grade: 'v', name: 'vorzüglich', prize: 25 },
+  { min: 95, grade: 'hv', name: 'hervorragend', prize: 12 },
+  { min: 93, grade: 'sg', name: 'sehr gut', prize: 5 },
+  { min: 92, grade: 'g', name: 'gut', prize: 0 },
+  { min: 0, grade: 'b', name: 'befriedigend', prize: 0 },
+];
+export const SHOW_TROPHY_PRIZE = 50;
 
 /* ------------------------------------------------------------------ */
 /* Sonstiges                                                          */

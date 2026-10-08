@@ -20,6 +20,8 @@ export interface Animal {
   id: number;
   name: string;
   breed: BreedId;
+  /** Farbvariante (ab 0.3.0); fehlt sie, gilt die erste Variante der Rasse */
+  variant?: string;
   sex: Sex;
   /** Spieltag des Schlupfs. Alter = state.day - hatchedDay */
   hatchedDay: number;
@@ -57,6 +59,8 @@ export interface Animal {
 
 export interface HatchEgg {
   breed: BreedId;
+  /** Farbvariante des Kükens (ab 0.3.0) */
+  variant?: string;
   fertile: boolean;
 }
 
@@ -69,6 +73,7 @@ export interface MarketOffer {
   id: number;
   kind: 'brutei' | 'kueken' | 'junghenne' | 'legehenne' | 'hahn';
   breed: BreedId;
+  variant?: string;
   price: number;
   qty: number;
   seller: string;
@@ -103,6 +108,41 @@ export interface Celebration {
   emoji: string;
   title: string;
   lines: string[];
+}
+
+/** Eintrag im Hühner-Album */
+export interface AlbumEntry {
+  day: number;
+  name: string;
+}
+
+/** Bewertung eines Tiers auf der Geflügelschau */
+export interface ShowResult {
+  animalId: number;
+  name: string;
+  breed: BreedId;
+  variant?: string;
+  points: number;
+  grade: string;
+  prize: number;
+  trophy: boolean;
+}
+
+export interface PoultryShow {
+  day: number;
+  title: string;
+  /** 2 = Landesschau (ab 4 Sternen, doppelte Preise) */
+  level: 1 | 2;
+  entries: number[];
+  announced: boolean;
+}
+
+export interface Trophy {
+  day: number;
+  title: string;
+  animal: string;
+  breed: BreedId;
+  variant?: string;
 }
 
 export interface Goal {
@@ -170,6 +210,22 @@ export interface GameState {
   events: GameEvent[];
   /** Kundenaufträge (ab 0.2.0) */
   orders?: Order[];
+
+  /** Weidezustand je Auslaufhälfte 0..100, 100 = frisch (ab 0.3.0). Ohne Wechselweide zählt nur [0]. */
+  pasture?: [number, number];
+  /** Aktive Auslaufhälfte bei Wechselweide */
+  pastureSide?: 0 | 1;
+  pastureSwitchDay?: number;
+  /** Stalllicht eingeschaltet (Zeitschaltuhr, wirkt im Herbst und Winter) */
+  lightOn?: boolean;
+  /** Hühner-Album: freigeschaltete Rassen und Farbvarianten, Schlüssel „rasse:variante“ */
+  album?: Record<string, AlbumEntry>;
+  /** Nächste Geflügelschau */
+  show?: PoultryShow;
+  lastShow?: { title: string; day: number; results: ShowResult[] };
+  trophies?: Trophy[];
+  /** Tutorial-Pfeile ausgeschaltet */
+  tutorialOff?: boolean;
 
   stats: {
     eggsSold: number;

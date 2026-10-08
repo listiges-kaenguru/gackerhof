@@ -23,14 +23,10 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 
 - **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt), „Eiermillionär“
 - **Kapitel 4 „Rassezucht“ und 5 „Der große Hof“**
-- **Geflügelschau** mit Preisgeld und Pokal
 - **Kundenaufträge** („Bäckerei Krause braucht 30 Eier bis Freitag“)
 - **Abnutzung und Reparatur** von Ausrüstung
 - **Weitere Ereignisse:** Nachbar beschwert sich über den Hahn, verstecktes Nest suchen, ausgebüxtes Huhn einfangen
 - **Hühnermist als Dünger** im eigenen Gemüsebeet statt nur verkaufen
-- **Wechselweide** gegen Würmer
-- **Stalllicht im Winter** für mehr Eier (mit Stromkosten)
-- **Hühner-Album** zum Sammeln aller Rassen und Farbvarianten
 
 ## Verbesserungen aus Test
 
@@ -40,7 +36,6 @@ Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt. Neue
 
 - **Sound:** Gackern, Hahnenschrei am Morgen, Hintergrundmusik (abschaltbar)
 - **Fotomodus** mit Rahmen zum Teilen
-- **Tutorial-Hinweise** direkt an den Objekten (Pfeile) für die ersten Schritte
 - **Weitere Sprachen** (Texte zentral sammeln)
 
 ## Spätere Erweiterungen

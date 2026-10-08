@@ -1,7 +1,8 @@
 import { BREEDS, DIFFICULTIES, HEN_NAMES, ROOSTER_NAMES, PERSONALITIES } from './data';
 import { between, chance, intBetween, pick } from './rng';
 import type { Animal, BreedId, Difficulty, GameState, Goal, Personality, PlotId, Sex } from './types';
-import { living } from './helpers';
+import { albumKey, living, stage } from './helpers';
+import { ensureShow } from './show';
 
 export const SAVE_VERSION = 1;
 const SAVE_KEY = 'gackerhof-save-v1';
@@ -49,6 +50,13 @@ export function newGame(opts: { farmName: string; difficulty: Difficulty; plot: 
     marderAlertDay: -1,
     hawkAlertDay: -1,
     events: [],
+    pasture: [100, 100],
+    pastureSide: 0,
+    pastureSwitchDay: 1,
+    lightOn: true,
+    album: {},
+    trophies: [],
+    tutorialOff: false,
     stats: {
       eggsSold: 0, eggsTotal: 0, hatched: 0, deaths: 0, deathsRecent: [], predatorLosses: 0, juniorsRaised: 0,
       income: 0, expenses: 0,
@@ -63,6 +71,7 @@ export function newGame(opts: { farmName: string; difficulty: Difficulty; plot: 
     celebrations: [],
     gameOver: false,
   };
+  ensureShow(s);
   return s;
 }
 
@@ -97,7 +106,7 @@ export function chapterGoals(ch: number): Goal[] {
 export function createAnimal(
   s: GameState,
   breed: BreedId,
-  opts: { sex?: Sex; ageDays?: number; history?: string; motherId?: number } = {},
+  opts: { sex?: Sex; ageDays?: number; history?: string; motherId?: number; variant?: string } = {},
 ): Animal {
   const sex: Sex = opts.sex ?? (chance(s, 0.5) ? 'henne' : 'hahn');
   const b = BREEDS[breed];
@@ -110,6 +119,7 @@ export function createAnimal(
     id: s.nextId++,
     name,
     breed,
+    variant: opts.variant ?? randomVariant(s, breed),
     sex,
     hatchedDay: s.day - ageDays,
     maxAge: Math.round(between(s, b.life[0], b.life[1])),
@@ -132,6 +142,13 @@ export function createAnimal(
   };
   a.weight = targetWeight(s, a);
   return a;
+}
+
+/** Zufällige Farbvariante: Die erste ist die häufigste */
+export function randomVariant(s: GameState, breed: BreedId, uniform = false): string {
+  const vs = BREEDS[breed].variants;
+  if (!uniform && chance(s, 0.6)) return vs[0].id;
+  return pick(s, uniform ? vs : vs.slice(1)).id;
 }
 
 export function targetWeight(s: GameState, a: Animal): number {
@@ -168,6 +185,21 @@ function migrate(s: GameState): GameState {
   s.toasts = [];
   s.banners ??= [];
   s.celebrations ??= [];
+  // 0.3.0: Weide, Stalllicht, Album, Geflügelschau, Tutorial
+  s.pasture ??= [100, 100];
+  s.pastureSide ??= 0;
+  s.pastureSwitchDay ??= s.day;
+  s.lightOn ??= true;
+  s.trophies ??= [];
+  // Laufende Spielstände brauchen kein Tutorial mehr
+  s.tutorialOff ??= s.stats.eggsSold > 0 || s.chapter > 1;
+  if (!s.album) {
+    s.album = {};
+    for (const a of living(s)) {
+      if (stage(s, a) !== 'kueken') s.album[albumKey(a.breed, a.variant)] ??= { day: s.day, name: a.name };
+    }
+  }
+  ensureShow(s);
   if (!s.marketVersion) {
     // Ältere Spielstände: Markt sofort neu bestücken (mit Hahn und Bruteiern)
     s.marketVersion = 2;

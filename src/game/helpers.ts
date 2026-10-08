@@ -3,7 +3,7 @@ import {
   AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
   ROOST_HOUR, ROOST_WINDOW, SEASONS, WALK_MINUTES,
 } from './data';
-import type { Animal, GameState, LogEntry, Season, Stage } from './types';
+import type { Animal, BreedId, GameState, LogEntry, Season, Stage } from './types';
 
 export const diff = (s: GameState) => DIFFICULTIES[s.difficulty];
 export const plot = (s: GameState) => PLOTS[s.plot];
@@ -59,6 +59,25 @@ export function stageName(s: GameState, a: Animal): string {
 }
 /** Geschlecht ist erst ab Junghuhn erkennbar */
 export const sexKnown = (s: GameState, a: Animal) => stage(s, a) !== 'kueken';
+
+/* ---------------- Farbvarianten & Album ---------------- */
+/** Farbvariante eines Tiers oder Eis (alte Spielstände: erste Variante) */
+export function variantOf(breed: BreedId, variant?: string) {
+  const vs = BREEDS[breed].variants;
+  return vs.find(v => v.id === variant) ?? vs[0];
+}
+/** z. B. „Sussex rot“ */
+export const breedLabel = (breed: BreedId, variant?: string) => `${BREEDS[breed].name} ${variantOf(breed, variant).name}`;
+export const albumKey = (breed: BreedId, variant?: string) => `${breed}:${variantOf(breed, variant).id}`;
+export const albumTotal = () => Object.values(BREEDS).reduce((t, b) => t + b.variants.length, 0);
+
+/* ---------------- Weide & Licht ---------------- */
+/** Zustand der gerade genutzten Weide (100 = frisch, 0 = völlig zertreten und verwurmt) */
+export const pastureNow = (s: GameState) => (s.pasture ?? [100, 100])[has(s, 'wechselweide') ? s.pastureSide ?? 0 : 0];
+/** Wurmrisiko durch die Weide: frisch 0,6×, abgenutzt bis 2× */
+export const pastureWormFactor = (s: GameState) => 0.6 + (1 - pastureNow(s) / 100) * 1.4;
+/** Stalllicht wirkt (und kostet Strom) nur im Herbst und Winter */
+export const lightActive = (s: GameState) => has(s, 'stalllicht') && s.lightOn !== false && (season(s) === 'herbst' || season(s) === 'winter');
 
 /* ---------------- Kapazitäten & Schutz ---------------- */
 export const coopCap = (s: GameState) => (s.equip.coop ? ITEM[s.equip.coop].cap ?? 0 : 0);

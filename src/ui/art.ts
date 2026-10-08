@@ -1,5 +1,6 @@
 // SVG-Zeichnungen im Cartoon-Stil (Stil A). Alle Funktionen liefern SVG-Markup als String.
 import { BREEDS } from '../game/data';
+import { variantOf } from '../game/helpers';
 import type { BreedId } from '../game/types';
 
 export const INK = '#3a2a1e';
@@ -42,17 +43,17 @@ export const DEFS = `
   <circle cx="-14" cy="-22" r="5" style="fill:var(--b)"/>
 </g>`;
 
-export function breedStyle(breed: BreedId, rooster: boolean): string {
-  const b = BREEDS[breed];
-  if (rooster) return `--b:${b.rooster.body};--bd:${b.rooster.wing};--n:${b.rooster.neck};--t:${b.rooster.tail}`;
-  const c = b.colors;
-  const chickColor = breed === 'marans' ? '#5a4a3a' : breed === 'hybrid' ? '#e8b25a' : '#ffe066';
+export function breedStyle(breed: BreedId, rooster: boolean, variant?: string): string {
+  const v = variantOf(breed, variant);
+  if (rooster) return `--b:${v.rooster.body};--bd:${v.rooster.wing};--n:${v.rooster.neck};--t:${v.rooster.tail}`;
+  const c = v.colors;
+  const chickColor = v.chick ?? '#ffe066';
   return `--b:${c.body};--bd:${c.wing};${c.neck ? `--n:${c.neck};` : ''}${c.tail ? `--t:${c.tail};` : ''}--cb:${chickColor}${breed === 'seide' ? ';--c:#6b2f3a' : ''}`;
 }
 
-/** Einzelnes Tier für Porträts (Steckbrief, Listen) */
-export function portrait(breed: BreedId, kind: 'hen' | 'rooster' | 'chick', dead = false): string {
-  const style = breedStyle(breed, kind === 'rooster');
+/** Einzelnes Tier für Porträts (Steckbrief, Listen, Album) */
+export function portrait(breed: BreedId, kind: 'hen' | 'rooster' | 'chick', dead = false, variant?: string): string {
+  const style = breedStyle(breed, kind === 'rooster', variant);
   const chickStyle = kind === 'chick' ? `--b:var(--cb)` : '';
   const fluffy = BREEDS[breed].fluffy && kind === 'hen';
   const vb = kind === 'chick' ? '-16 -16 32 30' : '-32 -36 70 60';
@@ -65,13 +66,13 @@ export function portrait(breed: BreedId, kind: 'hen' | 'rooster' | 'chick', dead
 /* ------------------------------------------------------------------ */
 /* Ausrüstung                                                          */
 /* ------------------------------------------------------------------ */
-export interface CoopGeo { door: [number, number]; badge: [number, number]; nest: [number, number] }
+export interface CoopGeo { door: [number, number]; badge: [number, number]; nest: [number, number]; window: [number, number] }
 export const COOP_GEO: Record<string, CoopGeo> = {
-  none: { door: [170, 215], badge: [170, 150], nest: [180, 222] },
-  kiste: { door: [168, 207], badge: [170, 152], nest: [196, 222] },
-  kleintier: { door: [150, 210], badge: [170, 108], nest: [196, 224] },
-  gartenhaus: { door: [150, 212], badge: [172, 88], nest: [205, 226] },
-  mobil: { door: [160, 205], badge: [172, 100], nest: [212, 224] },
+  none: { door: [170, 215], badge: [170, 150], nest: [180, 222], window: [170, 175] },
+  kiste: { door: [168, 207], badge: [170, 152], nest: [196, 222], window: [171, 180] },
+  kleintier: { door: [150, 210], badge: [170, 108], nest: [196, 224], window: [190, 156] },
+  gartenhaus: { door: [150, 212], badge: [172, 88], nest: [205, 226], window: [200, 139] },
+  mobil: { door: [160, 205], badge: [172, 100], nest: [212, 224], window: [205, 150] },
 };
 
 export function coopSvg(id: string | null, doorOpen: boolean, opts: { wetterhahn: boolean; licht: boolean; autoklappe: boolean; gitter: boolean; dirty: boolean }): string {
@@ -143,8 +144,8 @@ export function fenceSvg(id: string | null, opts: { geraet: boolean; untergrab: 
     for (let x = x0; x <= x1; x += 59) pegs += `<path d="M${x} ${yb + 6} V${yb - 8}" stroke="#a07b55" stroke-width="3"/>`;
     return { back: `<g data-act="open:shop:gehege" class="clickable">${pegs}
       <path d="M${x0} ${yb - 6} H${x1}" fill="none" stroke="#e05a3a" stroke-width="1.5" stroke-dasharray="5 4"/>
-      <rect x="318" y="${yb - 36}" width="72" height="22" rx="4" fill="#fff6e0"/>
-      <text x="354" y="${yb - 21}" text-anchor="middle" class="svgtxt">Gehege hier</text></g>`, front: '' };
+      <g class="fence-label"><rect x="376" y="${yb + 12}" width="72" height="22" rx="4" fill="#fff6e0"/>
+      <text x="412" y="${yb + 27}" text-anchor="middle" class="svgtxt">Gehege hier</text></g></g>`, front: '' };
   }
   let posts = '', front = '';
   const tall = id === 'maschen' ? 14 : 0;
@@ -254,6 +255,18 @@ export function playerSvg(hat: string | null, x: number, y: number): string {
     <circle cx="-4.5" cy="0" r="1.6" fill="${INK}" stroke="none"/><circle cx="4.5" cy="0" r="1.6" fill="${INK}" stroke="none"/>
     <path d="M-4.5 6 Q 0 9 4.5 6" fill="none" stroke-width="1.5"/>
     ${hat ? hats[hat] ?? '' : ''}
+  </g>`;
+}
+
+/** Pokal für Geflügelschau-Sieger */
+export function trophySvg(x: number, y: number, n: number): string {
+  return `<g data-act="open:markt:schau" class="clickable trophy" transform="translate(${x} ${y})">
+    <rect x="-9" y="6" width="18" height="6" rx="1.5" fill="#8a5a33"/>
+    <path d="M-3 0 H3 V6 H-3 Z" fill="#e0a92a"/>
+    <path d="M-10 -18 H10 Q 10 0 0 1 Q -10 0 -10 -18 Z" fill="#f2c94c"/>
+    <path d="M-10 -14 Q -17 -14 -15 -8 Q -13 -4 -8 -5 M10 -14 Q 17 -14 15 -8 Q 13 -4 8 -5" fill="none" stroke-width="2"/>
+    <path d="M-5 -14 Q -5 -6 0 -4" fill="none" stroke="#fff6c8" stroke-width="2"/>
+    ${n > 1 ? `<circle cx="11" cy="-18" r="6.5" fill="#d0453a"/><text x="11" y="-15" text-anchor="middle" class="svgtxt small" style="fill:#fff">${n}</text>` : ''}
   </g>`;
 }
 

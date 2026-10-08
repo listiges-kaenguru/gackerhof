@@ -3,6 +3,38 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## [0.3.0] – in Arbeit
+
+Fünf Ideen aus der Ideen-Liste sind umgesetzt.
+
+### Neu
+- **Wechselweide** (Shop → Erweiterungen, 55 €):
+  - Der Auslauf hat jetzt einen Weidezustand. Scharrende Hühner zertreten das Gras, und je abgegraster der Auslauf, desto öfter bekommen sie Würmer (bis doppelt so oft).
+  - Mit der Wechselweide nutzen die Hühner nur eine Hälfte, die andere erholt sich. Gewechselt wird in der Hofübersicht oder über den Hinweis „Weide abgegrast“.
+  - Auf dem Hof sieht man abgegraste Stellen, den Trennzaun und die ruhende Hälfte mit frischem Gras. Das Hühnermobil schont die Weide zusätzlich.
+- **Stalllicht mit Zeitschaltuhr** (Shop → Erweiterungen, 35 €):
+  - Es verlängert im Herbst und Winter den Tag im Stall. Die Hennen legen dann deutlich mehr (Herbst 88 % statt 60 %, Winter 80 % statt 45 % der Sommerleistung).
+  - Strom (0,12 € pro Tag) kostet es nur im Herbst und Winter. In der Hofübersicht lässt es sich ausschalten.
+  - In der Dämmerung leuchtet das Stallfenster.
+- **Hühner-Album** (Tiere → Album oder Mehr):
+  - Jede Rasse gibt es jetzt in 3 Farbvarianten, zum Beispiel Sussex hell, rot und porzellanfarbig. Das sind 15 Album-Einträge.
+  - Ein Eintrag zählt, sobald ein Tier dieser Farbe auf dem Hof lebt. Küken zeigen ihre Farbe erst als Junghuhn.
+  - Küken erben die Farbe von Mutter oder Vater (gleiche Rasse), selten gibt es eine Überraschung. Auf dem Markt sind noch fehlende Farben mit „📒 neu“ markiert.
+  - Prämien: 20 € für alle Farben einer Rasse, 100 € für das ganze Album.
+- **Geflügelschau** (Markt → Schau):
+  - Einmal pro Jahreszeit (Tag 25), eine Woche vorher angekündigt. Bis zu 3 ausgewachsene, gesunde Rassetiere können für 4 € Standgeld antreten. Legehybriden sind nicht zugelassen.
+  - Die Preisrichter vergeben Punkte für Gesundheit, Wohlbefinden, Gewicht, Alter und sauberes Gefieder, dazu kommt etwas Glück. Die Schau zeigt eine Prognose und Tipps je Tier.
+  - Preise: „sehr gut“ (93) 5 €, „hervorragend“ (95) 12 €, „vorzüglich“ (97) 25 €. Das beste Tier mit 97 Punkten bekommt einen Pokal (+50 €), der danach auf dem Hof steht.
+  - Ab 4 Sternen Hof-Ruf geht es auf die Landesschau mit doppelten Preisen.
+- **Tutorial-Pfeile:** In den ersten Spieltagen zeigt ein gelber Pfeil mit kurzem Text direkt auf das nächste Ziel: Zaun, Stall, Tränke, Futterstelle, Futter kaufen und einfüllen, Hühner kaufen, Eier sammeln und verkaufen sowie morgens und abends die Klappe. Er zeigt auf Objekte im Hof, Knöpfe im Shop oder die Tabs. Mit ✕ oder unter „Mehr → Spiel“ lässt er sich ausschalten. Laufende Spielstände starten ohne Pfeile.
+
+### Geändert
+- Die Beschriftung „Gehege hier“ steht jetzt im Auslauf. Vorher war sie vom Schaukasten verdeckt.
+
+### Technisch
+- 14 neue Tests (40 insgesamt) für Weide, Stalllicht, Album und Vererbung, Geflügelschau und Tutorial.
+- Ältere Spielstände bekommen beim Laden alle neuen Felder. Das Album wird aus den vorhandenen Tieren befüllt, alle bisherigen Tiere haben die erste Farbe ihrer Rasse.
+
 ## [0.2.1] – 2026-10-08
 
 Prototyp in den Branches `proto-v0.2.1` und `proto-built-v0.2.1`. Das Spiel ist am Handy im Hochformat besser spielbar.
