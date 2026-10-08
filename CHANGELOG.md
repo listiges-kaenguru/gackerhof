@@ -3,9 +3,9 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
-## [0.3.0] – in Arbeit
+## [0.3.0] – 2026-10-08
 
-Fünf Ideen aus der Ideen-Liste sind umgesetzt.
+Prototyp in den Branches `proto-v0.3.0` und `proto-built-v0.3.0`. Fünf Ideen aus der Ideen-Liste sind umgesetzt.
 
 ### Neu
 - **Wechselweide** (Shop → Erweiterungen, 55 €):
