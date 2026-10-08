@@ -70,13 +70,17 @@ export class Scene {
     const r = this.svg.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const aspect = r.width / r.height;
-    // Im Hochformat näher heranzoomen; der Rest des Hofs ist per Wischen erreichbar
-    const w = aspect < 1.3 ? 350 : 480;
+    // Im Hochformat so weit heranzoomen, dass der Hof gut 70 % der Höhe füllt. Mindestens 280 Einheiten
+    // bleiben sichtbar (Klappe, Nest, Tor, Tränke, Futter, Schaukasten); der Rest ist per Wischen erreichbar.
+    const w = Math.round(Math.max(280, Math.min(480, (270 * aspect) / 0.7)));
     if (w !== this.viewW) {
       this.viewW = w;
-      this.panX = w < 480 ? 480 - w - 8 : 0;
+      // Startausschnitt beginnt kurz vor der Stallklappe
+      this.panX = 120;
     }
     this.applyView();
+    // Höhe des sichtbaren Hofs, damit die Wisch-Pfeile auf Höhe der Szene sitzen
+    (this.svg.parentElement as HTMLElement | null)?.style.setProperty('--scene-h', `${Math.min(r.height, (r.width * 270) / this.viewW).toFixed(0)}px`);
   }
   private applyView() {
     this.panX = Math.max(0, Math.min(480 - this.viewW, this.panX));

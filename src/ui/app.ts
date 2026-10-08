@@ -796,6 +796,29 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   };
   window.addEventListener('keydown', onKey);
 
+  // Panel am Handy (unten eingeblendet) an der Kopfzeile nach unten wischen zum Schließen
+  const panelHead = $('.panel-head');
+  let dragY: number | null = null;
+  panelHead.addEventListener('pointerdown', e => {
+    if (getComputedStyle(panel).position !== 'fixed' || (e.target as Element).closest('button')) return;
+    dragY = e.clientY;
+    panelHead.setPointerCapture(e.pointerId);
+  });
+  panelHead.addEventListener('pointermove', e => {
+    if (dragY == null) return;
+    const dy = Math.max(0, e.clientY - dragY);
+    panel.style.transform = dy ? `translateY(${dy}px)` : '';
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (dragY == null) return;
+    const dy = e.clientY - dragY;
+    dragY = null;
+    panel.style.transform = '';
+    if (e.type === 'pointerup' && dy > 70) { ui.panel = null; refreshAll(); }
+  };
+  panelHead.addEventListener('pointerup', endDrag);
+  panelHead.addEventListener('pointercancel', endDrag);
+
   /* ================================================================ */
   /* Spielschleife                                                     */
   /* ================================================================ */
