@@ -3,6 +3,18 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## [0.2.1] – 2026-10-08
+
+Prototyp in den Branches `proto-v0.2.1` und `proto-built-v0.2.1`. Das Spiel ist am Handy im Hochformat besser spielbar.
+
+### Geändert
+- Der Hof wird näher herangezoomt und füllt mehr vom Bildschirm. Der Ausschnitt beginnt an der Stallklappe, der Rest ist per Wischen erreichbar. Die Wisch-Pfeile sitzen auf Höhe des Hofs statt im Himmel.
+- Shop, Markt und Co. lassen sich an der Kopfzeile nach unten wischen und so schließen.
+- Im Shop stehen Preis und Kaufknopf unter der Beschreibung, der Text bekommt die volle Breite.
+- In Dialogen wie der Begrüßung bleibt der Bestätigen-Knopf immer sichtbar, auch auf kleinen Handys.
+- Kopfzeile und Dialoge halten Abstand zu Notch und Statusleiste (als App installiert).
+- Schnelles Mehrfachtippen (z. B. „+1“ auf dem Markt) zoomt die Seite nicht mehr versehentlich heran.
+
 ## [0.2.0] – in Arbeit
 
 Ab dieser Version zählen Prototypen mit **0.x.x**. Die bisherigen Testversionen hießen noch 1.0.0 und 1.1.0. Umgesetzt sind die „Verbesserungen aus Test“ aus der Ideen-Liste.
@@ -27,13 +39,6 @@ Ab dieser Version zählen Prototypen mit **0.x.x**. Die bisherigen Testversionen
   - Beim Verkauf als Speiseeier steht jetzt der Preis dabei.
   - Die Sammelmeldung nennt die Gesamtzahl und die Aufteilung, das Lager zeigt die Summe aller Eier.
 - Ein Auftrag mit Eiern zählt auch für das Kapitelziel „Eier verkaufen“.
-- **Handy im Hochformat:**
-  - Der Hof wird näher herangezoomt und füllt mehr vom Bildschirm. Der Ausschnitt beginnt an der Stallklappe, der Rest ist per Wischen erreichbar. Die Wisch-Pfeile sitzen auf Höhe des Hofs statt im Himmel.
-  - Shop, Markt und Co. lassen sich an der Kopfzeile nach unten wischen und so schließen.
-  - Im Shop stehen Preis und Kaufknopf unter der Beschreibung, der Text bekommt die volle Breite.
-  - In Dialogen wie der Begrüßung bleibt der Bestätigen-Knopf immer sichtbar, auch auf kleinen Handys.
-  - Kopfzeile und Dialoge halten Abstand zu Notch und Statusleiste (als App installiert).
-  - Schnelles Mehrfachtippen (z. B. „+1“ auf dem Markt) zoomt die Seite nicht mehr versehentlich heran.
 
 ### Behoben
 - **Fuchsschutz:** Der Untergrabschutz zählte intern nur +10 %, angezeigt waren +15 %. Jetzt gilt überall der Wert aus dem Shop (Kapitel 2: 20 % → 35 %).
