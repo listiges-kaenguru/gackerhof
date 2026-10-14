@@ -53,8 +53,10 @@ Aufbau:
 
 ## Veröffentlichen
 
-Der Workflow `.github/workflows/pages.yml` baut das Spiel bei jedem Push auf `main` und veröffentlicht es auf GitHub Pages.
-Dazu einmalig im Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen.
+Der Workflow `.github/workflows/pages.yml` baut das Spiel und veröffentlicht es auf GitHub Pages. Er läuft nur auf Knopfdruck
+(**Actions → Spiel veröffentlichen → Run workflow**), damit nichts versehentlich veröffentlicht wird. Dazu einmalig im
+Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen; bei privaten Repositories setzt GitHub Pages
+einen kostenpflichtigen Tarif voraus.
 
 ## Lizenz
 

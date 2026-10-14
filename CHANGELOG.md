@@ -3,6 +3,11 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## [Unveröffentlicht]
+
+### Geändert
+- Der GitHub-Pages-Workflow läuft nur noch auf Knopfdruck und veröffentlicht nicht mehr bei jedem Push auf `main`.
+
 ## [0.3.1] – 2026-10-14
 
 Prototyp in den Branches `proto-v0.3.1` und `proto-built-v0.3.1`. Das Spiel ist jetzt freie Software.

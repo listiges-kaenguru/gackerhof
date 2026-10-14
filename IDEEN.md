@@ -16,7 +16,6 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 
 | Idee | Beschreibung | Aufwand |
 |---|---|---|
-| **Pages-Workflow nur manuell** | Den GitHub-Pages-Workflow so umstellen, dass er nur auf Knopfdruck läuft und nicht versehentlich veröffentlicht. | klein |
 | **Geschützter Zugang** | Online spielbar, aber nur für freigegebene Personen, z. B. über Cloudflare Pages mit Cloudflare Access. | mittel |
 
 ## Gameplay (aus dem Konzept, noch offen)
