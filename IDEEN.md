@@ -40,3 +40,4 @@ Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt. Neue
 ## Spätere Erweiterungen
 
 - **Weitere Geflügelarten:** Laufenten (Wasserbecken, fressen Schnecken), Gänse (Grasweide, Wachgans gegen Füchse), Wachteln
+- **Game Over:** Wenn der Spieler längere Zeit pleite ist und kaum Chancen bestehen, das wieder aufzuholen, soll es ein Game Over geben. Dann muss er zurück in seinen langweiligen Büro-Job.
