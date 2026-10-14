@@ -10,7 +10,7 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(req)
       .then(res => {
-        if (res.ok && (new URL(req.url).origin === location.origin || req.url.includes('fonts.g'))) {
+        if (res.ok && new URL(req.url).origin === location.origin) {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(req, copy));
         }

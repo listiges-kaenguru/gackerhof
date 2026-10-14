@@ -1,4 +1,11 @@
 /* Gackerhof – Cartoon-Stil: kräftige Farben, dicke Umrisse, runde Formen */
+/* Schrift Fredoka (SIL Open Font License 1.1, siehe public/fonts/OFL.txt), selbst ausgeliefert statt von Google Fonts */
+@font-face {
+  font-family: Fredoka;
+  src: url('./assets/fonts/fredoka.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
 :root {
   --ink: #3a2a1e;
   --cream: #fdf6e3;

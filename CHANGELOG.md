@@ -6,6 +6,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 ## [Unveröffentlicht]
 
 ### Geändert
+- Die Schrift Fredoka wird mit dem Spiel ausgeliefert und nicht mehr von Google Fonts geladen. Das Spiel lädt damit keine externen Inhalte mehr. Die Lizenz der Schrift (SIL Open Font License 1.1) liegt in `public/fonts/OFL.txt`.
 - Der GitHub-Pages-Workflow läuft nur noch auf Knopfdruck und veröffentlicht nicht mehr bei jedem Push auf `main`.
 
 ## [0.3.1] – 2026-10-14
