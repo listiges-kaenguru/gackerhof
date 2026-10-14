@@ -31,6 +31,8 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 
 Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt. Neue Testergebnisse gern wieder hier sammeln.
 
+- **ToDo – Fehler: Gefrorene Tränke.** Bei Frost (unter 0 °C) können die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. `frozen()` hängt nur an der Tagestemperatur, und `hourly()` lässt bei `iced` gar nicht trinken. Auch die Bachpumpe hilft nicht. Die Meldungen („Wasser muss täglich neu aufgefüllt werden“, „Eis aufgehackt“) versprechen etwas anderes. Beheben, z. B. nach dem Aufhacken einige Stunden Trinken erlauben. Danach die Anleitung in `../gackerhof-wiki` (Tagesablauf, Shop, Tipps) anpassen.
+
 ## Oberfläche & Präsentation
 
 - **Sound:** Gackern, Hahnenschrei am Morgen, Hintergrundmusik (abschaltbar)

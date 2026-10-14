@@ -53,6 +53,9 @@ Aufbau:
 
 ## Veröffentlichen
 
+Gehostet wird das Spiel bei ALL-INKL unter <https://gackerhof.schmaralde.de/>: nach `npm run build` den Inhalt von `dist/` hochladen.
+Infoseite und Anleitung liegen im Projekt `../gackerhof-wiki` (<https://gackerhof-wiki.schmaralde.de/>).
+
 Der Workflow `.github/workflows/pages.yml` baut das Spiel und veröffentlicht es auf GitHub Pages. Er läuft nur auf Knopfdruck
 (**Actions → Spiel veröffentlichen → Run workflow**), damit nichts versehentlich veröffentlicht wird. Dazu einmalig im
 Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen; bei privaten Repositories setzt GitHub Pages
