@@ -16,9 +16,7 @@ import type { Animal, Difficulty, GameState } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
-
-/** Öffentlicher Quelltext (AGPL §13: Spieler müssen ihn erreichen können) */
-const SOURCE_URL = 'https://github.com/listiges-kaenguru/gackerhof';
+import { infoLinks, SOURCE_URL, WIKI_URL } from './links';
 
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
 type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
@@ -702,7 +700,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · L Reinlocken · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
       </section>
       <p class="version">Gackerhof Version ${__APP_VERSION__}</p>
-      <p class="version">Freie Software unter der <a href="${SOURCE_URL}/blob/HEAD/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a> · <a href="${SOURCE_URL}" target="_blank" rel="noopener">Quelltext auf GitHub</a></p>`;
+      <p class="version">Freie Software unter der <a href="${SOURCE_URL}/blob/HEAD/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a> · <a href="${SOURCE_URL}" target="_blank" rel="noopener">Quelltext auf GitHub</a></p>
+      <p class="version">${infoLinks()}</p>`;
   }
 
   /* ---------------- Dialoge ---------------- */
@@ -749,6 +748,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <li>🕊️ Gestorbene Tiere müssen kostenpflichtig entsorgt werden.</li>
           <li>💾 Das Spiel speichert automatisch. Geschlossen ruht der Hof.</li>
         </ul>
+        <p class="muted">📖 Alles ganz genau, mit allen Preisen und Werten: die <a href="${WIKI_URL}anleitung/" target="_blank" rel="noopener">Anleitung im Gackerhof-Wiki</a>.</p>
         <button class="btn primary big" data-act="modal-ok">Verstanden</button>`;
     }
     if (cache.modal !== html) { modalEl.innerHTML = html; cache.modal = html; }

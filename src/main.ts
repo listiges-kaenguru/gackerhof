@@ -6,6 +6,7 @@ import { load, newGame, save } from './game/state';
 import type { Difficulty, PlotId } from './game/types';
 import { startApp } from './ui/app';
 import { DEFS, INK, playerSvg } from './ui/art';
+import { infoLinks } from './ui/links';
 import { esc } from './ui/scene';
 
 const root = document.getElementById('root')!;
@@ -50,6 +51,7 @@ function startScreen() {
             }).join('')}
           </div>
           <button class="btn primary big" data-start="new">🐣 Hof gründen</button>
+          <p class="version">${infoLinks()}</p>
         </div>
       </div>`;
   };
