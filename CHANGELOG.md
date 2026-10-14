@@ -3,6 +3,11 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## [Unveröffentlicht]
+
+### Geändert
+- Das Spiel steht jetzt unter der **GNU Affero General Public License v3.0 oder später** (`AGPL-3.0-or-later`). Der Lizenztext liegt in `LICENSE`.
+
 ## [0.3.0] – 2026-10-08
 
 Prototyp in den Branches `proto-v0.3.0` und `proto-built-v0.3.0`. Fünf Ideen aus der Ideen-Liste sind umgesetzt.

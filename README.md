@@ -55,3 +55,17 @@ Aufbau:
 
 Der Workflow `.github/workflows/pages.yml` baut das Spiel bei jedem Push auf `main` und veröffentlicht es auf GitHub Pages.
 Dazu einmalig im Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen.
+
+## Lizenz
+
+Copyright (C) 2026 listiges-kaenguru
+
+Der Gackerhof ist freie Software: Du kannst ihn unter den Bedingungen der
+[GNU Affero General Public License](LICENSE), Version 3 oder (nach deiner Wahl) jeder späteren Version,
+weitergeben und verändern (SPDX: `AGPL-3.0-or-later`).
+
+Wer eine veränderte Fassung des Spiels öffentlich im Netz anbietet, muss den Spielerinnen und Spielern
+auch den Quelltext dieser Fassung zugänglich machen.
+Der Quelltext des Originals liegt unter <https://github.com/listiges-kaenguru/huehnerhalter-spiel>.
+
+Das Spiel wird ohne jede Gewährleistung bereitgestellt. Den vollständigen Lizenztext findest du in [LICENSE](LICENSE).
