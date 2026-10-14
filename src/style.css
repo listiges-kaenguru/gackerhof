@@ -402,6 +402,7 @@ label.btn input { display: none; }
 }
 @keyframes burst { 50% { transform: scale(1.15) rotate(6deg); } }
 .version { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 8px; }
+.version a { color: inherit; }
 @media (prefers-reduced-motion: reduce) { .banner, .banner .medal, .burst { animation: none; } }
 
 /* ---------------- Kapitel-Ziele ---------------- */

@@ -7,6 +7,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ### Geändert
 - Das Spiel steht jetzt unter der **GNU Affero General Public License v3.0 oder später** (`AGPL-3.0-or-later`). Der Lizenztext liegt in `LICENSE`.
+- Unter **Mehr** stehen neben der Versionsnummer jetzt Links zur Lizenz und zum Quelltext auf GitHub.
 
 ## [0.3.0] – 2026-10-08
 

@@ -17,6 +17,9 @@ import { portrait } from './art';
 import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
 
+/** Öffentlicher Quelltext (AGPL §13: Spieler müssen ihn erreichen können) */
+const SOURCE_URL = 'https://github.com/listiges-kaenguru/huehnerhalter-spiel';
+
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
 type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
 interface Modal { kind: 'report' | 'intro' | 'gameover' | 'help' | 'celebrate'; lines?: string[] }
@@ -698,7 +701,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <div class="row"><button class="btn small" data-act="${s.tutorialOff ? 'tut-on' : 'tut-off'}">${s.tutorialOff ? '👉 Tutorial-Pfeile einschalten' : '👉 Tutorial-Pfeile ausschalten'}</button></div>
         <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · L Reinlocken · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
       </section>
-      <p class="version">Gackerhof Version ${__APP_VERSION__}</p>`;
+      <p class="version">Gackerhof Version ${__APP_VERSION__}</p>
+      <p class="version">Freie Software unter der <a href="${SOURCE_URL}/blob/HEAD/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a> · <a href="${SOURCE_URL}" target="_blank" rel="noopener">Quelltext auf GitHub</a></p>`;
   }
 
   /* ---------------- Dialoge ---------------- */
