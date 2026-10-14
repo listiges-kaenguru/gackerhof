@@ -3,7 +3,12 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
-## [Unveröffentlicht]
+## [0.3.2] – 2026-10-14
+
+Prototyp in den Branches `proto-v0.3.2` und `proto-built-v0.3.2`. Das Spiel hat jetzt eine Infoseite mit ausführlicher Anleitung.
+
+### Neu
+- Links zur **Anleitung** im Gackerhof-Wiki (gackerhof-wiki.schmaralde.de) und zu **Impressum & Datenschutz** auf dem Startbildschirm und unter **Mehr**. Die Hilfe (**?**) verweist ebenfalls auf die Anleitung.
 
 ### Geändert
 - Die Schrift Fredoka wird mit dem Spiel ausgeliefert und nicht mehr von Google Fonts geladen. Das Spiel lädt damit keine externen Inhalte mehr. Die Lizenz der Schrift (SIL Open Font License 1.1) liegt in `public/fonts/OFL.txt`.
