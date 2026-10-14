@@ -68,6 +68,6 @@ weitergeben und verändern (SPDX: `AGPL-3.0-or-later`).
 
 Wer eine veränderte Fassung des Spiels öffentlich im Netz anbietet, muss den Spielerinnen und Spielern
 auch den Quelltext dieser Fassung zugänglich machen.
-Der Quelltext des Originals liegt unter <https://github.com/listiges-kaenguru/huehnerhalter-spiel>.
+Der Quelltext des Originals liegt unter <https://github.com/listiges-kaenguru/gackerhof>.
 
 Das Spiel wird ohne jede Gewährleistung bereitgestellt. Den vollständigen Lizenztext findest du in [LICENSE](LICENSE).

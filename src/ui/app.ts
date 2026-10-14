@@ -18,7 +18,7 @@ import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
 
 /** Öffentlicher Quelltext (AGPL §13: Spieler müssen ihn erreichen können) */
-const SOURCE_URL = 'https://github.com/listiges-kaenguru/huehnerhalter-spiel';
+const SOURCE_URL = 'https://github.com/listiges-kaenguru/gackerhof';
 
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
 type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
