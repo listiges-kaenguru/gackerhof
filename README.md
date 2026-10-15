@@ -53,7 +53,8 @@ Aufbau:
 
 ## Veröffentlichen
 
-Gehostet wird das Spiel bei ALL-INKL unter <https://gackerhof.schmaralde.de/>: nach `npm run build` den Inhalt von `dist/` hochladen.
+Gehostet wird das Spiel bei ALL-INKL unter <https://gackerhof.schmaralde.de/>: nach `npm run build` den Inhalt von `dist/` hochladen,
+auch die versteckte Datei `.htaccess` (aus `public/`). Sie sorgt dafür, dass Browser neue Versionen sofort laden.
 Infoseite und Anleitung liegen im Projekt `../gackerhof-wiki` (<https://gackerhof-wiki.schmaralde.de/>).
 
 Der Workflow `.github/workflows/pages.yml` baut das Spiel und veröffentlicht es auf GitHub Pages. Er läuft nur auf Knopfdruck

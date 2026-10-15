@@ -1,0 +1,11 @@
+# Wird von Vite nach dist/ kopiert und mit hochgeladen.
+# Browser sollen jede Datei vor der Verwendung beim Server prüfen (ETag/Last-Modified).
+# Ist sie unverändert, antwortet der Server nur mit „304 Not Modified“; nach dem Hochladen
+# einer neuen Version ist sie damit sofort sichtbar, ohne F5 oder STRG+F5.
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-cache"
+  # Von Vite erzeugte Dateien mit Hash im Namen (assets/index-CFc9GHGW.js) ändern sich nie.
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

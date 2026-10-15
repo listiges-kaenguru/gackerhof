@@ -3,6 +3,11 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## Unveröffentlicht
+
+### Behoben
+- Nach einem Update zeigte der Browser oft noch die alte Version, bis die Seite neu geladen wurde. Die neue `.htaccess` (in `public/`, landet in `dist/`) lässt den Browser jede Datei kurz beim Server prüfen; die Dateien mit Hash im Namen unter `assets/` dürfen dagegen ein Jahr im Cache bleiben.
+
 ## [0.3.2] – 2026-10-14
 
 Prototyp in den Branches `proto-v0.3.2` und `proto-built-v0.3.2`. Das Spiel hat jetzt eine Infoseite mit ausführlicher Anleitung.
