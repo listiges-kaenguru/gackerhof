@@ -6,10 +6,31 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 ## [Unveröffentlicht]
 
 ### Neu
+- **Spielstand importieren auf dem Startbildschirm:** Ein exportierter Hof lässt sich jetzt direkt beim Start laden, ohne vorher einen neuen Hof zu gründen. Ist schon ein Hof gespeichert, fragt das Spiel vorher nach, ob er ersetzt werden soll.
+- **Finanzübersicht** unter **Mehr → Finanzen**: Einnahmen und Ausgaben des laufenden und des letzten Monats nach Kategorien (Eier, Tierverkauf, Aufträge, Mist, Hofbesuche, Futter, Einstreu, Medizin, Tierarzt, Tierkauf, Ausrüstung, Pacht/Strom/Wasser …). Das **laufende Ergebnis** zeigt ohne Ausrüstung, Kredite und Geschenke, ob sich der Hof trägt.
+- **Opa Heinz gibt Rat:** Steht das laufende Ergebnis zwei Monate in Folge im Minus, schaut er vorbei, nennt den größten Kostenblock und gibt passende Tipps (z. B. Dämmung und Kräuter gegen Tierarztkosten, Trittfutterautomat und Großpackungen gegen hohe Futterkosten). Höchstens alle zwei Monate.
+- **Großpackungen:** Körnerfutter und Legemehl im 25-kg-Sack (12 € bzw. 18 €, ein Fünftel günstiger pro Kilo), Stroh als Rundballen mit 6 Ballen (21 € statt 30 €).
+- **Lagerplatz und Lagerschuppen:** Ins Lager passen 60 kg Futter und 8 Ballen Stroh. Der neue **Lagerschuppen** (Erweiterungen, 150 €) schafft Platz für 300 kg und 30 Ballen.
+- **Futter verdirbt:** Legemehl und Kükenstarter verlieren im Lager etwa 1 % am Tag, Körner 0,5 %, im Lagerschuppen nur halb so viel. Große Vorräte lohnen sich deshalb erst bei vielen Hühnern.
+- **Hofbesuche:** Ab 4 Sternen fragen Kita, Schulklassen oder Vereine nach einem Besuch (Markt → Aufträge). Wer zusagt und am Besuchstag um 10 Uhr einen sauberen Stall (mindestens 60 %), gesunde Tiere und kein totes Tier im Gehege hat, bekommt 25–50 € und 30 Tage lang einen besseren Hof-Ruf. Geht der Besuch daneben, gibt es kein Geld und 15 Tage lang einen schlechteren Ruf. Eine Checkliste zeigt vorher, was noch fehlt.
+- **Stalldämmung und Zugluftschutz** (Shop → Erweiterungen, 60 €): Im Herbst und Winter gibt es viel weniger Atemwegsinfekte, auch die zugige Holzkiste verliert ihren Nachteil. Gartenhaus-Stall und Hühnermobil gelten als schon gedämmt.
+- **Kräuter fürs Trinkwasser** (Shop → Futter & Medizin, 5 € je Beutel): Vorbeugend über **Lager → Kräuter ins Trinkwasser** 10 Tage lang deutlich weniger Atemwegsinfekte. Ein leichter Infekt (bis 30 %) heilt damit ganz ohne Tierarzt und ohne Wartezeit. Erst schwere Fälle brauchen den Tierarzt.
+- **Immunität:** Wer einen Atemwegsinfekt oder als Küken Kokzidiose überstanden hat, ist 30 Tage lang dagegen immun. Der Steckbrief zeigt das an. Gegen Milben und Würmer gibt es wie in echt keine Immunität, dafür Kieselgur, Sandbad und Wechselweide.
 - **Versionsprüfung:** Unter **Mehr** steht unter der Versionsnummer, ob auf GitHub schon eine neuere Version
   erschienen ist (mit Link zum Release), sonst „Das ist die neueste Version.“ Der Browser fragt dafür die GitHub-API
   höchstens einmal am Tag und erst beim Öffnen von **Mehr**; ohne Netz bleibt die Zeile leer. Das ist die einzige
   Verbindung des Spiels nach außen.
+
+### Geändert
+- **Eierpreis nachvollziehbar:** Markt und Lager schlüsseln den Wert der Eier nach Rassen auf, z. B. „5× Legehybride à 0,51 € · 2× Marans à 1,02 €“, und nennen die Faktoren (Marans-Eier zählen doppelt, Seidenhuhn-Eier 1,2-fach, auf „Leicht“ 15 % Bonus). Bisher zeigte der Markt nur die Summe, was wie ein Rechenfehler wirkte. Der Gesamtpreis ist jetzt genau die Summe der angezeigten Stückpreise.
+- **Eier-Aufträge** liefern zuerst die günstigsten Eier (wertvolle Marans-Eier zuletzt, Bruteier erst ganz am Ende). Der Auftrag zeigt, welche Eier geliefert werden und was genau diese Eier auf dem Markt bringen würden.
+- **Ansteckung in großen Herden:** Ein krankes Tier steckt nicht mehr jedes andere im Stall an. Bis zu 4 Stallgenossen bleibt alles wie bisher, darüber wächst die Zahl der engen Kontakte nur mit der Wurzel der Herdengröße. Größere Herden werden dadurch pro Tier nicht mehr teurer.
+- Krankheiten waren auf Dauer der größte Kostenblock, sodass auch sorgfältige Höfe ins Minus rutschten. In einer Simulation über ein Spieljahr („Mittel“, 12 Legehybriden mit Hofladen, gute Vorsorge) wird aus etwa −15 € jetzt etwa +85 € im Monat. Ein Hof mit 6 Hennen ohne Hofladen kommt ungefähr auf null.
+- Die Hilfe (**?**) erklärt Hausmittel, Immunität und Vorbeugung.
+
+### Behoben
+- Bei Frost konnten die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. Ohne beheizte Tränke verdurstete im ersten Winter oft die ganze Herde. Jetzt können sie nach dem Aufhacken etwa 6 Stunden trinken, bevor das Wasser wieder zufriert. Wer morgens das Eis aufhackt, bringt seine Hühner durch den Winter. Die Frostmeldung erklärt das.
+- Die Bachpumpe friert nicht mehr ein und versorgt die Tränke auch bei Frost, wie die Wasserleitung.
 
 ### Intern
 - Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei ALL-INKL),

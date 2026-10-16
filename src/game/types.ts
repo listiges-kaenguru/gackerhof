@@ -36,6 +36,8 @@ export interface Animal {
   conditions: Condition[];
   /** Medikamenten-Wartezeit: bis zu diesem Tag keine Eier/kein Schlachten */
   withdrawalUntil: number;
+  /** Nach überstandener Krankheit immun bis zu diesem Tag */
+  immuneUntil?: Partial<Record<ConditionId, number>>;
   eggsLaid: number;
   /** brütet bis zu diesem Tag (Glucke) */
   broodingUntil: number;
@@ -102,6 +104,22 @@ export interface Order {
   qty: number;
   reward: number;
   dueDay: number;
+}
+
+/** Kategorien der Finanzübersicht (Mehr → Finanzen) */
+export type FinanceCat =
+  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
+  | 'futter' | 'einstreu' | 'medizin' | 'tierarzt' | 'tierkauf' | 'ausruestung' | 'pacht' | 'entsorgung' | 'sonstiges';
+
+/** Geldbewegungen eines Monats je Kategorie (Einnahmen positiv, Ausgaben negativ) */
+export type FinanceMonth = Partial<Record<FinanceCat, number>>;
+
+/** Anfrage für einen Hofbesuch (Kita, Schulklasse …) */
+export interface Visit {
+  group: string;
+  day: number; // Besuchstag, Ankunft um VISIT_HOUR
+  fee: number;
+  accepted: boolean;
 }
 
 export interface Celebration {
@@ -185,6 +203,10 @@ export interface GameState {
   cleanliness: number; // Stall 0..100
   flatterbandSince: number;
   kieselgurUntil: number;
+  /** Kräuter im Trinkwasser wirken bis zu diesem Tag */
+  kraeuterUntil?: number;
+  /** Bei Frost: Eis aufgehackt, bis zu dieser Spielstunde (Tag × 24 + Stunde) können die Hühner trinken */
+  iceFreeUntil?: number;
 
   inventory: Record<string, number>;
   eggs: Record<string, number>; // gesammelte Speiseeier im Lager, je Rasse
@@ -238,6 +260,14 @@ export interface GameState {
     income: number;
     expenses: number;
   };
+  /** Finanzübersicht: laufender und letzter Monat, Ergebnis der letzten Monate (ohne Investitionen) */
+  finance?: { cur: FinanceMonth; prev?: FinanceMonth; results: number[] };
+  /** Tag, an dem Opa Heinz zuletzt Rat gegeben hat */
+  adviceDay?: number;
+  /** Anfrage oder zugesagter Hofbesuch */
+  visit?: Visit | null;
+  /** Wirkung des letzten Hofbesuchs auf den Hof-Ruf */
+  visitEffect?: { until: number; points: number } | null;
   /** laufende Kosten (Strom, Wasser), die zur Monatsabrechnung fällig werden */
   pendingCosts: number;
   chapter: number;
