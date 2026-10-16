@@ -5,6 +5,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Behoben
+- Bei Frost konnten die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. Ohne beheizte Tränke verdurstete im ersten Winter oft die ganze Herde. Jetzt können sie nach dem Aufhacken etwa 6 Stunden trinken, bevor das Wasser wieder zufriert. Wer morgens das Eis aufhackt, bringt seine Hühner durch den Winter. Die Frostmeldung erklärt das.
+- Die Bachpumpe friert nicht mehr ein und versorgt die Tränke auch bei Frost, wie die Wasserleitung.
+
 ### Intern
 - Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei ALL-INKL),
   Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nur noch in der Entwurfssammlung,

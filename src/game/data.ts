@@ -316,8 +316,8 @@ export const ITEMS: ItemDef[] = [
   { id: 'sandbad', cat: 'ausbau', name: 'Sandbad', price: 15, desc: 'Hühner pflegen ihr Gefieder: weniger Milben.' },
   { id: 'autofutter', cat: 'ausbau', name: 'Automatische Fütterung', price: 700,
     desc: 'Füllt die Futterstelle jeden Morgen aus dem Lager auf.' },
-  { id: 'pumpe', cat: 'ausbau', name: 'Bachpumpe', price: 450, plot: 'bach', desc: 'Wasser aus dem Bach: Tränke ist immer voll.' },
-  { id: 'leitung', cat: 'ausbau', name: 'Wasserleitung', price: 900, power: 0.3, desc: 'Tränke ist immer voll. Kostet etwas Wasser.' },
+  { id: 'pumpe', cat: 'ausbau', name: 'Bachpumpe', price: 450, plot: 'bach', desc: 'Wasser aus dem Bach: Tränke ist immer voll, auch bei Frost.' },
+  { id: 'leitung', cat: 'ausbau', name: 'Wasserleitung', price: 900, power: 0.3, desc: 'Tränke ist immer voll, auch bei Frost. Kostet etwas Wasser.' },
   { id: 'hofladen', cat: 'ausbau', name: 'Hofladen mit Vertrauenskasse', price: 300,
     desc: 'Verkauft Eier aus dem Lager von selbst, zu besseren Preisen.' },
   // Gimmicks

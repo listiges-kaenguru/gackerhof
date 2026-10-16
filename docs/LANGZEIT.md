@@ -26,6 +26,9 @@ obwohl jeden Morgen Wasser aufgefüllt wurde. Ursache ist der bekannte Fehler �
 Wer gerade einen schönen Hof aufgebaut hat, verliert alles und muss obendrein die Entsorgung bezahlen. Das ist
 vermutlich der häufigste Grund, warum es „nach einer Weile“ kippt.
 
+> Inzwischen behoben (siehe CHANGELOG unter „Unveröffentlicht“): Mit täglichem Eisaufhacken überlebt die Herde den
+> Winter jetzt auch mit normaler Tränke.
+
 ### Ergebnis 2: Auch sorgfältiges Spielen bringt dauerhaft Minus
 
 Mit beheizter Tränke, also ohne den Fehler, kommt dabei heraus:
@@ -88,7 +91,7 @@ Dazu kommen Pacht und Strom, etwa 25–30 € pro Monat für den ganzen Hof.
 
 | # | Vorschlag | Wirkung |
 |---|---|---|
-| A1 | **Fehler „Gefrorene Tränke“ beheben** (siehe ToDo): Nach dem Eisaufhacken einige Stunden Trinken erlauben. Die Bachpumpe friert nicht ein. | Kein Totalverlust im ersten Winter |
+| A1 | ✅ **Fehler „Gefrorene Tränke“ beheben** (erledigt, siehe CHANGELOG): Nach dem Eisaufhacken etwa 6 Stunden Trinken erlauben. Die Bachpumpe friert nicht ein. | Kein Totalverlust im ersten Winter |
 | A2 | **Günstige Vorbeugung gegen den Atemwegsinfekt:** z. B. „Zugluftschutz / Stalldämmung“ (einmalig, senkt das Risiko im Herbst und Winter deutlich) und „Kräuter im Trinkwasser“ (Verbrauchsartikel, ähnlich wie Kieselgur). Der Gartenhaus-Stall ist laut Beschreibung schon „gedämmt“ und sollte entsprechend schützen. | Größter Kostenblock schrumpft |
 | A3 | **Leichte Fälle billiger behandeln:** Ist ein Tier nur leicht erkrankt (Schwere < 30), reicht ein Hausmittel aus dem Lager. Erst schwere Fälle brauchen den Tierarzt. | Belohnt Aufmerksamkeit |
 | A4 | **Ansteckung begrenzen:** Ein krankes Tier steckt nur einige Nachbarn an, nicht die ganze Herde. Die Wahrscheinlichkeit soll z. B. mit der Wurzel der Herdengröße wachsen statt linear. | Große Herden werden nicht bestraft |

@@ -4,7 +4,7 @@ import {
 } from './data';
 import {
   addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggValue, eventActive, feederCap,
-  flock, frozen, has, isDaytime, living, log, maxInside, outsideAnimals, round2, stage, storedEggCount,
+  flock, frozen, has, hourIndex, ICE_FREE_HOURS, isDaytime, living, log, maxInside, outsideAnimals, round2, stage, storedEggCount,
 } from './helpers';
 import { registerAlbum } from './album';
 import { chance, intBetween } from './rng';
@@ -159,9 +159,12 @@ export function lureIn(s: GameState): Result {
 export function refillWater(s: GameState): Result {
   if (!s.equip.drinker) return fail('Du hast noch keine Tränke.');
   const cap = drinkerCap(s);
-  if (s.water >= cap - 0.01 && !frozen(s)) return fail('Die Tränke ist schon voll.');
+  const iced = frozen(s);
+  if (s.water >= cap - 0.01 && !iced) return fail('Die Tränke ist schon voll.');
   s.water = cap;
-  return ok(frozen(s) ? 'Eis aufgehackt und frisches Wasser eingefüllt. Es friert bald wieder ein.' : 'Tränke aufgefüllt.');
+  if (!iced) return ok('Tränke aufgefüllt.');
+  s.iceFreeUntil = hourIndex(s) + ICE_FREE_HOURS;
+  return ok(`Eis aufgehackt und frisches Wasser eingefüllt. Etwa ${ICE_FREE_HOURS} Stunden können die Hühner trinken, dann friert es wieder zu.`);
 }
 
 export function refillFeed(s: GameState, type?: FeedId): Result {

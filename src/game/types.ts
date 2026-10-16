@@ -185,6 +185,8 @@ export interface GameState {
   cleanliness: number; // Stall 0..100
   flatterbandSince: number;
   kieselgurUntil: number;
+  /** Bei Frost: Eis aufgehackt, bis zu dieser Spielstunde (Tag × 24 + Stunde) können die Hühner trinken */
+  iceFreeUntil?: number;
 
   inventory: Record<string, number>;
   eggs: Record<string, number>; // gesammelte Speiseeier im Lager, je Rasse

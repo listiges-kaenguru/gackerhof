@@ -115,8 +115,15 @@ export const marderSafe = (s: GameState) =>
   !!s.equip.coop && (!!ITEM[s.equip.coop].marderSafe || has(s, 'mardergitter'));
 export const ratSafe = (s: GameState) => !!s.equip.feeder && !!ITEM[s.equip.feeder].ratSafe;
 export const autoWater = (s: GameState) => has(s, 'pumpe') || has(s, 'leitung');
-export const frozen = (s: GameState) =>
-  s.temperature < 0 && !(s.equip.drinker && ITEM[s.equip.drinker].frostSafe) && !has(s, 'leitung');
+/** Wie lange nach dem Eisaufhacken getrunken werden kann (Spielstunden) */
+export const ICE_FREE_HOURS = 6;
+/** Fortlaufende Spielstunde, z. B. für Fristen innerhalb eines Tages */
+export const hourIndex = (s: GameState) => s.day * 24 + s.hour;
+/** Die Tränke friert bei Frost ein (beheizte Tränke, Wasserleitung und Bachpumpe nicht) */
+export const freezes = (s: GameState) =>
+  s.temperature < 0 && !(s.equip.drinker && ITEM[s.equip.drinker].frostSafe) && !has(s, 'leitung') && !has(s, 'pumpe');
+/** Die Tränke ist gerade zugefroren: Frost und das Eis ist nicht (mehr) aufgehackt */
+export const frozen = (s: GameState) => freezes(s) && (s.iceFreeUntil ?? 0) <= hourIndex(s);
 export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
 /** Tiere im Auslauf (Küken und brütende Hennen bleiben drinnen) */
 export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);

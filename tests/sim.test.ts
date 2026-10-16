@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
-import { foxProtection, flock, living, stage, starFactors, stars } from '../src/game/helpers';
+import { foxProtection, flock, frozen, ICE_FREE_HOURS, living, stage, starFactors, stars } from '../src/game/helpers';
 import { advanceHour, advanceMinute, refreshOffers } from '../src/game/sim';
 import { createAnimal, importSave, newGame } from '../src/game/state';
 import type { GameState } from '../src/game/types';
@@ -287,6 +287,52 @@ describe('Kundenaufträge', () => {
     s.orders = [{ id: 5, customer: 'Gasthaus', kind: 'suppenhuhn', qty: 1, reward: 15, dueDay: s.day + 3 }];
     expect(A.fulfillOrder(s, 5).ok).toBe(true);
     expect(s.animals.map(a => a.id)).toEqual([young.id]);
+  });
+});
+
+describe('Frost', () => {
+  /** Stunden weiterlaufen lassen, dabei bleibt es frostig */
+  const frost = (s: GameState, n: number, each?: (s: GameState) => void) => {
+    for (let i = 0; i < n; i++) {
+      advanceHour(s);
+      s.temperature = -5;
+      if (each && s.hour === 8) each(s);
+      if (each && s.hour === 21 && s.doorOpen) A.toggleDoor(s);
+    }
+  };
+
+  it('nach dem Eisaufhacken können die Hühner einige Stunden trinken', () => {
+    const s = starter();
+    s.temperature = -5;
+    expect(frozen(s)).toBe(true);
+    expect(A.refillWater(s).ok).toBe(true);
+    expect(frozen(s)).toBe(false);
+    frost(s, ICE_FREE_HOURS);
+    expect(frozen(s)).toBe(true);
+  });
+
+  it('wer morgens das Eis aufhackt, bringt die Hühner durch eine Frostwoche', () => {
+    const s = starter();
+    s.money = 1000;
+    for (let i = 0; i < 3; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 60 }));
+    frost(s, 7 * 24, careTaker);
+    expect(living(s).length).toBe(3);
+    expect(s.animals.some(a => a.deathCause === 'verdurstet')).toBe(false);
+  });
+
+  it('Bachpumpe und beheizte Tränke frieren nicht ein', () => {
+    const s = newGame({ farmName: 'Test', difficulty: 'mittel', plot: 'bach', seed: 1 });
+    s.money = 2000;
+    for (const id of ['knoten', 'kiste', 'eimer']) expect(A.buyItem(s, id).ok).toBe(true);
+    s.temperature = -5;
+    expect(frozen(s)).toBe(true);
+    expect(A.buyItem(s, 'pumpe').ok).toBe(true);
+    expect(frozen(s)).toBe(false);
+    const t = starter();
+    t.money = 1000;
+    expect(A.buyItem(t, 'beheizt').ok).toBe(true);
+    t.temperature = -5;
+    expect(frozen(t)).toBe(false);
   });
 });
 

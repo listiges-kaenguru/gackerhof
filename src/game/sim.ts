@@ -5,7 +5,7 @@ import {
 import { registerAlbum } from './album';
 import {
   addMoney, adultRoosters, age, autoWater, breedLabel, chicks, crowding, dayOfSeason, defaultFeed, diff, drinkerCap, eventActive,
-  feederCap, flock, foxProtection, frozen, has, hawkProtection, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
+  feederCap, flock, foxProtection, freezes, frozen, has, ICE_FREE_HOURS, hawkProtection, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
   maxInside, minuteOfDay, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2, season, shade, stage,
   stars, worstCondition,
 } from './helpers';
@@ -240,7 +240,7 @@ function newDay(s: GameState) {
   // Wetter
   s.temperature = Math.round(SEASON_TEMP[season(s)] + between(s, -6, 7));
   if (s.temperature >= 30) log(s, `🥵 Hitzewelle: ${s.temperature} °C. Die Hühner brauchen viel Wasser und Schatten.`, 'warn', true);
-  if (s.temperature < 0 && frozen(s) && s.equip.drinker) log(s, `🥶 Frost: ${s.temperature} °C. Die Tränke friert ein. Wasser muss täglich neu aufgefüllt werden.`, 'warn', true);
+  if (freezes(s) && s.equip.drinker) log(s, `🥶 Frost: ${s.temperature} °C. Die Tränke friert ein. Hack morgens das Eis auf und füll frisches Wasser ein, dann können die Hühner etwa ${ICE_FREE_HOURS} Stunden trinken. Eine beheizte Tränke friert nicht ein.`, 'warn', true);
 
   // Eierpreis schwankt
   const target = eventActive(s, 'dorffest') ? 0.95 : 0.5;
