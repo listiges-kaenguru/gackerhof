@@ -4,15 +4,15 @@ import {
   PREVENTION_DAYS, SOUP_AGE, SUPPLY, VISIT_HOUR,
 } from './data';
 import {
-  addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggValue, eventActive,
-  feederCap, feedStock, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log, maxInside, outsideAnimals,
-  round2, stage, storageCap, storedEggCount,
+  addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggUnitPrice, eggValue,
+  eventActive, feederCap, feedStock, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log,
+  maxInside, outsideAnimals, round2, stage, storageCap, storedEggCount,
 } from './helpers';
 import { registerAlbum } from './album';
 import { chance, intBetween } from './rng';
 import { moveFlock } from './sim';
 import { createAnimal } from './state';
-import type { Animal, ConditionId, Difficulty, FeedId, FinanceCat, GameState } from './types';
+import type { Animal, BreedId, ConditionId, Difficulty, FeedId, FinanceCat, GameState } from './types';
 
 export interface Result { ok: boolean; msg: string }
 const ok = (msg: string): Result => ({ ok: true, msg });
@@ -487,20 +487,28 @@ export function orderAnimals(s: GameState, kind: 'junghenne' | 'suppenhuhn'): An
     .sort((x, y) => (kind === 'suppenhuhn' ? age(s, y) - age(s, x) : 0));
 }
 
+/** Welche Eier ein Eier-Auftrag nimmt: zuerst die günstigsten Speiseeier, Bruteier erst zuletzt */
+export function orderEggs(s: GameState, qty: number): { eggs: Record<string, number>; hatch: number } {
+  const eggs: Record<string, number> = {};
+  let need = qty;
+  const cheapest = (Object.keys(s.eggs) as BreedId[]).sort((a, b) => eggUnitPrice(s, a) - eggUnitPrice(s, b));
+  for (const k of cheapest) {
+    const n = Math.min(need, s.eggs[k] ?? 0);
+    if (n > 0) eggs[k] = n;
+    need -= n;
+  }
+  return { eggs, hatch: Math.min(need, s.hatchEggs.length) };
+}
+
 export function fulfillOrder(s: GameState, orderId: number): Result {
   const o = (s.orders ?? []).find(x => x.id === orderId);
   if (!o) return fail('Auftrag nicht mehr verfügbar.');
   if (o.kind === 'eier') {
     const have = storedEggCount(s);
     if (have < o.qty) return fail(`Dafür brauchst du ${o.qty} Eier im Lager, du hast ${have}.`);
-    let need = o.qty;
-    // zuerst Speiseeier, dann Bruteier
-    for (const k of Object.keys(s.eggs)) {
-      const n = Math.min(need, s.eggs[k]);
-      s.eggs[k] -= n;
-      need -= n;
-    }
-    if (need > 0) s.hatchEggs.splice(0, need);
+    const pick = orderEggs(s, o.qty);
+    for (const [k, n] of Object.entries(pick.eggs)) s.eggs[k] -= n;
+    if (pick.hatch > 0) s.hatchEggs.splice(0, pick.hatch);
     s.stats.eggsSold += o.qty;
   } else {
     const list = orderAnimals(s, o.kind).slice(0, o.qty);

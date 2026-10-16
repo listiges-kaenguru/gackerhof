@@ -4,7 +4,7 @@ import {
   ADVICE_PAUSE, ALBUM_BREED_BONUS, PASTURE_WARN, SHOW_DAY, SHOW_FEE, SHOW_NOTICE, STORAGE, VISIT_BAD, VISIT_GOOD, VISIT_HOUR,
 } from '../src/game/data';
 import {
-  albumKey, dayOfSeason, feedStock, lightActive, living, pastureNow, pastureWormFactor, season, starFactors, visitProblems,
+  albumKey, dayOfSeason, eggBreakdown, eggUnitPrice, eggValue, euro, feedStock, lightActive, living, pastureNow, pastureWormFactor, season, starFactors, visitProblems,
 } from '../src/game/helpers';
 import { advanceHour, refreshOffers } from '../src/game/sim';
 import { runShow, showBasePoints, showProblem } from '../src/game/show';
@@ -410,5 +410,33 @@ describe('Hofbesuche', () => {
     hens(bad, 6);
     days(bad, 90, x => { care(x); x.cleanliness = 10; });
     expect(bad.log.some(l => l.text.startsWith('📩 Anfrage'))).toBe(false);
+  });
+});
+
+describe('Eierpreis', () => {
+  it('Marans-Eier zählen doppelt, und die Aufschlüsselung geht genau auf', () => {
+    const s = farm();
+    s.eggPrice = 0.51;
+    s.eggs = { hybrid: 1, marans: 1 };
+    expect(eggValue(s, s.eggs)).toBe(1.53);
+    expect(eggBreakdown(s, s.eggs).replace(/\u00a0/g, ' ')).toBe(`1× Legehybride à ${euro(0.51)} · 1× Marans à ${euro(1.02)}`.replace(/\u00a0/g, ' '));
+    const before = s.money;
+    A.sellEggs(s);
+    expect(s.money - before).toBeCloseTo(1.53, 2);
+  });
+
+  it('auf Leicht gilt der Bonus pro Ei, die Summe passt zu den Stückpreisen', () => {
+    const s = newGame({ farmName: 'Test', difficulty: 'leicht', plot: 'obst', seed: 1 });
+    s.eggPrice = 0.51;
+    expect(eggUnitPrice(s, 'hybrid')).toBe(0.59);
+    expect(eggValue(s, { hybrid: 3 })).toBe(1.77);
+  });
+
+  it('Aufträge liefern zuerst die günstigsten Eier, Bruteier zuletzt', () => {
+    const s = farm();
+    s.eggs = { marans: 3, hybrid: 2 };
+    s.hatchEggs = [{ breed: 'sussex', fertile: true }];
+    expect(A.orderEggs(s, 4)).toEqual({ eggs: { hybrid: 2, marans: 2 }, hatch: 0 });
+    expect(A.orderEggs(s, 6)).toEqual({ eggs: { hybrid: 2, marans: 3 }, hatch: 1 });
   });
 });

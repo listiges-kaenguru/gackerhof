@@ -7,10 +7,10 @@ import {
 import { registerAlbum } from './album';
 import {
   addMoney, adultRoosters, age, autoWater, breedLabel, chicks, contactFactor, crowding, dayOfSeason, defaultFeed, diff,
-  drinkerCap, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection, herbsActive,
-  ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe, maxInside,
-  minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2, season, shade,
-  stage, stars, visitProblems, worstCondition,
+  drinkerCap, eggUnitPrice, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection,
+  herbsActive, ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
+  maxInside, minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2,
+  season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { announceShow, ensureShow, runShow } from './show';
@@ -325,7 +325,7 @@ function newDay(s: GameState) {
       const n = Math.min(quota, s.eggs[k]);
       if (n <= 0) continue;
       s.eggs[k] -= n; quota -= n; sold += n;
-      earned += n * s.eggPrice * 1.5 * BREEDS[k as BreedId].eggValue * d.sellBonus;
+      earned += n * eggUnitPrice(s, k as BreedId, 1.5);
     }
     if (sold) {
       addMoney(s, round2(earned), 'eier');

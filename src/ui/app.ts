@@ -8,10 +8,10 @@ import {
 } from '../game/data';
 import {
   age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason,
-  daysText, dead, diff, drinkerCap, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock, foxProtection,
-  frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living, lockedOut,
-  marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season, seasonOfDay, sexKnown,
-  stage, stageName, starFactors, stars, storageCap, storedEggCount, visitProblems, year,
+  daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
+  foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
+  lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
+  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, storedEggCount, visitProblems, year,
 } from '../game/helpers';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
@@ -487,6 +487,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     return tabsHtml + info + `
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
+        ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
         ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * MANURE_PRICE)}</button></div>` : ''}
         ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
@@ -539,6 +540,22 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <p class="muted">Das laufende Ergebnis zeigt, ob sich dein Hof trägt: ohne Käufe von Ausrüstung, Kredite und Geschenke.</p>`;
   }
 
+  /** Erklärt den Stückpreis: Rassenfaktoren und Bonus der Schwierigkeit */
+  function eggPriceNote(): string {
+    const breeds = Object.keys(s.eggs).filter(b => s.eggs[b] > 0 && BREEDS[b as BreedId].eggValue !== 1) as BreedId[];
+    const parts = breeds.map(b => `${BREEDS[b].name}-Eier zählen ${String(BREEDS[b].eggValue).replace('.', ',')}-fach`);
+    const bonus = diff(s).sellBonus;
+    if (bonus !== 1) parts.push(`inkl. ${Math.round((bonus - 1) * 100)} % Bonus (${diff(s).name})`);
+    return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
+  }
+  /** Was die Eier eines Auftrags auf dem Markt bringen würden */
+  function orderMarketValue(qty: number): number {
+    const pick = A.orderEggs(s, qty);
+    const hatch: Record<string, number> = {};
+    for (const e of s.hatchEggs.slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
+    return eggValue(s, pick.eggs) + eggValue(s, hatch);
+  }
+
   function panelOrders(): string {
     const list = s.orders ?? [];
     if (!list.length) return visitCard() + `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
@@ -550,16 +567,18 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       let have: string, can: boolean;
       if (o.kind === 'eier') {
         can = eggsHave >= o.qty;
-        have = `Im Lager: ${eggsHave} Eier`;
+        const pick = A.orderEggs(s, o.qty);
+        const delivers = [eggBreakdown(s, pick.eggs), pick.hatch ? `${pick.hatch} Brutei${pick.hatch > 1 ? 'er' : ''}` : ''].filter(Boolean).join(' · ');
+        have = `Im Lager: ${eggsHave} Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
       } else {
         const animals = A.orderAnimals(s, o.kind);
         can = animals.length >= o.qty;
         have = can ? `Liefert: ${animals.slice(0, o.qty).map(a => esc(a.name)).join(', ')}` : `Passende Tiere: ${animals.length}`;
       }
-      const market = o.kind === 'eier' ? o.qty * s.eggPrice : 0;
+      const market = o.kind === 'eier' && eggsHave >= o.qty ? orderMarketValue(o.qty) : 0;
       return `<section class="card order">
         <h3>${esc(o.customer)}</h3>
-        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(Markt: ca. ${euro(market)})</small>` : ''}</p>
+        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
         <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
         ${confirmBtn(`order:${o.id}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
       </section>`;
@@ -705,7 +724,6 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   /* ---------------- Lager ---------------- */
   function panelStore(): string {
     const eggs = eggCount(s.eggs);
-    const eggList = Object.entries(s.eggs).filter(([, n]) => n > 0).map(([b, n]) => `${n}× ${BREEDS[b as BreedId].name}`).join(', ');
     const inc = has(s, 'brutapparat')
       ? `<section class="card"><h3>🥚 Brutapparat (${s.incubator.length}/12)</h3>
           ${s.incubator.length ? `<p>${groupIncubator()}</p>` : '<p class="muted">Leer.</p>'}
@@ -714,7 +732,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       : `<section class="card"><h3>🥚 Brüten</h3><p class="muted">Bruteier kannst du mit einem Brutapparat oder einer brütigen Henne (Glucke) ausbrüten.</p><button class="btn" data-act="open:shop:ausbau">Brutapparat im Shop</button></section>`;
     return `
       <section class="card"><h3>🥚 Eier</h3>
-        <p>${eggs} Speiseeier${eggList ? ` (${eggList})` : ''} · Wert ${euro(eggValue(s, s.eggs))}</p>
+        <p>${eggs} Speiseeier · Wert auf dem Markt ${euro(eggValue(s, s.eggs))}</p>
+        ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         <p>${s.hatchEggs.length} Bruteier (mit Hahn gelegt, zum Ausbrüten oder Verkaufen)</p>
         <p><b>Zusammen: ${eggs + s.hatchEggs.length} Eier im Lager</b></p>
         <div class="row"><button class="btn" data-act="collect">Im Nest einsammeln</button><button class="btn primary" data-act="open:markt:verkaufen">Verkaufen</button></div>

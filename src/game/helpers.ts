@@ -228,10 +228,21 @@ export function worstCondition(a: Animal): Condition | undefined {
 }
 
 /* ---------------- Preise ---------------- */
+/** Preis eines Eis dieser Rasse: Tagespreis × Rassenfaktor × Bonus der Schwierigkeit (factor: 1,5 im Hofladen) */
+export function eggUnitPrice(s: GameState, breed: BreedId, factor = 1): number {
+  return round2(s.eggPrice * BREEDS[breed].eggValue * factor * diff(s).sellBonus);
+}
+/** Wert dieser Eier: Summe der gerundeten Stückpreise, damit die Aufschlüsselung immer aufgeht */
 export function eggValue(s: GameState, eggs: Record<string, number>, factor = 1): number {
   let v = 0;
-  for (const [b, n] of Object.entries(eggs)) v += n * s.eggPrice * BREEDS[b as BreedId].eggValue;
-  return round2(v * factor * diff(s).sellBonus);
+  for (const [b, n] of Object.entries(eggs)) v += n * eggUnitPrice(s, b as BreedId, factor);
+  return round2(v);
+}
+/** Aufschlüsselung für die Anzeige, z. B. „1× Legehybride à 0,51 € · 1× Marans à 1,02 €“ (ohne Umbruch innerhalb eines Postens) */
+export function eggBreakdown(s: GameState, eggs: Record<string, number>, factor = 1): string {
+  return (Object.entries(eggs).filter(([, n]) => n > 0) as [BreedId, number][])
+    .sort(([a], [b]) => eggUnitPrice(s, a) - eggUnitPrice(s, b))
+    .map(([b, n]) => `${n}×\u00a0${BREEDS[b].name} à\u00a0${euro(eggUnitPrice(s, b, factor))}`).join(' · ');
 }
 export function animalValue(s: GameState, a: Animal): number {
   const b = BREEDS[a.breed];
