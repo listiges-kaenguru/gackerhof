@@ -1,9 +1,9 @@
 // Abgeleitete Werte aus dem Spielstand (keine Seiteneffekte außer log/toast).
 import {
-  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
+  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, CONTACTS, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
   ROOST_HOUR, ROOST_WINDOW, SEASONS, WALK_MINUTES,
 } from './data';
-import type { Animal, BreedId, Condition, FeedId, GameState, LogEntry, Season, Stage } from './types';
+import type { Animal, BreedId, Condition, ConditionId, FeedId, GameState, LogEntry, Season, Stage } from './types';
 
 export const diff = (s: GameState) => DIFFICULTIES[s.difficulty];
 export const plot = (s: GameState) => PLOTS[s.plot];
@@ -115,6 +115,15 @@ export const marderSafe = (s: GameState) =>
   !!s.equip.coop && (!!ITEM[s.equip.coop].marderSafe || has(s, 'mardergitter'));
 export const ratSafe = (s: GameState) => !!s.equip.feeder && !!ITEM[s.equip.feeder].ratSafe;
 export const autoWater = (s: GameState) => has(s, 'pumpe') || has(s, 'leitung');
+/** Stall ist gedämmt und zugfrei: weniger Atemwegsinfekte im Herbst und Winter */
+export const insulated = (s: GameState) => has(s, 'daemmung') || s.equip.coop === 'gartenhaus' || s.equip.coop === 'mobil';
+/** Kräuter im Trinkwasser wirken gerade */
+export const herbsActive = (s: GameState) => (s.kraeuterUntil ?? 0) >= s.day;
+/** Ansteckung: Faktor je Stallgenosse. Bis CONTACTS Tiere 1, darüber wächst die Zahl der engen Kontakte
+ *  nur mit der Wurzel der Herdengröße (others × Faktor = Wurzel aus CONTACTS × others). */
+export const contactFactor = (others: number) => Math.min(1, Math.sqrt(CONTACTS / Math.max(1, others)));
+/** Immun gegen diese Krankheit (nach überstandener Erkrankung) */
+export const immune = (s: GameState, a: Animal, id: ConditionId) => (a.immuneUntil?.[id] ?? 0) >= s.day;
 /** Wie lange nach dem Eisaufhacken getrunken werden kann (Spielstunden) */
 export const ICE_FREE_HOURS = 6;
 /** Fortlaufende Spielstunde, z. B. für Fristen innerhalb eines Tages */

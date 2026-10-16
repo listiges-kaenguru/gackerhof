@@ -36,6 +36,8 @@ export interface Animal {
   conditions: Condition[];
   /** Medikamenten-Wartezeit: bis zu diesem Tag keine Eier/kein Schlachten */
   withdrawalUntil: number;
+  /** Nach überstandener Krankheit immun bis zu diesem Tag */
+  immuneUntil?: Partial<Record<ConditionId, number>>;
   eggsLaid: number;
   /** brütet bis zu diesem Tag (Glucke) */
   broodingUntil: number;
@@ -185,6 +187,8 @@ export interface GameState {
   cleanliness: number; // Stall 0..100
   flatterbandSince: number;
   kieselgurUntil: number;
+  /** Kräuter im Trinkwasser wirken bis zu diesem Tag */
+  kraeuterUntil?: number;
   /** Bei Frost: Eis aufgehackt, bis zu dieser Spielstunde (Tag × 24 + Stunde) können die Hühner trinken */
   iceFreeUntil?: number;
 

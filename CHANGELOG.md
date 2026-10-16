@@ -5,6 +5,16 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Stalldämmung und Zugluftschutz** (Shop → Erweiterungen, 60 €): Im Herbst und Winter gibt es viel weniger Atemwegsinfekte, auch die zugige Holzkiste verliert ihren Nachteil. Gartenhaus-Stall und Hühnermobil gelten als schon gedämmt.
+- **Kräuter fürs Trinkwasser** (Shop → Futter & Medizin, 5 € je Beutel): Vorbeugend über **Lager → Kräuter ins Trinkwasser** 10 Tage lang deutlich weniger Atemwegsinfekte. Ein leichter Infekt (bis 30 %) heilt damit ganz ohne Tierarzt und ohne Wartezeit. Erst schwere Fälle brauchen den Tierarzt.
+- **Immunität:** Wer einen Atemwegsinfekt oder als Küken Kokzidiose überstanden hat, ist 30 Tage lang dagegen immun. Der Steckbrief zeigt das an. Gegen Milben und Würmer gibt es wie in echt keine Immunität, dafür Kieselgur, Sandbad und Wechselweide.
+
+### Geändert
+- **Ansteckung in großen Herden:** Ein krankes Tier steckt nicht mehr jedes andere im Stall an. Bis zu 4 Stallgenossen bleibt alles wie bisher, darüber wächst die Zahl der engen Kontakte nur mit der Wurzel der Herdengröße. Größere Herden werden dadurch pro Tier nicht mehr teurer.
+- Krankheiten waren auf Dauer der größte Kostenblock, sodass auch sorgfältige Höfe ins Minus rutschten. In einer Simulation über ein Spieljahr („Mittel“, 12 Legehybriden mit Hofladen, gute Vorsorge) wird aus etwa −15 € jetzt etwa +85 € im Monat. Ein Hof mit 6 Hennen ohne Hofladen kommt ungefähr auf null.
+- Die Hilfe (**?**) erklärt Hausmittel, Immunität und Vorbeugung.
+
 ### Behoben
 - Bei Frost konnten die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. Ohne beheizte Tränke verdurstete im ersten Winter oft die ganze Herde. Jetzt können sie nach dem Aufhacken etwa 6 Stunden trinken, bevor das Wasser wieder zufriert. Wer morgens das Eis aufhackt, bringt seine Hühner durch den Winter. Die Frostmeldung erklärt das.
 - Die Bachpumpe friert nicht mehr ein und versorgt die Tränke auch bei Frost, wie die Wasserleitung.

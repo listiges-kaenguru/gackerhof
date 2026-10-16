@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
-import { foxProtection, flock, frozen, ICE_FREE_HOURS, living, stage, starFactors, stars } from '../src/game/helpers';
-import { advanceHour, advanceMinute, refreshOffers } from '../src/game/sim';
+import { CONDITIONS, CONTACTS, PREVENTION_DAYS } from '../src/game/data';
+import { contactFactor, foxProtection, flock, frozen, ICE_FREE_HOURS, insulated, living, stage, starFactors, stars } from '../src/game/helpers';
+import { addCondition, advanceHour, advanceMinute, refreshOffers } from '../src/game/sim';
 import { createAnimal, importSave, newGame } from '../src/game/state';
 import type { GameState } from '../src/game/types';
 
@@ -287,6 +288,102 @@ describe('Kundenaufträge', () => {
     s.orders = [{ id: 5, customer: 'Gasthaus', kind: 'suppenhuhn', qty: 1, reward: 15, dueDay: s.day + 3 }];
     expect(A.fulfillOrder(s, 5).ok).toBe(true);
     expect(s.animals.map(a => a.id)).toEqual([young.id]);
+  });
+});
+
+describe('Krankheiten', () => {
+  const sickHen = (s: GameState, severity: number) => {
+    const a = createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 60 });
+    s.animals.push(a);
+    a.conditions.push({ id: 'schnupfen', severity });
+    return a;
+  };
+
+  it('Kräuter heilen einen leichten Atemwegsinfekt ohne Wartezeit, einen schweren nicht', () => {
+    const s = starter();
+    s.money = 500;
+    const mild = sickHen(s, 25);
+    const r = A.treat(s, mild.id, 'schnupfen', 'kraeuter');
+    expect(r.ok).toBe(true);
+    expect(mild.conditions).toHaveLength(0);
+    expect(mild.withdrawalUntil).toBeLessThan(s.day);
+    expect(s.kraeuterUntil).toBe(s.day + PREVENTION_DAYS);
+    const severe = sickHen(s, 31);
+    const money = s.money;
+    expect(A.treat(s, severe.id, 'schnupfen', 'kraeuter').ok).toBe(false);
+    expect(s.money).toBe(money);
+    expect(A.treat(s, severe.id, 'schnupfen', 'tierarzt').ok).toBe(true);
+    expect(severe.conditions).toHaveLength(0);
+  });
+
+  it('nach einem Atemwegsinfekt eine Weile immun, gegen Milben nie', () => {
+    const s = starter();
+    s.money = 500;
+    const a = sickHen(s, 20);
+    A.treat(s, a.id, 'schnupfen', 'kraeuter');
+    addCondition(s, a, 'schnupfen');
+    expect(a.conditions).toHaveLength(0);
+    a.conditions.push({ id: 'milben', severity: 20 });
+    A.treat(s, a.id, 'milben', 'milbenspray');
+    addCondition(s, a, 'milben');
+    expect(a.conditions.map(c => c.id)).toEqual(['milben']);
+    a.conditions = [];
+    s.day += CONDITIONS.schnupfen.immunity! + 1;
+    addCondition(s, a, 'schnupfen');
+    expect(a.conditions.map(c => c.id)).toEqual(['schnupfen']);
+  });
+
+  it('Dämmung gibt es nur für ungedämmte Ställe', () => {
+    const s = starter();
+    s.money = 2000;
+    expect(insulated(s)).toBe(false);
+    expect(A.buyItem(s, 'daemmung').ok).toBe(true);
+    expect(insulated(s)).toBe(true);
+    const t = starter();
+    t.money = 2000;
+    expect(A.buyItem(t, 'gartenhaus').ok).toBe(true);
+    expect(insulated(t)).toBe(true);
+    expect(A.canBuy(t, 'daemmung')).toBe('Dein Stall ist schon gedämmt');
+  });
+
+  it('Dämmung und Kräuter senken Atemwegsinfekte im Winter deutlich', () => {
+    /** Zählt neue Atemwegsinfekte von 6 gesunden Hennen in einem Winter (ohne Ansteckung) */
+    const winterColds = (prepare: (s: GameState) => void) => {
+      let n = 0;
+      for (let seed = 1; seed <= 20; seed++) {
+        const s = newGame({ farmName: 'Test', difficulty: 'mittel', plot: 'obst', seed });
+        s.money = 5000;
+        for (const id of ['maschen', 'kleintier', 'beheizt', 'tritt']) A.buyItem(s, id);
+        for (let i = 0; i < 6; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 60 }));
+        s.day = 90; // ab Tag 91 Winter
+        prepare(s);
+        for (let h = 0; h < 30 * 24; h++) {
+          advanceHour(s);
+          if (s.kraeuterUntil != null) s.kraeuterUntil = s.day + 1;
+          for (const a of living(s)) {
+            n += a.conditions.filter(c => c.id === 'schnupfen').length;
+            a.conditions = [];
+            a.food = a.water = a.health = a.wellbeing = 100;
+          }
+        }
+      }
+      return n;
+    };
+    const plain = winterColds(() => {});
+    const warm = winterColds(s => A.buyItem(s, 'daemmung'));
+    const herbs = winterColds(s => { s.kraeuterUntil = s.day + 1; });
+    expect(plain).toBeGreaterThan(15);
+    expect(warm).toBeLessThan(plain * 0.6);
+    expect(herbs).toBeLessThan(plain * 0.6);
+  });
+
+  it('in großen Herden steckt ein krankes Tier nicht mehr jedes andere an', () => {
+    expect(contactFactor(1)).toBe(1);
+    expect(contactFactor(CONTACTS)).toBe(1);
+    // 16 Stallgenossen: halbe Wahrscheinlichkeit je Tier, also 8 statt 16 enge Kontakte
+    expect(contactFactor(16)).toBeCloseTo(Math.sqrt(CONTACTS / 16));
+    expect(contactFactor(16) * 16).toBeLessThan(16);
+    expect(contactFactor(36) * 36).toBeGreaterThan(contactFactor(16) * 16);
   });
 });
 

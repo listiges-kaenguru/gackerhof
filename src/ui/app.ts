@@ -8,7 +8,7 @@ import {
 import {
   age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason, daysText, dead,
   diff, drinkerCap, eggCount, eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, grainStock, has, hawkProtection,
-  isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, nestCount, outsideAnimals, pastureNow, ratSafe, runCap,
+  herbsActive, immune, isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, nestCount, outsideAnimals, pastureNow, ratSafe, runCap,
   season, seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storedEggCount, year,
 } from '../game/helpers';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
@@ -546,6 +546,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <div class="row">${def.cures.map(cu => {
           const inStock = cu.id !== 'tierarzt' && (s.inventory[cu.id] ?? 0) >= 1;
           const price = cu.vetPrice != null ? cu.vetPrice * diff(s).vetFactor : A.supplyPrice(s, cu.id);
+          if (cu.maxSeverity != null && c.severity > cu.maxSeverity) {
+            return `<button class="btn" disabled>${cu.label} <small>(nur bis ${cu.maxSeverity} %)</small></button>`;
+          }
           return `<button class="btn" data-act="treat:${a.id}:${c.id}:${cu.id}">${cu.label} <small>${inStock ? '(im Lager)' : euro(price)}</small></button>`;
         }).join('')}</div></div>`;
     }).join('');
@@ -554,6 +557,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       : '';
     const brooding = a.broodingUntil > s.day ? `<div class="goodbox">🥚 Brütet ${a.broodEggs.length} Eier aus. Schlupf in ${a.broodingUntil - s.day} Tag(en).</div>` : '';
     const withdrawal = a.withdrawalUntil >= s.day ? `<p class="warnbox">💊 Medikamenten-Wartezeit bis Tag ${a.withdrawalUntil}: Eier werden entsorgt, Schlachten ist nicht erlaubt.</p>` : '';
+    const immunities = (Object.keys(a.immuneUntil ?? {}) as ConditionId[]).filter(id => immune(s, a, id));
+    const immunity = immunities.length
+      ? `<p class="muted">🛡️ Immun gegen ${immunities.map(id => `${CONDITIONS[id].name} bis Tag ${a.immuneUntil![id]}`).join(', ')}</p>`
+      : '';
     return `
       <div class="pet-head">${pic(a)}
         <div><h3>${esc(a.name)} <button class="link" data-act="rename:${a.id}" aria-label="Umbenennen">✏️</button></h3>
@@ -561,7 +568,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p class="muted">${stageName(s, a)} · Persönlichkeit: ${PERSONALITIES[a.personality]}</p></div></div>
       ${broody}${brooding}${withdrawal}
       ${meter('Hunger', a.food, '🌾')}${meter('Durst', a.water, '💧')}${meter('Gesundheit', a.health, '❤️')}${meter('Wohlbefinden', a.wellbeing, '😊')}
-      ${conds ? `<section class="card warn"><h3>Krankheiten</h3>${conds}</section>` : ''}
+      ${conds ? `<section class="card warn"><h3>Krankheiten</h3>${conds}</section>` : ''}${immunity}
       <p>⚖️ ${a.weight.toFixed(2).replace('.', ',')} kg ${a.sex === 'henne' && st === 'erwachsen' ? `· 🥚 ${a.eggsLaid} Eier gelegt` : ''}</p>
       ${a.history.length ? `<p class="muted">📜 ${a.history.map(esc).join(' · ')} · seit Tag ${a.arrivedDay} auf dem Hof</p>` : ''}
       <p class="muted">${BREEDS[a.breed].desc}</p>
@@ -657,8 +664,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <section class="card"><h3>📦 Vorräte</h3>
         <ul class="stock">${SUPPLIES.map(sp => `<li><span>${sp.emoji} ${sp.name}</span><b>${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</b></li>`).join('')}
         <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li></ul>
+        ${herbsActive(s) ? `<p class="muted">🍃 Kräuter im Trinkwasser wirken bis Tag ${s.kraeuterUntil}.</p>` : ''}
         <div class="row">
           <button class="btn" data-act="treat" ${(s.inventory.mehlwuermer ?? 0) >= 1 && living(s).length ? '' : 'disabled'}>🪱 Mehlwürmer verstreuen</button>
+          <button class="btn" data-act="herbs" ${(s.inventory.kraeuter ?? 0) >= 1 && s.equip.drinker ? '' : 'disabled'}>🍃 Kräuter ins Trinkwasser</button>
           <button class="btn primary" data-act="open:shop:verbrauch">Nachkaufen</button>
         </div>
       </section>`;
@@ -756,7 +765,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <li>🐔 Tippe auf ein Tier für seinen Steckbrief. Symbole über den Tieren zeigen Probleme: 💧 Durst, 🌾 Hunger, 🐜 Milben, 🤧 Schnupfen, 🪱 Würmer.</li>
           <li>🥚 Tippe auf die Eier am Stall, die Tränke oder den Futtertrog für schnelle Aktionen.</li>
           <li>🦊 Fuchs, 🦅 Habicht und 🦡 Marder kündigen sich immer an. Reagiere schnell!</li>
-          <li>💊 Krankheiten früh behandeln. Manche Medikamente haben eine Wartezeit.</li>
+          <li>💊 Krankheiten früh behandeln: Leichte Fälle heilen oft schon mit günstigen Hausmitteln, schwere brauchen den Tierarzt. Manche Medikamente haben eine Wartezeit. Wer eine Krankheit überstanden hat, ist eine Weile immun.</li>
+          <li>🍃 Vorbeugen ist billiger: Kieselgur gegen Milben, Kräuter im Trinkwasser und ein gedämmter Stall gegen Atemwegsinfekte, die Wechselweide gegen Würmer.</li>
           <li>🕊️ Gestorbene Tiere müssen kostenpflichtig entsorgt werden.</li>
           <li>💾 Das Spiel speichert automatisch. Geschlossen ruht der Hof.</li>
         </ul>
@@ -921,6 +931,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'treat':
         if (a1) return result(A.treat(s, Number(a1), a2 as ConditionId, a3));
         return result(A.giveTreat(s));
+      case 'herbs': return result(A.giveHerbs(s));
       case 'shopcat': ui.shopCat = a1 as ShopCat; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'mtab': ui.marketTab = a1 as MarketTab; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'buy': return result(A.buyItem(s, a1));

@@ -92,10 +92,10 @@ Dazu kommen Pacht und Strom, etwa 25–30 € pro Monat für den ganzen Hof.
 | # | Vorschlag | Wirkung |
 |---|---|---|
 | A1 | ✅ **Fehler „Gefrorene Tränke“ beheben** (erledigt, siehe CHANGELOG): Nach dem Eisaufhacken etwa 6 Stunden Trinken erlauben. Die Bachpumpe friert nicht ein. | Kein Totalverlust im ersten Winter |
-| A2 | **Günstige Vorbeugung gegen den Atemwegsinfekt:** z. B. „Zugluftschutz / Stalldämmung“ (einmalig, senkt das Risiko im Herbst und Winter deutlich) und „Kräuter im Trinkwasser“ (Verbrauchsartikel, ähnlich wie Kieselgur). Der Gartenhaus-Stall ist laut Beschreibung schon „gedämmt“ und sollte entsprechend schützen. | Größter Kostenblock schrumpft |
-| A3 | **Leichte Fälle billiger behandeln:** Ist ein Tier nur leicht erkrankt (Schwere < 30), reicht ein Hausmittel aus dem Lager. Erst schwere Fälle brauchen den Tierarzt. | Belohnt Aufmerksamkeit |
-| A4 | **Ansteckung begrenzen:** Ein krankes Tier steckt nur einige Nachbarn an, nicht die ganze Herde. Die Wahrscheinlichkeit soll z. B. mit der Wurzel der Herdengröße wachsen statt linear. | Große Herden werden nicht bestraft |
-| A5 | **Immunität nach Genesung:** Wer eine Krankheit überstanden hat, ist eine Weile geschützt (z. B. 30 Tage). | Weniger Wiederholungen |
+| A2 | ✅ (erledigt: Stalldämmung 60 €, Kräuter 5 € je 10 Tage) **Günstige Vorbeugung gegen den Atemwegsinfekt:** z. B. „Zugluftschutz / Stalldämmung“ (einmalig, senkt das Risiko im Herbst und Winter deutlich) und „Kräuter im Trinkwasser“ (Verbrauchsartikel, ähnlich wie Kieselgur). Der Gartenhaus-Stall ist laut Beschreibung schon „gedämmt“ und sollte entsprechend schützen. | Größter Kostenblock schrumpft |
+| A3 | ✅ (erledigt: Kräuter bis 30 %) **Leichte Fälle billiger behandeln:** Ist ein Tier nur leicht erkrankt (Schwere < 30), reicht ein Hausmittel aus dem Lager. Erst schwere Fälle brauchen den Tierarzt. | Belohnt Aufmerksamkeit |
+| A4 | ✅ (erledigt: bis 4 Stallgenossen wie bisher, darüber Wurzel) **Ansteckung begrenzen:** Ein krankes Tier steckt nur einige Nachbarn an, nicht die ganze Herde. Die Wahrscheinlichkeit soll z. B. mit der Wurzel der Herdengröße wachsen statt linear. | Große Herden werden nicht bestraft |
+| A5 | ✅ (erledigt: 30 Tage bei Atemwegsinfekt und Kokzidiose, nicht bei Parasiten) **Immunität nach Genesung:** Wer eine Krankheit überstanden hat, ist eine Weile geschützt (z. B. 30 Tage). | Weniger Wiederholungen |
 | A6 | **Quarantänebox** (schon in `KONZEPT.md` §7 vorgesehen): Ein krankes Tier steckt während der Behandlung niemanden an. | Spieler kann selbst eingreifen |
 
 ### B. Mehr und bessere Einnahmen (mittel)
@@ -162,6 +162,12 @@ unbemerkt wieder.
 | **4 – Langzeit** | E1 Kapitel 4/5 und Jahresziele, E2 Erfolge, E3 Jahresrückblick | mittel |
 | **5 – Ausbau** | B2 Eier-Abo, B5 Gemüsebeet, C2 Bestandstierarzt, D2 Nebenjob, A6 Quarantänebox | mittel |
 | **Später** | B6–B8, D4 Game Over, E4 Vererbung, E5 Hofübergabe, E6 neue Arten | groß |
+
+> **Stand Etappe 2:** A2–A5 sind umgesetzt (noch unveröffentlicht). Dieselbe Simulation wie in Abschnitt 1 ergibt jetzt
+> pro Monat: 12 Legehybriden mit Hofladen und kluger Vorsorge **+79 bis +92 €** (vorher −10 bis −23 €), 6 Legehybriden
+> ohne Hofladen **−6 bis −16 €** (vorher −46 bis −86 €), 12 Hennen ohne jede Vorsorge −82 bis −110 € (vorher −200
+> bis −240 €). Wer täglich nach seinen Hühnern schaut, braucht für Atemwegsinfekte kaum noch den Tierarzt.
+> Größter Krankheitsposten sind jetzt die Würmer (rund 45 Wurmkuren im Jahr bei 12 Hennen trotz Wechselweide).
 
 Etappen 1 und 2 beheben den Kern des Problems. Danach geht es um Abwechslung. Bei jeder Etappe die Anleitung im Wiki
 mitziehen (Preise, Krankheiten, Tipps).

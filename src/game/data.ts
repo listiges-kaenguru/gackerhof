@@ -314,6 +314,8 @@ export const ITEMS: ItemDef[] = [
   { id: 'stalllicht', cat: 'ausbau', name: 'Stalllicht mit Zeitschaltuhr', price: 35, power: 0.12,
     desc: 'Verlängert im Herbst und Winter den Tag im Stall: deutlich mehr Eier. Strom nur, wenn es läuft.' },
   { id: 'sandbad', cat: 'ausbau', name: 'Sandbad', price: 15, desc: 'Hühner pflegen ihr Gefieder: weniger Milben.' },
+  { id: 'daemmung', cat: 'ausbau', name: 'Stalldämmung und Zugluftschutz', price: 60,
+    desc: 'Dichtet Ritzen ab und dämmt den Stall: im Herbst und Winter viel weniger Atemwegsinfekte. Gartenhaus-Stall und Hühnermobil sind schon gedämmt.' },
   { id: 'autofutter', cat: 'ausbau', name: 'Automatische Fütterung', price: 700,
     desc: 'Füllt die Futterstelle jeden Morgen aus dem Lager auf.' },
   { id: 'pumpe', cat: 'ausbau', name: 'Bachpumpe', price: 450, plot: 'bach', desc: 'Wasser aus dem Bach: Tränke ist immer voll, auch bei Frost.' },
@@ -353,6 +355,7 @@ export const SUPPLIES: SupplyDef[] = [
   { id: 'kuekenstarter', name: 'Kükenstarter', unit: 'kg', amount: 5, price: 7, emoji: '🐣', desc: 'Pflichtfutter für Küken.' },
   { id: 'mehlwuermer', name: 'Mehlwürmer', unit: 'Portionen', amount: 5, price: 6, emoji: '🪱', desc: 'Leckerli: +Wohlbefinden für alle.' },
   { id: 'einstreu', name: 'Einstreu (Stroh)', unit: 'Ballen', amount: 1, price: 5, emoji: '🌿', desc: 'Zum Ausmisten. Ein Ballen pro Reinigung.' },
+  { id: 'kraeuter', name: 'Kräuter fürs Trinkwasser', unit: 'Beutel', amount: 1, price: 5, emoji: '🍃', desc: 'Oregano und Thymian: 10 Tage weniger Atemwegsinfekte. Hilft auch bei leichtem Infekt.' },
   { id: 'kieselgur', name: 'Kieselgur', unit: 'Dosen', amount: 1, price: 6, emoji: '🧂', desc: 'Gegen Milben, wirkt auch 10 Tage vorbeugend im Stall.' },
   { id: 'milbenspray', name: 'Milbenspray', unit: 'Flaschen', amount: 1, price: 12, emoji: '🧴', desc: 'Beseitigt Milbenbefall bei einem Tier zuverlässig.' },
   { id: 'wurmkur', name: 'Wurmkur', unit: 'Packungen', amount: 1, price: 10, emoji: '💊', desc: 'Gegen Würmer. 5 Tage Wartezeit für Eier.' },
@@ -369,8 +372,10 @@ export interface ConditionDef {
   sign: string;
   contagious: number;
   growth: number; // Zunahme der Schwere pro Tag
-  /** Lösungen: Lagerartikel oder 'tierarzt' */
-  cures: { id: string; label: string; vetPrice?: number; withdrawal?: number; effect: number }[];
+  /** Nach der Heilung so viele Tage immun (Parasiten: keine Immunität) */
+  immunity?: number;
+  /** Lösungen: Lagerartikel oder 'tierarzt'; maxSeverity: wirkt nur bis zu dieser Schwere (Hausmittel) */
+  cures: { id: string; label: string; vetPrice?: number; withdrawal?: number; effect: number; maxSeverity?: number }[];
 }
 export const CONDITIONS: Record<ConditionId, ConditionDef> = {
   milben: {
@@ -385,14 +390,23 @@ export const CONDITIONS: Record<ConditionId, ConditionDef> = {
     cures: [{ id: 'wurmkur', label: 'Wurmkur', effect: 100, withdrawal: 5 }],
   },
   schnupfen: {
-    name: 'Atemwegsinfekt', emoji: '🤧', sign: 'niest, Augen tränen', contagious: 0.15, growth: 14,
-    cures: [{ id: 'tierarzt', label: 'Tierarzt + Antibiotikum', vetPrice: 25, effect: 100, withdrawal: 7 }],
+    name: 'Atemwegsinfekt', emoji: '🤧', sign: 'niest, Augen tränen', contagious: 0.15, growth: 14, immunity: 30,
+    cures: [
+      { id: 'kraeuter', label: 'Kräuter ins Trinkwasser', effect: 100, maxSeverity: 30 },
+      { id: 'tierarzt', label: 'Tierarzt + Antibiotikum', vetPrice: 25, effect: 100, withdrawal: 7 },
+    ],
   },
   kokzidiose: {
-    name: 'Kokzidiose', emoji: '🦠', sign: 'lustlos, aufgeplustert', contagious: 0.2, growth: 18,
+    name: 'Kokzidiose', emoji: '🦠', sign: 'lustlos, aufgeplustert', contagious: 0.2, growth: 18, immunity: 30,
     cures: [{ id: 'kokzidiostatikum', label: 'Kokzidiose-Mittel', effect: 100 }],
   },
 };
+
+/** Kräuter im Trinkwasser und Kieselgur im Stall wirken so viele Tage vorbeugend */
+export const PREVENTION_DAYS = 10;
+/** Ansteckung: So viele Stallgenossen kann ein krankes Tier voll anstecken. In größeren Herden wächst die Zahl der
+ *  Kontakte nur mit der Wurzel der Herdengröße (ein Huhn hat nicht mit allen gleich engen Kontakt). */
+export const CONTACTS = 4;
 
 /* ------------------------------------------------------------------ */
 /* Weide, Licht, Album, Geflügelschau                                 */

@@ -4,10 +4,11 @@ import {
 } from './data';
 import { registerAlbum } from './album';
 import {
-  addMoney, adultRoosters, age, autoWater, breedLabel, chicks, crowding, dayOfSeason, defaultFeed, diff, drinkerCap, eventActive,
-  feederCap, flock, foxProtection, freezes, frozen, has, ICE_FREE_HOURS, hawkProtection, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
-  maxInside, minuteOfDay, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2, season, shade, stage,
-  stars, worstCondition,
+  addMoney, adultRoosters, age, autoWater, breedLabel, chicks, contactFactor, crowding, dayOfSeason, defaultFeed, diff,
+  drinkerCap, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection, herbsActive,
+  ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe, maxInside,
+  minuteOfDay, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2, season, shade, stage, stars,
+  worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { announceShow, ensureShow, runShow } from './show';
@@ -362,7 +363,7 @@ function finances(s: GameState) {
 /* Krankheiten                                                        */
 /* ================================================================== */
 export function addCondition(s: GameState, a: Animal, id: ConditionId, severity = 10) {
-  if (a.conditions.some(x => x.id === id)) return;
+  if (a.conditions.some(x => x.id === id) || immune(s, a, id)) return;
   a.conditions.push({ id, severity });
   const def = CONDITIONS[id];
   log(s, `${def.emoji} ${a.name} zeigt Anzeichen von ${def.name}: ${def.sign}.`, 'warn', true);
@@ -376,6 +377,7 @@ function diseases(s: GameState) {
   const crowd = crowding(s);
   // Überbelegung: Krankheiten breiten sich deutlich schneller aus
   const crowdF = crowd > 1 ? 1 + (crowd - 1) * 5 : 1;
+  const herbs = herbsActive(s);
   const all = living(s);
 
   for (const a of all) {
@@ -389,7 +391,10 @@ function diseases(s: GameState) {
     // Neue Krankheiten
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
     let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s);
-    let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? 2 : 1) * (s.temperature < 3 ? 1.5 : 1) * (s.equip.coop === 'kiste' ? 1.6 : 1) * crowdF;
+    // Ein gedämmter, zugfreier Stall hebt den Nachteil von Herbst, Winter, Kälte und zugiger Holzkiste auf
+    const warm = insulated(s);
+    let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? (warm ? 1 : 2) : 1) * (s.temperature < 3 && !warm ? 1.5 : 1)
+      * (s.equip.coop === 'kiste' && !warm ? 1.6 : 1) * (herbs ? 0.4 : 1) * crowdF;
     if (st === 'kueken') {
       pMilben = 0;
       pWurm = 0;
@@ -400,14 +405,15 @@ function diseases(s: GameState) {
     if (chance(s, pWurm * d.disease)) addCondition(s, a, 'wuermer');
     if (chance(s, pSchnupfen * d.disease)) addCondition(s, a, 'schnupfen');
   }
-  // Ansteckung
+  // Ansteckung: in großen Herden wächst die Zahl der engen Kontakte nur mit der Wurzel der Herdengröße
   for (const a of all) {
     for (const c of [...a.conditions]) {
       const def = CONDITIONS[c.id];
-      for (const b of all) {
-        if (b === a) continue;
-        if ((c.id === 'kokzidiose') !== (stage(s, b) === 'kueken')) continue;
-        if (chance(s, def.contagious * (c.severity / 100) * d.disease * 0.5)) addCondition(s, b, c.id, 5);
+      const others = all.filter(b => b !== a && (c.id === 'kokzidiose') === (stage(s, b) === 'kueken'));
+      const contact = contactFactor(others.length);
+      const resist = c.id === 'schnupfen' && herbs ? 0.4 : 1;
+      for (const b of others) {
+        if (chance(s, def.contagious * (c.severity / 100) * d.disease * 0.5 * contact * resist)) addCondition(s, b, c.id, 5);
       }
     }
   }

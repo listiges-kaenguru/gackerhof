@@ -1,10 +1,12 @@
 // Alles, was der Spieler tun kann. Jede Aktion liefert ein Ergebnis mit Meldung zurück.
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, HEALTH_CHECK_COST, ITEM, MANURE_PRICE, SOUP_AGE, SUPPLY,
+  BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, HEALTH_CHECK_COST, ITEM, MANURE_PRICE, PREVENTION_DAYS, SOUP_AGE,
+  SUPPLY,
 } from './data';
 import {
-  addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggValue, eventActive, feederCap,
-  flock, frozen, has, hourIndex, ICE_FREE_HOURS, isDaytime, living, log, maxInside, outsideAnimals, round2, stage, storedEggCount,
+  addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggValue, eventActive,
+  feederCap, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log, maxInside, outsideAnimals,
+  round2, stage, storedEggCount,
 } from './helpers';
 import { registerAlbum } from './album';
 import { chance, intBetween } from './rng';
@@ -47,6 +49,8 @@ export function canBuy(s: GameState, id: string): string | null {
   if (id === 'autofutter' && !s.equip.feeder) return 'Braucht zuerst eine Futterstelle';
   if (id === 'wechselweide' && !s.equip.fence) return 'Braucht zuerst einen Zaun';
   if (id === 'stalllicht' && !s.equip.coop) return 'Braucht zuerst einen Stall';
+  if (id === 'daemmung' && !s.equip.coop) return 'Braucht zuerst einen Stall';
+  if (id === 'daemmung' && insulated(s)) return 'Dein Stall ist schon gedämmt';
   if (s.money < itemPrice(s, id)) return 'Nicht genug Geld';
   return null;
 }
@@ -253,7 +257,11 @@ export function treat(s: GameState, animalId: number, cond: ConditionId, cureId:
   if (!a || a.dead) return fail('Tier nicht gefunden.');
   const c = a.conditions.find(x => x.id === cond);
   if (!c) return fail('Das Tier hat diese Krankheit nicht.');
-  const cure = CONDITIONS[cond].cures.find(x => x.id === cureId)!;
+  const def = CONDITIONS[cond];
+  const cure = def.cures.find(x => x.id === cureId)!;
+  if (cure.maxSeverity != null && c.severity > cure.maxSeverity) {
+    return fail(`${cure.label} hilft nur bei leichtem ${def.name} (bis ${cure.maxSeverity} %). ${a.name} ist schon zu krank dafür.`);
+  }
   if (cure.vetPrice != null) {
     const price = round2(cure.vetPrice * diff(s).vetFactor);
     if (!pay(s, price)) return fail(`Der Tierarzt kostet ${price} €. Nicht genug Geld.`);
@@ -265,10 +273,24 @@ export function treat(s: GameState, animalId: number, cond: ConditionId, cureId:
   }
   c.severity -= cure.effect;
   const healed = c.severity <= 0;
-  if (cureId === 'kieselgur') s.kieselgurUntil = s.day + 10;
-  if (healed) a.conditions = a.conditions.filter(x => x !== c);
+  if (cureId === 'kieselgur') s.kieselgurUntil = s.day + PREVENTION_DAYS;
+  if (cureId === 'kraeuter') s.kraeuterUntil = s.day + PREVENTION_DAYS;
+  if (healed) {
+    a.conditions = a.conditions.filter(x => x !== c);
+    if (def.immunity) (a.immuneUntil ??= {})[cond] = s.day + def.immunity;
+  }
   if (cure.withdrawal) a.withdrawalUntil = s.day + cure.withdrawal;
-  return ok(`${cure.label}: ${a.name} ${healed ? 'ist wieder gesund' : 'geht es besser, aber der Befall ist noch nicht weg'}.${cure.withdrawal ? ` Wartezeit ${cure.withdrawal} Tage: keine Eier verkaufen, nicht schlachten.` : ''}`);
+  const immunity = healed && def.immunity ? ` Die nächsten ${def.immunity} Tage ist ${a.name} dagegen immun.` : '';
+  return ok(`${cure.label}: ${a.name} ${healed ? 'ist wieder gesund' : 'geht es besser, aber der Befall ist noch nicht weg'}.${immunity}${cure.withdrawal ? ` Wartezeit ${cure.withdrawal} Tage: keine Eier verkaufen, nicht schlachten.` : ''}`);
+}
+
+/** Vorbeugend Kräuter ins Trinkwasser geben (wirkt für die ganze Herde) */
+export function giveHerbs(s: GameState): Result {
+  if (!s.equip.drinker) return fail('Du hast noch keine Tränke.');
+  if ((s.inventory.kraeuter ?? 0) < 1) return fail('Keine Kräuter im Lager. Kauf welche im Shop unter „Futter & Medizin“.');
+  s.inventory.kraeuter -= 1;
+  s.kraeuterUntil = s.day + PREVENTION_DAYS;
+  return ok(`🍃 Kräuter ins Trinkwasser gegeben: Bis Tag ${s.kraeuterUntil} gibt es deutlich weniger Atemwegsinfekte.`);
 }
 
 export function disposeBody(s: GameState, id: number): Result {
