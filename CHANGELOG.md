@@ -18,6 +18,8 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - **Immunität:** Wer einen Atemwegsinfekt oder als Küken Kokzidiose überstanden hat, ist 30 Tage lang dagegen immun. Der Steckbrief zeigt das an. Gegen Milben und Würmer gibt es wie in echt keine Immunität, dafür Kieselgur, Sandbad und Wechselweide.
 
 ### Geändert
+- **Eierpreis nachvollziehbar:** Markt und Lager schlüsseln den Wert der Eier nach Rassen auf, z. B. „5× Legehybride à 0,51 € · 2× Marans à 1,02 €“, und nennen die Faktoren (Marans-Eier zählen doppelt, Seidenhuhn-Eier 1,2-fach, auf „Leicht“ 15 % Bonus). Bisher zeigte der Markt nur die Summe, was wie ein Rechenfehler wirkte. Der Gesamtpreis ist jetzt genau die Summe der angezeigten Stückpreise.
+- **Eier-Aufträge** liefern zuerst die günstigsten Eier (wertvolle Marans-Eier zuletzt, Bruteier erst ganz am Ende). Der Auftrag zeigt, welche Eier geliefert werden und was genau diese Eier auf dem Markt bringen würden.
 - **Ansteckung in großen Herden:** Ein krankes Tier steckt nicht mehr jedes andere im Stall an. Bis zu 4 Stallgenossen bleibt alles wie bisher, darüber wächst die Zahl der engen Kontakte nur mit der Wurzel der Herdengröße. Größere Herden werden dadurch pro Tier nicht mehr teurer.
 - Krankheiten waren auf Dauer der größte Kostenblock, sodass auch sorgfältige Höfe ins Minus rutschten. In einer Simulation über ein Spieljahr („Mittel“, 12 Legehybriden mit Hofladen, gute Vorsorge) wird aus etwa −15 € jetzt etwa +85 € im Monat. Ein Hof mit 6 Hennen ohne Hofladen kommt ungefähr auf null.
 - Die Hilfe (**?**) erklärt Hausmittel, Immunität und Vorbeugung.
