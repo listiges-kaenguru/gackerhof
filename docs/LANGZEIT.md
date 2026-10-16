@@ -1,6 +1,7 @@
 # Konzept: Langzeitspaß und Geld im späteren Spiel
 
-> Stand: Oktober 2026, Spielversion 0.3.3. Nur Konzept, noch nichts umgesetzt.
+> Stand: Oktober 2026. Befund aus Spielversion 0.3.3; umgesetzt sind seit 0.4.0 die mit ✅ markierten Punkte
+> (siehe Abschnitt 5).
 
 **Problem:** Nach längerer Spieldauer geht das Geld aus, und das Spiel wird zäh. Dieses Konzept untersucht die Ursachen
 mit Zahlen und schlägt Änderungen vor, damit der Spielspaß länger anhält.
@@ -163,7 +164,7 @@ unbemerkt wieder.
 | **5 – Ausbau** | B2 Eier-Abo, B5 Gemüsebeet, C2 Bestandstierarzt, D2 Nebenjob, A6 Quarantänebox | mittel |
 | **Später** | B6–B8, D4 Game Over, E4 Vererbung, E5 Hofübergabe, E6 neue Arten | groß |
 
-> **Stand Etappe 2:** A2–A5 sind umgesetzt (noch unveröffentlicht). Dieselbe Simulation wie in Abschnitt 1 ergibt jetzt
+> **Stand Etappe 2:** A2–A5 sind seit 0.4.0 umgesetzt. Dieselbe Simulation wie in Abschnitt 1 ergibt jetzt
 > pro Monat: 12 Legehybriden mit Hofladen und kluger Vorsorge **+79 bis +92 €** (vorher −10 bis −23 €), 6 Legehybriden
 > ohne Hofladen **−6 bis −16 €** (vorher −46 bis −86 €), 12 Hennen ohne jede Vorsorge −82 bis −110 € (vorher −200
 > bis −240 €). Wer täglich nach seinen Hühnern schaut, braucht für Atemwegsinfekte kaum noch den Tierarzt.

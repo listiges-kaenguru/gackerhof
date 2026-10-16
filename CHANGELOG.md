@@ -5,6 +5,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+## [0.4.0] – 2026-10-17
+
+Mehr Langzeitspaß, weiterhin ein Prototyp. Im ersten Winter verdurstet die Herde nicht mehr, Krankheiten kosten weniger, und neue Einnahmen und Großpackungen bringen den Hof leichter ins Plus. Dazu kommen eine Finanzübersicht, Hofbesuche und eine Versionsprüfung. Spielstände aus 0.3.3 lassen sich weiterspielen.
+
 ### Neu
 - **Spielstand importieren auf dem Startbildschirm:** Ein exportierter Hof lässt sich jetzt direkt beim Start laden, ohne vorher einen neuen Hof zu gründen. Ist schon ein Hof gespeichert, fragt das Spiel vorher nach, ob er ersetzt werden soll.
 - **Finanzübersicht** unter **Mehr → Finanzen**: Einnahmen und Ausgaben des laufenden und des letzten Monats nach Kategorien (Eier, Tierverkauf, Aufträge, Mist, Hofbesuche, Futter, Einstreu, Medizin, Tierarzt, Tierkauf, Ausrüstung, Pacht/Strom/Wasser …). Das **laufende Ergebnis** zeigt ohne Ausrüstung, Kredite und Geschenke, ob sich der Hof trägt.
