@@ -2,7 +2,7 @@
 // die Tiere bewegen sich in jedem Frame.
 import { BREEDS, CONDITIONS } from '../game/data';
 import {
-  drinkerCap, eggCount, feederCap, frozen, has, headingIn, isDaytime, lightActive, season, stage,
+  autoWater, drinkerCap, feederCap, flock, frozen, has, headingIn, isDaytime, lightActive, nestCount, season, stage, worstCondition,
 } from '../game/helpers';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
@@ -21,6 +21,23 @@ const STATION = { x0: 18, x1: 80, y0: 240, y1: 256 };
 const GATE = { x: 236, y: 208 };
 /** Hier drängen sich ausgesperrte Hühner nachts vor der Klappe */
 const HUDDLE = { x0: 246, x1: 286, y0: 198, y1: 222 };
+
+/** Tageszeit der Szene (Himmel, Abdunklung, Stalllicht) */
+type Phase = 'nacht' | 'morgen' | 'tag' | 'abend';
+function scenePhase(h: number): Phase {
+  if (h >= 21 || h < 5) return 'nacht';
+  if (h < 8) return 'morgen';
+  if (h < 18) return 'tag';
+  return 'abend';
+}
+const SKY: Record<Phase, [string, string]> = {
+  nacht: ['#16224a', '#34477a'], morgen: ['#a9d8f0', '#ffe2b8'], tag: ['#7fcdf3', '#d8f1fb'], abend: ['#f59a6b', '#f8d6a0'],
+};
+/** Abdunklung der Szene je Tageszeit */
+const NIGHT_SHADE: Record<Phase, number> = { nacht: 0.5, morgen: 0.12, tag: 0, abend: 0.2 };
+
+/** Hühner im Stall (für das Zähler-Schild) */
+const insideCount = (s: GameState) => flock(s).filter(a => !a.outside).length;
 
 interface Sprite {
   el: SVGGElement;
@@ -44,6 +61,8 @@ export class Scene {
   /** Bereich, in dem die Hühner tagsüber scharren (bei Wechselweide nur eine Hälfte) */
   private yard = YARD;
   private sprites = new Map<number, Sprite>();
+  /** Spieltempo des letzten Frames (0 = Pause) */
+  private speed = 1;
 
   constructor(host: HTMLElement) {
     host.innerHTML = `
@@ -132,34 +151,29 @@ export class Scene {
 
   /** Statische Szene neu zeichnen, wenn sich etwas Sichtbares geändert hat */
   refresh(s: GameState) {
-    const phase = s.hour >= 21 || s.hour < 5 ? 'n' : s.hour < 8 ? 'm' : s.hour < 18 ? 'd' : 'e';
+    const phase = scenePhase(s.hour);
     const sig = JSON.stringify([
       s.plot, season(s), s.temperature <= 0, s.equip, s.extras, s.runExtensions, s.cosmetics, s.hat, s.doorOpen,
       frozen(s), s.cleanliness < 35, Math.round(s.water / Math.max(1, drinkerCap(s)) * 8), Math.round(s.feed / Math.max(1, feederCap(s)) * 8),
-      s.feedType, eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs, phase, s.incubator.length, s.farmName,
-      this.insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
-      has(s, 'wechselweide'), s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
+      s.feedType, nestCount(s), phase, s.incubator.length, s.farmName,
+      insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
+      s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
     ]);
     if (sig !== this.sig) {
       this.sig = sig;
       this.yard = has(s, 'wechselweide') ? HALVES[s.pastureSide ?? 0] : YARD;
       this.drawWorld(s, phase);
     }
-    const shade = { n: 0.5, m: 0.12, d: 0, e: 0.2 }[phase];
-    this.overlay.setAttribute('opacity', String(shade));
+    this.overlay.setAttribute('opacity', String(NIGHT_SHADE[phase]));
     this.updateAnimalIcons(s);
   }
 
-  private insideCount(s: GameState) {
-    return s.animals.filter(a => !a.dead && stage(s, a) !== 'kueken' && !a.outside).length;
-  }
-
-  private drawWorld(s: GameState, phase: string) {
+  private drawWorld(s: GameState, phase: Phase) {
     const se = season(s);
     const snow = se === 'winter' && s.temperature <= 0;
     const ground = snow ? ['#eef3f6', '#d9e3ea'] : { fruehling: ['#8fd16a', '#6cb84f'], sommer: ['#7cc35a', '#5ea845'], herbst: ['#b5b85a', '#9aa04a'], winter: ['#a6b98a', '#8fa676'] }[se];
     const leaf = { fruehling: '#5fae45', sommer: '#4f9e3a', herbst: '#d9822b', winter: '#9aa58a' }[se];
-    const sky = { n: ['#16224a', '#34477a'], m: ['#a9d8f0', '#ffe2b8'], d: ['#7fcdf3', '#d8f1fb'], e: ['#f59a6b', '#f8d6a0'] }[phase]!;
+    const sky = SKY[phase];
     this.svg.querySelector('#sky1')!.setAttribute('stop-color', sky[0]);
     this.svg.querySelector('#sky2')!.setAttribute('stop-color', sky[1]);
 
@@ -167,11 +181,11 @@ export class Scene {
     const sunT = Math.min(1, Math.max(0, (h - 5) / 16));
     const sunX = 40 + sunT * 400;
     const sunY = 70 - Math.sin(sunT * Math.PI) * 48;
-    const celestial = phase === 'n'
+    const celestial = phase === 'nacht'
       ? `<circle cx="400" cy="34" r="14" fill="#f4f1d0"/><circle cx="406" cy="30" r="12" fill="#16224a" stroke="none"/>
          <g fill="#fff" stroke="none">${[[60, 30], [120, 18], [180, 40], [260, 22], [330, 44], [450, 14], [30, 60]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4"/>`).join('')}</g>`
       : `<circle cx="${sunX}" cy="${sunY}" r="${s.temperature >= 28 ? 24 : 19}" fill="#ffd23f"/>`;
-    const clouds = phase === 'n' ? '' : `<g fill="#fff" class="clouds"><ellipse cx="90" cy="38" rx="26" ry="11"/><ellipse cx="112" cy="31" rx="16" ry="11"/><ellipse cx="300" cy="52" rx="22" ry="9"/></g>`;
+    const clouds = phase === 'nacht' ? '' : `<g fill="#fff" class="clouds"><ellipse cx="90" cy="38" rx="26" ry="11"/><ellipse cx="112" cy="31" rx="16" ry="11"/><ellipse cx="300" cy="52" rx="22" ry="9"/></g>`;
 
     // Grundstück
     let decor = '';
@@ -194,13 +208,13 @@ export class Scene {
       gitter: has(s, 'mardergitter'), dirty: s.cleanliness < 35,
     });
     const geo = COOP_GEO[s.equip.coop ?? 'none'];
-    const inside = this.insideCount(s);
+    const inside = insideCount(s);
     const badge = s.equip.coop && inside > 0
       ? `<g class="badge" data-act="open:stall"><rect x="${geo.badge[0] - 20}" y="${geo.badge[1] - 11}" width="40" height="18" rx="9" fill="#fff"/><text x="${geo.badge[0]}" y="${geo.badge[1] + 2}" text-anchor="middle" class="svgtxt">🐔 ${inside}</text></g>`
       : '';
 
     // Eier im Nest
-    const nest = eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
+    const nest = nestCount(s);
     let eggs = '';
     if (nest > 0 && s.equip.coop) {
       const [nx, ny] = geo.nest;
@@ -235,7 +249,7 @@ export class Scene {
       <path d="M60 230 l4 -9 l3 9 M180 250 l3 -8 l3 8 M240 168 l3 -7 l3 7 M300 236 l3 -8 l3 8 M400 214 l3 -7 l3 7" fill="none" stroke="${ground[1]}" stroke-width="2"/>
       ${s.equip.fence ? pastureSvg(s, snow) : ''}
       ${fence.back}${extra.join('')}${coop}
-      ${drinkerSvg(s.equip.drinker, s.water / Math.max(1, drinkerCap(s)), frozen(s), has(s, 'pumpe') || has(s, 'leitung'))}
+      ${drinkerSvg(s.equip.drinker, s.water / Math.max(1, drinkerCap(s)), frozen(s), autoWater(s))}
       ${feederSvg(s.equip.feeder, s.feed / Math.max(1, feederCap(s)), s.feedType === 'legemehl')}
       ${eggs}${badge}`;
     const sign = s.cosmetics.includes('schild')
@@ -244,7 +258,7 @@ export class Scene {
     this.front.innerHTML = `${fence.front}${sign}${playerSvg(s.hat, 106, 168)}`;
     // Stalllicht leuchtet in der Dämmerung und nachts durchs Fenster (über der Nachtabdunklung)
     const [wx, wy] = geo.window;
-    this.glow.innerHTML = s.equip.coop && lightActive(s) && phase !== 'd'
+    this.glow.innerHTML = s.equip.coop && lightActive(s) && phase !== 'tag'
       ? `<circle cx="${wx}" cy="${wy}" r="22" fill="#ffe680" opacity=".28"/><circle cx="${wx}" cy="${wy}" r="9" fill="#fff3b0" opacity=".85"/>`
       : '';
   }
@@ -292,13 +306,11 @@ export class Scene {
   private updateAnimalIcons(s: GameState) {
     for (const a of s.animals) {
       const sp = this.sprites.get(a.id);
-      if (!sp) continue;
-      sp.icon.textContent = iconFor(s, a);
+      if (sp) sp.icon.textContent = iconFor(s, a);
     }
   }
 
-  /** Jeder Frame: Tiere bewegen */
-  /** dtMs: echte Zeit seit dem letzten Frame, speed: Spieltempo (0 = Pause) */
+  /** Jeder Frame: Tiere bewegen. dtMs: echte Zeit seit dem letzten Frame, speed: Spieltempo (0 = Pause) */
   tick(s: GameState, dtMs: number, speed = 1) {
     this.speed = speed;
     const seen = new Set<number>();
@@ -331,8 +343,6 @@ export class Scene {
       prev = sp.el;
     }
   }
-
-  private speed = 1;
 
   private moveSprite(s: GameState, a: Animal, sp: Sprite, dtMs: number) {
     const st = stage(s, a);
@@ -378,9 +388,7 @@ export class Scene {
       } else if (!sp.inside) {
         sp.tx = geo.door[0]; sp.ty = geo.door[1] + 4;
         // erst verschwinden, wenn das Huhn laut Simulation wirklich drin ist (sonst wartet es an der Klappe)
-        if (dist(sp) < 4 && !a.outside) {
-          sp.inside = true;
-        }
+        if (dist(sp) < 4 && !a.outside) sp.inside = true;
       }
     } else if (sp.inside && a.outside) {
       sp.inside = false;
@@ -399,8 +407,7 @@ export class Scene {
           const p = rndIn(region);
           sp.tx = p[0]; sp.ty = p[1];
           sp.wait = 800 + Math.random() * 3500;
-          if (Math.random() < 0.5) sp.body.classList.toggle('peck', true);
-          else sp.body.classList.toggle('peck', false);
+          sp.body.classList.toggle('peck', Math.random() < 0.5);
         }
       }
     }
@@ -409,15 +416,14 @@ export class Scene {
     if (sp.inside) return;
     const dx = sp.tx - sp.x, dy = sp.ty - sp.y;
     const d = Math.hypot(dx, dy);
-    if (d > 0.5) {
+    const walking = d > 0.5;
+    if (walking) {
       const k = Math.min(1, speed / d);
       sp.x += dx * k;
       sp.y += dy * k;
       if (Math.abs(dx) > 0.5) sp.flip = dx > 0;
-      sp.body.classList.toggle('walking', true);
-    } else {
-      sp.body.classList.toggle('walking', false);
     }
+    sp.body.classList.toggle('walking', walking);
     sp.el.setAttribute('transform', `translate(${sp.x.toFixed(1)} ${sp.y.toFixed(1)})`);
     sp.body.setAttribute('transform', `scale(${sp.flip ? -scale : scale} ${scale})`);
   }
@@ -483,7 +489,7 @@ function iconFor(s: GameState, a: Animal): string {
   if (a.dead) return '🕊️';
   if (chickFreezing(s, a)) return '🥶';
   if (a.outside && !s.doorOpen && !isDaytime(s.hour)) return '🚪';
-  const worst = [...a.conditions].sort((x, y) => y.severity - x.severity)[0];
+  const worst = worstCondition(a);
   if (a.water < 30) return '💧';
   if (a.food < 30) return '🌾';
   if (worst && worst.severity > 15) return CONDITIONS[worst.id].emoji;

@@ -1,6 +1,6 @@
 // Tutorial-Pfeile: zeigen in den ersten Spieltagen direkt auf das Objekt, das als Nächstes dran ist.
 // Jeder Schritt nennt mehrere Ziele (CSS-Selektoren); der Pfeil zeigt auf das erste, das gerade sichtbar ist.
-import { eggCount, flock, has, living, outsideAnimals } from '../game/helpers';
+import { flock, grainStock, has, living, nestCount, outsideAnimals, storedEggCount } from '../game/helpers';
 import type { GameState } from '../game/types';
 
 export interface TutorialStep {
@@ -23,7 +23,7 @@ export function tutorialStep(s: GameState): TutorialStep | null {
   // Nach dem ersten Eierverkauf begleiten die Pfeile nur noch die Klappe in den ersten Tagen
   const basics = s.stats.eggsSold === 0;
   if (!basics && s.day > 5) return null;
-  const stock = (s.inventory.koerner ?? 0) + (s.inventory.legemehl ?? 0);
+  const stock = grainStock(s);
   const f = flock(s);
 
   if (basics) {
@@ -54,9 +54,8 @@ export function tutorialStep(s: GameState): TutorialStep | null {
     }
   }
   if (basics) {
-    const nest = eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
-    const stored = eggCount(s.eggs) + s.hatchEggs.length;
-    if (nest && !stored) return { id: 'sammeln', text: 'Eier im Nest! Tippe drauf, um sie einzusammeln.', targets: ['.scene .eggs', '.quickbar [data-act="collect"]'] };
+    const stored = storedEggCount(s);
+    if (nestCount(s) && !stored) return { id: 'sammeln', text: 'Eier im Nest! Tippe drauf, um sie einzusammeln.', targets: ['.scene .eggs', '.quickbar [data-act="collect"]'] };
     if (stored) {
       return { id: 'verkaufen', text: 'Verkauf deine ersten Eier auf dem Markt.', targets: [
         '.panel [data-act="mtab:verkaufen"]:not(.on)', '.panel [data-act="sellEggs"]:not(:disabled)', '[data-act="tab:markt"]',

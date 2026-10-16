@@ -150,11 +150,13 @@ export function fenceSvg(id: string | null, opts: { geraet: boolean; untergrab: 
   let posts = '', front = '';
   const tall = id === 'maschen' ? 14 : 0;
   const color = id === 'enetz' ? '#f08a3c' : '#f0d2a0';
+  const postColor = id === 'enetz' ? '#ddd' : color;
+  const netColor = opts.geraet ? '#f08a3c' : '#c9a07a';
   for (let x = x0; x <= x1; x += 26) {
-    posts += `<rect x="${x - 3}" y="${yb - 34 - tall}" width="6" height="${40 + tall}" rx="2" fill="${id === 'enetz' ? '#ddd' : color}"/>`;
-    front += `<rect x="${x - 2.5}" y="${246 - tall / 2}" width="5" height="${22 + tall / 2}" rx="2" fill="${id === 'enetz' ? '#ddd' : color}"/>`;
+    posts += `<rect x="${x - 3}" y="${yb - 34 - tall}" width="6" height="${40 + tall}" rx="2" fill="${postColor}"/>`;
+    front += `<rect x="${x - 2.5}" y="${246 - tall / 2}" width="5" height="${22 + tall / 2}" rx="2" fill="${postColor}"/>`;
   }
-  let mesh = '';
+  let mesh: string;
   if (id === 'knoten') {
     mesh = `<path d="M${x0} ${yb - 26} H${x1} M${x0} ${yb - 14} H${x1} M${x0} ${yb - 2} H${x1}" fill="none" stroke="#9a9a9a" stroke-width="1.2"/>`;
   } else if (id === 'maschen') {
@@ -165,7 +167,7 @@ export function fenceSvg(id: string | null, opts: { geraet: boolean; untergrab: 
     let d = '';
     for (let y = yb - 30; y <= yb; y += 6) d += `M${x0} ${y} H${x1} `;
     for (let x = x0; x <= x1; x += 9) d += `M${x} ${yb - 30} V${yb + 2} `;
-    mesh = `<path d="${d}" fill="none" stroke="${opts.geraet ? '#f08a3c' : '#c9a07a'}" stroke-width="1" opacity=".85"/>`;
+    mesh = `<path d="${d}" fill="none" stroke="${netColor}" stroke-width="1" opacity=".85"/>`;
   }
   const ribbons = opts.flatterband ? Array.from({ length: 5 }, (_, i) => {
     const x = x0 + 26 + i * 52;
@@ -175,7 +177,7 @@ export function fenceSvg(id: string | null, opts: { geraet: boolean; untergrab: 
   const device = opts.geraet ? `<g transform="translate(${x1 - 10} ${yb + 8})"><rect x="-10" y="-10" width="20" height="16" rx="3" fill="#2c6e49"/><text x="0" y="2" text-anchor="middle" class="svgtxt" fill="#ffe066" stroke="none">⚡</text></g>` : '';
   const under = opts.untergrab ? `<path d="M${x0} ${yb + 5} H${x1}" fill="none" stroke="#7a5c2e" stroke-width="2" stroke-dasharray="3 3"/>` : '';
   const frontMesh = id === 'enetz'
-    ? `<path d="M${x0} 252 H${x1} M${x0} 258 H${x1} M${x0} 264 H${x1}" fill="none" stroke="${opts.geraet ? '#f08a3c' : '#c9a07a'}" stroke-width="1" opacity=".8"/>`
+    ? `<path d="M${x0} 252 H${x1} M${x0} 258 H${x1} M${x0} 264 H${x1}" fill="none" stroke="${netColor}" stroke-width="1" opacity=".8"/>`
     : `<path d="M${x0} 252 H${x1} M${x0} 262 H${x1}" fill="none" stroke="#9a9a9a" stroke-width="1" opacity=".8"/>`;
   return {
     back: `<g data-act="open:shop:gehege" class="clickable">${mesh}${posts}${under}${ribbons}${device}
@@ -189,7 +191,7 @@ export function drinkerSvg(id: string | null, fill: number, frozen: boolean, aut
   const water = frozen ? '#cfeaf7' : '#4fa9e0';
   if (!id) return `<g data-act="open:shop:wasser" class="clickable ghost"><ellipse cx="290" cy="212" rx="18" ry="5" fill="none" stroke-dasharray="3 3"/><text x="290" y="208" text-anchor="middle" class="svgtxt">💧?</text></g>`;
   const level = Math.max(0, Math.min(1, fill));
-  let g = '';
+  let g: string;
   if (id === 'eimer') {
     g = `<path d="M276 194 H304 L300 216 H280 Z" fill="#9fb4c4"/>
       <rect x="279" y="${214 - 18 * level}" width="22" height="${18 * level}" fill="${water}" stroke="none" opacity=".85"/>
@@ -216,7 +218,7 @@ export function feederSvg(id: string | null, fill: number, legemehl: boolean): s
   if (!id) return `<g data-act="open:shop:futter" class="clickable ghost"><rect x="336" y="206" width="36" height="10" rx="3" fill="none" stroke-dasharray="3 3"/><text x="354" y="202" text-anchor="middle" class="svgtxt">🌾?</text></g>`;
   const level = Math.max(0, Math.min(1, fill));
   const grain = legemehl ? '#d9b98a' : '#f2c14e';
-  let g = '';
+  let g: string;
   if (id === 'trog') {
     g = `<path d="M334 206 H374 L370 218 H338 Z" fill="#c08a55"/>
       ${level > 0 ? `<path d="M337 ${207 - 4 * level} Q 354 ${202 - 4 * level} 371 ${207 - 4 * level} L371 207 H337 Z" fill="${grain}" stroke="none"/>` : ''}

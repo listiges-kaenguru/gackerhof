@@ -3,12 +3,11 @@ import {
   AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
   ROOST_HOUR, ROOST_WINDOW, SEASONS, WALK_MINUTES,
 } from './data';
-import type { Animal, BreedId, GameState, LogEntry, Season, Stage } from './types';
+import type { Animal, BreedId, Condition, FeedId, GameState, LogEntry, Season, Stage } from './types';
 
 export const diff = (s: GameState) => DIFFICULTIES[s.difficulty];
 export const plot = (s: GameState) => PLOTS[s.plot];
 export const has = (s: GameState, id: string) => s.extras.includes(id) || Object.values(s.equip).includes(id);
-export const owns = (s: GameState, id: string) => has(s, id) || s.cosmetics.includes(id);
 
 export const age = (s: GameState, a: Animal) => s.day - a.hatchedDay;
 export function stage(s: GameState, a: Animal): Stage {
@@ -25,18 +24,11 @@ export const flock = (s: GameState) => living(s).filter(a => stage(s, a) !== 'ku
 export const chicks = (s: GameState) => living(s).filter(a => stage(s, a) === 'kueken');
 export const adultRoosters = (s: GameState) => living(s).filter(a => a.sex === 'hahn' && stage(s, a) === 'erwachsen');
 
-export function season(s: GameState): Season {
-  return SEASONS[Math.floor((s.day - 1) / DAYS_PER_SEASON) % 4];
-}
+export const seasonOfDay = (day: number): Season => SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
+export const season = (s: GameState) => seasonOfDay(s.day);
 export const year = (s: GameState) => Math.floor((s.day - 1) / (DAYS_PER_SEASON * 4)) + 1;
 export const dayOfSeason = (s: GameState) => ((s.day - 1) % DAYS_PER_SEASON) + 1;
 export const isNight = (h: number) => h < 6 || h >= 21;
-export function dayPhase(h: number): 'nacht' | 'morgen' | 'tag' | 'abend' {
-  if (h >= 21 || h < 5) return 'nacht';
-  if (h < 9) return 'morgen';
-  if (h < 18) return 'tag';
-  return 'abend';
-}
 
 export function ageText(s: GameState, a: Animal): string {
   return daysText(age(s, a));
@@ -77,7 +69,11 @@ export const pastureNow = (s: GameState) => (s.pasture ?? [100, 100])[has(s, 'we
 /** Wurmrisiko durch die Weide: frisch 0,6×, abgenutzt bis 2× */
 export const pastureWormFactor = (s: GameState) => 0.6 + (1 - pastureNow(s) / 100) * 1.4;
 /** Stalllicht wirkt (und kostet Strom) nur im Herbst und Winter */
-export const lightActive = (s: GameState) => has(s, 'stalllicht') && s.lightOn !== false && (season(s) === 'herbst' || season(s) === 'winter');
+export function lightActive(s: GameState): boolean {
+  if (!has(s, 'stalllicht') || s.lightOn === false) return false;
+  const se = season(s);
+  return se === 'herbst' || se === 'winter';
+}
 
 /* ---------------- Kapazitäten & Schutz ---------------- */
 export const coopCap = (s: GameState) => (s.equip.coop ? ITEM[s.equip.coop].cap ?? 0 : 0);
@@ -189,11 +185,31 @@ export function stars(s: GameState): number {
   return Math.max(1, Math.min(5, Math.round(score)));
 }
 
-/* ---------------- Preise ---------------- */
+/* ---------------- Vorräte ---------------- */
 export const eggCount = (eggs: Record<string, number>) => Object.values(eggs).reduce((a, b) => a + b, 0);
+/** Alle Eier im Nest, auch Bruteier und solche mit Wartezeit */
+export const nestCount = (s: GameState) => eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
+/** Eingesammelte Speise- und Bruteier im Lager */
+export const storedEggCount = (s: GameState) => eggCount(s.eggs) + s.hatchEggs.length;
+/** Körnerfutter und Legemehl im Lager (kg) */
+export const grainStock = (s: GameState) => (s.inventory.koerner ?? 0) + (s.inventory.legemehl ?? 0);
+/** Welches Futter beim Auffüllen genommen wird: Legemehl vor Körnern */
+export function defaultFeed(s: GameState): FeedId | null {
+  if ((s.inventory.legemehl ?? 0) > 0) return 'legemehl';
+  if ((s.inventory.koerner ?? 0) > 0) return 'koerner';
+  return null;
+}
+/** Die schwerste Krankheit eines Tiers (bei Gleichstand die zuerst aufgetretene) */
+export function worstCondition(a: Animal): Condition | undefined {
+  let worst: Condition | undefined;
+  for (const c of a.conditions) if (!worst || c.severity > worst.severity) worst = c;
+  return worst;
+}
+
+/* ---------------- Preise ---------------- */
 export function eggValue(s: GameState, eggs: Record<string, number>, factor = 1): number {
   let v = 0;
-  for (const [b, n] of Object.entries(eggs)) v += n * s.eggPrice * BREEDS[b as keyof typeof BREEDS].eggValue;
+  for (const [b, n] of Object.entries(eggs)) v += n * s.eggPrice * BREEDS[b as BreedId].eggValue;
   return round2(v * factor * diff(s).sellBonus);
 }
 export function animalValue(s: GameState, a: Animal): number {

@@ -5,6 +5,9 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## Unveröffentlicht
 
+### Intern
+- Code aufgeräumt, ohne Änderung am Spiel: ungenutzte Funktionen entfernt, doppelte Ausdrücke in gemeinsame Helfer zusammengeführt (Eier im Nest, Futtervorrat, Futterwahl, schwerste Krankheit, Jahreszeit eines Tages), feste Zahlen in der Oberfläche durch die Konstanten aus `data.ts` ersetzt und die Zielprüfungen nicht mehr jede Spielstunde neu angelegt.
+
 ### Behoben
 - Nach einem Update zeigte der Browser oft noch die alte Version, bis die Seite neu geladen wurde. Die neue `.htaccess` (in `public/`, landet in `dist/`) lässt den Browser jede Datei kurz beim Server prüfen; die Dateien mit Hash im Namen unter `assets/` dürfen dagegen ein Jahr im Cache bleiben.
 
