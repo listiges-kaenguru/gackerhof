@@ -524,3 +524,5 @@ button.tut-target, .btn.tut-target { outline: 3px solid var(--yellow); outline-o
 .fin thead th { font-weight: 600; vertical-align: bottom; }
 .fin tr.sec th { text-align: left; font-weight: 600; padding-top: 10px; border-bottom: 0; }
 .fin tr.sum th, .fin tr.sum td { font-weight: 600; border-bottom: 0; }
+.start-import { text-align: center; margin: 4px 0 8px; }
+.start-import .row { justify-content: center; }

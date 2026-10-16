@@ -6,6 +6,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 ## [Unveröffentlicht]
 
 ### Neu
+- **Spielstand importieren auf dem Startbildschirm:** Ein exportierter Hof lässt sich jetzt direkt beim Start laden, ohne vorher einen neuen Hof zu gründen. Ist schon ein Hof gespeichert, fragt das Spiel vorher nach, ob er ersetzt werden soll.
 - **Finanzübersicht** unter **Mehr → Finanzen**: Einnahmen und Ausgaben des laufenden und des letzten Monats nach Kategorien (Eier, Tierverkauf, Aufträge, Mist, Hofbesuche, Futter, Einstreu, Medizin, Tierarzt, Tierkauf, Ausrüstung, Pacht/Strom/Wasser …). Das **laufende Ergebnis** zeigt ohne Ausrüstung, Kredite und Geschenke, ob sich der Hof trägt.
 - **Opa Heinz gibt Rat:** Steht das laufende Ergebnis zwei Monate in Folge im Minus, schaut er vorbei, nennt den größten Kostenblock und gibt passende Tipps (z. B. Dämmung und Kräuter gegen Tierarztkosten, Trittfutterautomat und Großpackungen gegen hohe Futterkosten). Höchstens alle zwei Monate.
 - **Großpackungen:** Körnerfutter und Legemehl im 25-kg-Sack (12 € bzw. 18 €, ein Fünftel günstiger pro Kilo), Stroh als Rundballen mit 6 Ballen (21 € statt 30 €).
