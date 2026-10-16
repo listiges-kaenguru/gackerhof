@@ -30,6 +30,9 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 
 ### Gameplay (aus dem Konzept, noch offen)
 
+- **Langzeitspaß und Geld:** Im späteren Spiel geht das Geld aus. Befund mit Zahlen und Vorschläge in
+  [`docs/LANGZEIT.md`](docs/LANGZEIT.md)
+
 - **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt), „Eiermillionär“
 - **Kapitel 4 „Rassezucht“ und 5 „Der große Hof“**
 - **Kundenaufträge** („Bäckerei Krause braucht 30 Eier bis Freitag“)
