@@ -5,7 +5,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [0.3.3] – 2026-10-16
 
-Prototyp in den Branches `proto-v0.3.3` und `proto-built-v0.3.3`. Fehlerbehebungen und aufgeräumter Code, am Spiel selbst ändert sich nichts.
+Erster Release auf GitHub (Tag `v0.3.3`), weiterhin ein Prototyp. Den fertigen Build gibt es als ZIP beim Release. Fehlerbehebungen und aufgeräumter Code, am Spiel selbst ändert sich nichts.
 
 ### Behoben
 - Nach einem Update zeigte der Browser oft noch die alte Version, bis die Seite neu geladen wurde. Die neue `.htaccess` (in `public/`, landet in `dist/`) lässt den Browser jede Datei kurz beim Server prüfen; die Dateien mit Hash im Namen unter `assets/` dürfen dagegen ein Jahr im Cache bleiben.
@@ -16,7 +16,7 @@ Prototyp in den Branches `proto-v0.3.3` und `proto-built-v0.3.3`. Fehlerbehebung
 
 ## [0.3.2] – 2026-10-14
 
-Prototyp in den Branches `proto-v0.3.2` und `proto-built-v0.3.2`. Das Spiel hat jetzt eine Infoseite mit ausführlicher Anleitung.
+Prototyp, Quelltext unter dem Tag `v0.3.2`. Das Spiel hat jetzt eine Infoseite mit ausführlicher Anleitung.
 
 ### Neu
 - Links zur **Anleitung** im Gackerhof-Wiki (gackerhof-wiki.schmaralde.de) und zu **Impressum & Datenschutz** auf dem Startbildschirm und unter **Mehr**. Die Hilfe (**?**) verweist ebenfalls auf die Anleitung.
@@ -27,7 +27,7 @@ Prototyp in den Branches `proto-v0.3.2` und `proto-built-v0.3.2`. Das Spiel hat 
 
 ## [0.3.1] – 2026-10-14
 
-Prototyp in den Branches `proto-v0.3.1` und `proto-built-v0.3.1`. Das Spiel ist jetzt freie Software.
+Prototyp, Quelltext unter dem Tag `v0.3.1`. Das Spiel ist jetzt freie Software.
 
 ### Geändert
 - Das Spiel steht jetzt unter der **GNU Affero General Public License v3.0 oder später** (`AGPL-3.0-or-later`). Der Lizenztext liegt in `LICENSE`.
@@ -35,7 +35,7 @@ Prototyp in den Branches `proto-v0.3.1` und `proto-built-v0.3.1`. Das Spiel ist 
 
 ## [0.3.0] – 2026-10-08
 
-Prototyp in den Branches `proto-v0.3.0` und `proto-built-v0.3.0`. Fünf Ideen aus der Ideen-Liste sind umgesetzt.
+Prototyp, Quelltext unter dem Tag `v0.3.0`. Fünf Ideen aus der Ideen-Liste sind umgesetzt.
 
 ### Neu
 - **Wechselweide** (Shop → Erweiterungen, 55 €):
@@ -67,7 +67,7 @@ Prototyp in den Branches `proto-v0.3.0` und `proto-built-v0.3.0`. Fünf Ideen au
 
 ## [0.2.1] – 2026-10-08
 
-Prototyp in den Branches `proto-v0.2.1` und `proto-built-v0.2.1`. Das Spiel ist am Handy im Hochformat besser spielbar.
+Prototyp, Quelltext unter dem Tag `v0.2.1`. Das Spiel ist am Handy im Hochformat besser spielbar.
 
 ### Geändert
 - Der Hof wird näher herangezoomt und füllt mehr vom Bildschirm. Der Ausschnitt beginnt an der Stallklappe, der Rest ist per Wischen erreichbar. Die Wisch-Pfeile sitzen auf Höhe des Hofs statt im Himmel.
@@ -77,9 +77,9 @@ Prototyp in den Branches `proto-v0.2.1` und `proto-built-v0.2.1`. Das Spiel ist 
 - Kopfzeile und Dialoge halten Abstand zu Notch und Statusleiste (als App installiert).
 - Schnelles Mehrfachtippen (z. B. „+1“ auf dem Markt) zoomt die Seite nicht mehr versehentlich heran.
 
-## [0.2.0] – in Arbeit
+## [0.2.0] – 2026-10-06
 
-Ab dieser Version zählen Prototypen mit **0.x.x**. Die bisherigen Testversionen hießen noch 1.0.0 und 1.1.0. Umgesetzt sind die „Verbesserungen aus Test“ aus der Ideen-Liste.
+Prototyp, Quelltext unter dem Tag `v0.2.0`. Ab dieser Version zählen Prototypen mit **0.x.x**. Die bisherigen Testversionen hießen noch 1.0.0 und 1.1.0. Umgesetzt sind die „Verbesserungen aus Test“ aus der Ideen-Liste.
 
 ### Neu
 - **Kundenaufträge** als neue Einnahmequelle (Markt → Aufträge):
