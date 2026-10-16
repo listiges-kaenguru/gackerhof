@@ -1,18 +1,21 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  AGE, BREEDS, CONDITIONS, CUSTOMERS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT, SEASON_NAMES, SELLERS, SOUP_AGE,
+  ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, CUSTOMERS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
+  SEASON_NAMES, SELLERS, SHED_SPOIL, SOUP_AGE, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
+  VISIT_MIN_STARS,
 } from './data';
 import { registerAlbum } from './album';
 import {
-  addMoney, adultRoosters, age, autoWater, breedLabel, chicks, crowding, dayOfSeason, defaultFeed, diff, drinkerCap, eventActive,
-  feederCap, flock, foxProtection, frozen, has, hawkProtection, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
-  maxInside, minuteOfDay, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2, season, shade, stage,
-  stars, worstCondition,
+  addMoney, adultRoosters, age, autoWater, breedLabel, chicks, contactFactor, crowding, dayOfSeason, defaultFeed, diff,
+  drinkerCap, eggUnitPrice, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection,
+  herbsActive, ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
+  maxInside, minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2,
+  season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { announceShow, ensureShow, runShow } from './show';
 import { chapterGoals, CHAPTERS, createAnimal, randomVariant, targetWeight } from './state';
-import type { Animal, BreedId, ConditionId, GameState, HatchEgg, MarketOffer, Order, Season } from './types';
+import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Order, Season } from './types';
 
 /** Feinster Takt: eine Spielminute. Die Hühner bewegen sich minutengenau, alles andere läuft stündlich. */
 export function advanceMinute(s: GameState) {
@@ -48,6 +51,7 @@ export function advanceHour(s: GameState) {
     case 21: roost(s); evening(s); break;
     case 23: nightPredators(s); break;
   }
+  if (s.hour === VISIT_HOUR) farmVisit(s);
   checkGoals(s);
 }
 
@@ -231,16 +235,18 @@ function newDay(s: GameState) {
   if (dayOfSeason(s) === 1) {
     const rent = plot(s).rent;
     const costs = round2(rent + s.pendingCosts);
-    addMoney(s, -costs);
+    addMoney(s, -costs, 'pacht');
     log(s, `📅 Monatsabrechnung: Pacht ${rent} € + Strom/Wasser ${s.pendingCosts.toFixed(2)} € = ${costs.toFixed(2)} €`, 'info', true);
     s.pendingCosts = 0;
     log(s, `🍂 Der ${SEASON_NAMES[season(s)]} beginnt.`, 'info', true);
+    closeMonth(s);
   }
+  spoilFeed(s);
 
   // Wetter
   s.temperature = Math.round(SEASON_TEMP[season(s)] + between(s, -6, 7));
   if (s.temperature >= 30) log(s, `🥵 Hitzewelle: ${s.temperature} °C. Die Hühner brauchen viel Wasser und Schatten.`, 'warn', true);
-  if (s.temperature < 0 && frozen(s) && s.equip.drinker) log(s, `🥶 Frost: ${s.temperature} °C. Die Tränke friert ein. Wasser muss täglich neu aufgefüllt werden.`, 'warn', true);
+  if (freezes(s) && s.equip.drinker) log(s, `🥶 Frost: ${s.temperature} °C. Die Tränke friert ein. Hack morgens das Eis auf und füll frisches Wasser ein, dann können die Hühner etwa ${ICE_FREE_HOURS} Stunden trinken. Eine beheizte Tränke friert nicht ein.`, 'warn', true);
 
   // Eierpreis schwankt
   const target = eventActive(s, 'dorffest') ? 0.95 : 0.5;
@@ -304,6 +310,7 @@ function newDay(s: GameState) {
   randomEvents(s);
   s.events = s.events.filter(e => e.until >= s.day);
   orders(s);
+  visitRequest(s);
   ensureShow(s);
   announceShow(s);
 
@@ -318,10 +325,10 @@ function newDay(s: GameState) {
       const n = Math.min(quota, s.eggs[k]);
       if (n <= 0) continue;
       s.eggs[k] -= n; quota -= n; sold += n;
-      earned += n * s.eggPrice * 1.5 * BREEDS[k as BreedId].eggValue * d.sellBonus;
+      earned += n * eggUnitPrice(s, k as BreedId, 1.5);
     }
     if (sold) {
-      addMoney(s, round2(earned));
+      addMoney(s, round2(earned), 'eier');
       s.stats.eggsSold += sold;
       log(s, `🏪 Hofladen: ${sold} Eier für ${earned.toFixed(2)} € verkauft.`, 'good');
     }
@@ -339,12 +346,12 @@ function finances(s: GameState) {
   if (!s.loanUsed) {
     s.loanUsed = true;
     if (d.opaLoan) {
-      addMoney(s, 200);
+      addMoney(s, 200, 'kredit');
       s.debt += 200;
       log(s, '👴 Opa Heinz hilft aus: „Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“ (zinslos)', 'info');
       s.celebrations.push({ emoji: '👴', title: 'Opa Heinz hilft aus', lines: ['„Dein Konto ist im Minus. Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“', 'Der Kredit ist zinslos. Zurückzahlen kannst du unter „Mehr → Finanzen“.', 'Diese Hilfe gibt es nur einmal!'] });
     } else {
-      addMoney(s, 300);
+      addMoney(s, 300, 'kredit');
       s.debt += 330;
       log(s, '🏦 Die Bank gibt dir einen Kredit über 300 € (Rückzahlung 330 €).', 'info');
       s.celebrations.push({ emoji: '🏦', title: 'Bankkredit', lines: ['Dein Konto ist im Minus. Die Bank gibt dir einen Kredit über 300 €.', 'Zurückzuzahlen sind 330 €. Einen weiteren Kredit gibt es nicht.'] });
@@ -362,7 +369,7 @@ function finances(s: GameState) {
 /* Krankheiten                                                        */
 /* ================================================================== */
 export function addCondition(s: GameState, a: Animal, id: ConditionId, severity = 10) {
-  if (a.conditions.some(x => x.id === id)) return;
+  if (a.conditions.some(x => x.id === id) || immune(s, a, id)) return;
   a.conditions.push({ id, severity });
   const def = CONDITIONS[id];
   log(s, `${def.emoji} ${a.name} zeigt Anzeichen von ${def.name}: ${def.sign}.`, 'warn', true);
@@ -376,6 +383,7 @@ function diseases(s: GameState) {
   const crowd = crowding(s);
   // Überbelegung: Krankheiten breiten sich deutlich schneller aus
   const crowdF = crowd > 1 ? 1 + (crowd - 1) * 5 : 1;
+  const herbs = herbsActive(s);
   const all = living(s);
 
   for (const a of all) {
@@ -389,7 +397,10 @@ function diseases(s: GameState) {
     // Neue Krankheiten
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
     let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s);
-    let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? 2 : 1) * (s.temperature < 3 ? 1.5 : 1) * (s.equip.coop === 'kiste' ? 1.6 : 1) * crowdF;
+    // Ein gedämmter, zugfreier Stall hebt den Nachteil von Herbst, Winter, Kälte und zugiger Holzkiste auf
+    const warm = insulated(s);
+    let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? (warm ? 1 : 2) : 1) * (s.temperature < 3 && !warm ? 1.5 : 1)
+      * (s.equip.coop === 'kiste' && !warm ? 1.6 : 1) * (herbs ? 0.4 : 1) * crowdF;
     if (st === 'kueken') {
       pMilben = 0;
       pWurm = 0;
@@ -400,14 +411,15 @@ function diseases(s: GameState) {
     if (chance(s, pWurm * d.disease)) addCondition(s, a, 'wuermer');
     if (chance(s, pSchnupfen * d.disease)) addCondition(s, a, 'schnupfen');
   }
-  // Ansteckung
+  // Ansteckung: in großen Herden wächst die Zahl der engen Kontakte nur mit der Wurzel der Herdengröße
   for (const a of all) {
     for (const c of [...a.conditions]) {
       const def = CONDITIONS[c.id];
-      for (const b of all) {
-        if (b === a) continue;
-        if ((c.id === 'kokzidiose') !== (stage(s, b) === 'kueken')) continue;
-        if (chance(s, def.contagious * (c.severity / 100) * d.disease * 0.5)) addCondition(s, b, c.id, 5);
+      const others = all.filter(b => b !== a && (c.id === 'kokzidiose') === (stage(s, b) === 'kueken'));
+      const contact = contactFactor(others.length);
+      const resist = c.id === 'schnupfen' && herbs ? 0.4 : 1;
+      for (const b of others) {
+        if (chance(s, def.contagious * (c.severity / 100) * d.disease * 0.5 * contact * resist)) addCondition(s, b, c.id, 5);
       }
     }
   }
@@ -712,10 +724,135 @@ function orders(s: GameState) {
   log(s, `📋 Neuer Auftrag: ${o.customer} möchte ${what} für ${o.reward} € (bis Tag ${o.dueDay}).`, 'good', true);
 }
 
+/* ================================================================== */
+/* Finanzen: Monatsabschluss und Rat von Opa Heinz                    */
+/* ================================================================== */
+function closeMonth(s: GameState) {
+  const f = (s.finance ??= { cur: {}, results: [] });
+  f.prev = f.cur;
+  f.cur = {};
+  f.results = [...f.results, monthResult(f.prev)].slice(-12);
+  advice(s);
+}
+
+/** Laufende Kosten, zu denen Opa Heinz Rat weiß */
+const ADVICE_CATS: FinanceCat[] = ['tierarzt', 'medizin', 'futter', 'einstreu', 'entsorgung', 'tierkauf', 'pacht'];
+
+/** Zwei Monate in Folge Minus: Opa Heinz nennt den größten Kostenblock und was dagegen hilft */
+function advice(s: GameState) {
+  const f = s.finance!;
+  const r = f.results;
+  if (r.length < 2 || r[r.length - 1] >= 0 || r[r.length - 2] >= 0 || !living(s).length) return;
+  if (s.adviceDay != null && s.day - s.adviceDay < ADVICE_PAUSE) return;
+  const costs = ADVICE_CATS.map(c => [c, -(f.prev![c] ?? 0)] as const).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  if (!costs.length) return;
+  s.adviceDay = s.day;
+  const [cat, amount] = costs[0];
+  const lines = [
+    `„Dein Konto schrumpft jetzt schon den zweiten Monat. Am meisten Geld ging zuletzt für ${FINANCE_CATS[cat].name} drauf: ${euro(amount)}.“`,
+    ...adviceTips(s, cat).map(t => `💡 ${t}`),
+  ];
+  if (!has(s, 'hofladen')) lines.push('💡 Und noch was: Mit einem Hofladen bekommst du für deine Eier das 1,5-Fache vom Marktpreis.');
+  lines.push('Wohin dein Geld fließt, siehst du unter „Mehr → Finanzen“.');
+  s.celebrations.push({ emoji: '👴', title: 'Opa Heinz schaut vorbei', lines });
+  log(s, `👴 Opa Heinz gibt Rat: Größter Kostenblock ist ${FINANCE_CATS[cat].name} (${euro(amount)} im letzten Monat).`, 'info', true);
+}
+
+function adviceTips(s: GameState, cat: FinanceCat): string[] {
+  const tips: string[] = [];
+  switch (cat) {
+    case 'tierarzt':
+      tips.push('Deine Hühner niesen dauernd. Gib Kräuter ins Trinkwasser und behandle leichte Infekte gleich mit Kräutern, dann brauchst du den Tierarzt kaum.');
+      if (!insulated(s)) tips.push('Dämm den Stall (Shop → Erweiterungen), dann gibt es im Herbst und Winter viel weniger Infekte.');
+      break;
+    case 'medizin':
+      if (!has(s, 'sandbad')) tips.push('Ein Sandbad hält die Milben fern.');
+      tips.push('Streu vorbeugend Kieselgur und halte den Stall sauber, das ist billiger als Milbenspray.');
+      if (!has(s, 'wechselweide')) tips.push('Gegen Würmer hilft eine Wechselweide.');
+      else tips.push('Wechsle die Weide, bevor sie abgegrast ist, dann gibt es weniger Würmer.');
+      break;
+    case 'futter':
+      if (!ratSafe(s)) tips.push('Ratten und Spatzen fressen an deiner offenen Futterstelle mit. Ein Trittfutterautomat spart viel Futter.');
+      if (SUPPLIES.some(sp => sp.bulk && FEED_SUPPLIES.includes(sp.id))) tips.push('Kauf Futter im 25-kg-Sack, das ist ein Fünftel günstiger. Lagere es aber nicht zu lange, sonst verdirbt es.');
+      if (adultRoosters(s).length > Math.max(1, Math.ceil(flock(s).filter(a => a.sex === 'henne').length / 8))) {
+        tips.push('Du hast mehr Hähne, als du brauchst. Die fressen mit, legen aber keine Eier.');
+      }
+      if (living(s).some(a => isSenior(s, a))) tips.push('Alte Hennen legen kaum noch. Als Suppenhuhn bringen sie noch Geld.');
+      break;
+    case 'einstreu':
+      tips.push('Ein Rundballen Stroh ist günstiger als einzelne Ballen. Und den Mist kannst du als Dünger verkaufen.');
+      break;
+    case 'entsorgung':
+      tips.push('Es sterben zu viele Tiere. Schau im Tagebuch nach, woran, und schütz sie besser.');
+      break;
+    case 'tierkauf':
+      tips.push('Zieh deine Junghennen selbst nach: mit Hahn und Glucke oder Brutapparat. Das ist viel billiger als kaufen.');
+      break;
+    case 'pacht':
+      tips.push('Die Pacht bleibt gleich, egal wie viele Hühner du hast. Mehr Hennen verteilen sie besser.');
+      break;
+  }
+  return tips;
+}
+
+/* ================================================================== */
+/* Lager: Futter verdirbt                                             */
+/* ================================================================== */
+function spoilFeed(s: GameState) {
+  const f = has(s, 'schuppen') ? SHED_SPOIL : 1;
+  for (const sp of SUPPLIES) {
+    const n = s.inventory[sp.id] ?? 0;
+    if (sp.spoil && n > 0) s.inventory[sp.id] = Math.max(0, round2(n - n * sp.spoil * f));
+  }
+}
+
+/* ================================================================== */
+/* Hofbesuche                                                         */
+/* ================================================================== */
+function visitRequest(s: GameState) {
+  if (s.visit && s.visit.day < s.day) s.visit = null;
+  if (s.visit) return;
+  const st = stars(s);
+  if (st < VISIT_MIN_STARS || flock(s).length < 3) return;
+  if (!chance(s, VISIT_CHANCE * (st - VISIT_MIN_STARS + 1))) return;
+  const v = { group: pick(s, VISIT_GROUPS), day: s.day + intBetween(s, 3, 5), fee: Math.round(between(s, 25, 40)) + (st >= 5 ? 10 : 0), accepted: false };
+  s.visit = v;
+  log(s, `📩 Anfrage: ${v.group} möchte am Tag ${v.day} um ${VISIT_HOUR} Uhr deinen Hof besuchen und zahlt ${v.fee} €. Zusagen kannst du unter Markt → Aufträge.`, 'good', true);
+}
+
+function farmVisit(s: GameState) {
+  const v = s.visit;
+  if (!v || v.day !== s.day) return;
+  s.visit = null;
+  if (!v.accepted) {
+    log(s, `📩 ${v.group} hat keine Zusage bekommen und besucht einen anderen Hof.`, 'info');
+    return;
+  }
+  const problems = visitProblems(s);
+  if (!problems.length) {
+    addMoney(s, v.fee, 'besuche');
+    s.visitEffect = { until: s.day + VISIT_GOOD.days, points: VISIT_GOOD.points };
+    log(s, `👧 Hofbesuch: ${v.group} war begeistert und zahlt ${v.fee} €. Das spricht sich herum.`, 'good', true);
+    s.celebrations.push({ emoji: '👧', title: 'Ein gelungener Hofbesuch', lines: [
+      `${v.group} war da: Hühner streicheln, Eier suchen, Fragen über Fragen.`,
+      `💰 Alle waren begeistert und zahlen ${v.fee} €.`,
+      `⭐ Das spricht sich herum: ${VISIT_GOOD.days} Tage lang ein besserer Hof-Ruf.`,
+    ] });
+  } else {
+    s.visitEffect = { until: s.day + VISIT_BAD.days, points: VISIT_BAD.points };
+    log(s, `😕 Hofbesuch: ${v.group} war enttäuscht. ${problems.join(' ')}`, 'bad', true);
+    s.celebrations.push({ emoji: '😕', title: 'Der Hofbesuch ging daneben', lines: [
+      `${v.group} war da, aber es hat ihnen nicht gefallen:`,
+      ...problems.map(p => `❌ ${p}`),
+      `Bezahlt haben sie nichts, und ${VISIT_BAD.days} Tage lang leidet dein Hof-Ruf.`,
+    ] });
+  }
+}
+
 function stallpflichtCheck(s: GameState) {
   if (!eventActive(s, 'stallpflicht') || has(s, 'netz') || !outsideAnimals(s).length) return;
   if (chance(s, 0.35)) {
-    addMoney(s, -40);
+    addMoney(s, -40, 'sonstiges');
     log(s, '👮 Kontrolle vom Veterinäramt: Die Hühner waren trotz Stallpflicht draußen. Bußgeld 40 €.', 'bad', true);
   }
 }
@@ -782,7 +919,7 @@ export function checkGoals(s: GameState) {
   }
   if (changed && s.goals.length && s.goals.every(g => g.done)) {
     const ch = CHAPTERS[s.chapter];
-    addMoney(s, ch.reward);
+    addMoney(s, ch.reward, 'geschenke');
     log(s, `🏆 Kapitel ${s.chapter} „${ch.title}“ geschafft! Opa Heinz ist stolz und schenkt dir ${ch.reward} €.`, 'good');
     const done = s.chapter;
     s.chapter++;

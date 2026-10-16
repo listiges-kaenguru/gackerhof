@@ -1,20 +1,22 @@
 // Benutzeroberfläche: Kopfzeile, Hinweise, Schnellaktionen, Navigation, Panels, Dialoge.
 import * as A from '../game/actions';
 import {
-  ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, HATS,
-  HEALTH_CHECK_COST, ITEM, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN, PERSONALITIES, PLOTS, SEASON_NAMES, SHOP_CATS, SHOW_FEE,
-  SHOW_GRADES, SHOW_MAX, SHOW_NOTICE, SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
+  ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST,
+  FINANCE_CATS, HATS, HEALTH_CHECK_COST, ITEM, type ItemDef, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN,
+  PERSONALITIES, PLOTS, SEASON_NAMES, SHED_SPOIL, SHOP_CATS, type ShopCat, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SHOW_NOTICE,
+  SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
 } from '../game/data';
 import {
-  age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason, daysText, dead,
-  diff, drinkerCap, eggCount, eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, grainStock, has, hawkProtection,
-  isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, nestCount, outsideAnimals, pastureNow, ratSafe, runCap,
-  season, seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storedEggCount, year,
+  age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason,
+  daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
+  foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
+  lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
+  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, storedEggCount, visitProblems, year,
 } from '../game/helpers';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
-import type { Animal, BreedId, ConditionId, Difficulty, GameState, MarketOffer } from '../game/types';
+import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
@@ -137,6 +139,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
     const ords = s.orders ?? [];
     if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
+    if (s.visit && !s.visit.accepted) out.push({ icon: '📩', text: 'Anfrage: Hofbesuch', act: 'open:markt:auftraege', kind: 'good' });
+    else if (s.visit && s.visit.day - s.day <= 1) {
+      const ready = !visitProblems(s).length;
+      out.push({ icon: '👧', text: `Hofbesuch ${s.visit.day === s.day ? 'heute' : 'morgen'} um ${VISIT_HOUR} Uhr${ready ? '' : ': noch nicht bereit'}`, act: 'open:markt:auftraege', kind: ready ? 'good' : 'warn' });
+    }
     if (locked.length && !hawkNow) out.push({ icon: '🚪', text: `${locked.length === 1 ? `${locked[0].name} ist` : `${locked.length} Hühner sind`} ausgesperrt: reinlocken`, act: 'lure', kind: isDaytime(s.hour) ? 'warn' : 'bad' });
     if (s.marderAlertDay === s.day && !marderSafe(s)) out.push({ icon: '🦡', text: 'Marder in der Nähe!', act: 'open:shop:fuchs', kind: 'bad' });
     if (f.length && isNight(s.hour) && s.doorOpen && !has(s, 'autoklappe')) out.push({ icon: '🚪', text: 'Klappe ist nachts offen!', act: 'door', kind: 'bad' });
@@ -390,16 +397,31 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     let body = '';
     if (ui.shopCat === 'verbrauch') {
       const expensive = eventActive(s, 'futterteuer');
-      body = `${expensive ? '<p class="warnbox">📦 Lieferengpass: Futter kostet gerade 50 % mehr.</p>' : ''}` + SUPPLIES.map(sp => {
-        const price = A.supplyPrice(s, sp.id);
-        return `<div class="item">
+      const cap = storageCap(s);
+      body = `${expensive ? '<p class="warnbox">📦 Lieferengpass: Futter kostet gerade 50 % mehr.</p>' : ''}`
+        + `<p class="infobar">📦 Lagerplatz: Futter ${fmtAmount(feedStock(s))} / ${cap.feed} kg · Stroh ${fmtAmount(s.inventory.einstreu ?? 0)} / ${cap.straw} Ballen${has(s, 'schuppen') ? '' : ' · Mehr Platz mit einem Lagerschuppen (Erweiterungen)'}</p>`
+        + SUPPLIES.map(sp => {
+          const price = A.supplyPrice(s, sp.id);
+          const buyBtn = (times: number, bulk: boolean, label: string, cls: string) => {
+            const total = A.supplyPrice(s, sp.id, bulk) * times;
+            const full = A.storageProblem(s, sp.id, (bulk && sp.bulk ? sp.bulk.amount : sp.amount) * times);
+            return `<button class="btn ${cls}" data-act="supply:${sp.id}:${times}${bulk ? ':bulk' : ''}" ${s.money < total || full ? 'disabled' : ''} ${full ? `title="${esc(full)}"` : ''}>${label}</button>`;
+          };
+          const full = A.storageProblem(s, sp.id, sp.amount);
+          const bulk = sp.bulk
+            ? buyBtn(1, true, `${sp.bulk.name} ${euro(A.supplyPrice(s, sp.id, true))}`, 'small')
+              + `<small class="muted">${euro(sp.bulk.price / sp.bulk.amount)} statt ${euro(sp.price / sp.amount)} je ${sp.unit === 'kg' ? 'kg' : 'Ballen'}</small>`
+            : '';
+          const spoil = sp.spoil ? `<span class="tag">verdirbt ca. ${String(sp.spoil * 100 * (has(s, 'schuppen') ? SHED_SPOIL : 1)).replace('.', ',')} % am Tag</span>` : '';
+          return `<div class="item">
           <div class="item-ico">${sp.emoji}</div>
-          <div class="item-main"><b>${sp.name}</b><p>${sp.desc}</p><span class="tag">Im Lager: ${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</span></div>
+          <div class="item-main"><b>${sp.name}</b><p>${sp.desc}</p><span class="tag">Im Lager: ${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</span>${spoil}${full ? `<small class="why">${esc(full)}</small>` : ''}</div>
           <div class="item-buy">
-            <button class="btn primary" data-act="supply:${sp.id}:1" ${s.money < price ? 'disabled' : ''}>${sp.amount} ${sp.unit === 'kg' ? 'kg' : '×'}<br><b>${euro(price)}</b></button>
-            <button class="btn small" data-act="supply:${sp.id}:5" ${s.money < price * 5 ? 'disabled' : ''}>5× ${euro(price * 5)}</button>
+            ${buyBtn(1, false, `${sp.amount} ${sp.unit === 'kg' ? 'kg' : '×'}<br><b>${euro(price)}</b>`, 'primary')}
+            ${buyBtn(5, false, `5× ${euro(price * 5)}`, 'small')}
+            ${bulk}
           </div></div>`;
-      }).join('');
+        }).join('');
     } else {
       const items = ITEMS.filter(i => i.cat === ui.shopCat && (!i.plot || i.plot === s.plot));
       body = items.map(it => {
@@ -428,7 +450,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
 
   /* ---------------- Markt ---------------- */
   function panelMarket(): string {
-    const nOrders = (s.orders ?? []).length;
+    const nOrders = (s.orders ?? []).length + (s.visit ? 1 : 0);
     const showIn = showCountdown(s);
     const tabsHtml = `<div class="seg"><button class="${ui.marketTab === 'kaufen' ? 'on' : ''}" data-act="mtab:kaufen">Kaufen</button><button class="${ui.marketTab === 'verkaufen' ? 'on' : ''}" data-act="mtab:verkaufen">Verkaufen</button><button class="${ui.marketTab === 'auftraege' ? 'on' : ''}" data-act="mtab:auftraege">Aufträge${nOrders ? ` <b class="count">${nOrders}</b>` : ''}</button><button class="${ui.marketTab === 'schau' ? 'on' : ''}" data-act="mtab:schau">Schau${showIn != null && showIn >= 0 ? ' <b class="count">!</b>' : ''}</button></div>`;
     const trend = s.eggPrice >= 0.55 ? '↑' : s.eggPrice <= 0.45 ? '↓' : '→';
@@ -465,6 +487,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     return tabsHtml + info + `
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
+        ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
         ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * MANURE_PRICE)}</button></div>` : ''}
         ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
@@ -479,27 +502,83 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       </section>`;
   }
 
+  function visitCard(): string {
+    const v = s.visit;
+    if (!v) return '';
+    const left = v.day - s.day;
+    const when = left <= 0 ? `heute um ${VISIT_HOUR} Uhr` : left === 1 ? `morgen um ${VISIT_HOUR} Uhr` : `am Tag ${v.day} um ${VISIT_HOUR} Uhr (in ${left} Tagen)`;
+    const problems = visitProblems(s);
+    return `<section class="card order">
+      <h3>👧 Hofbesuch: ${esc(v.group)}</h3>
+      <p>Möchte ${when} vorbeikommen und zahlt <b class="good">${euro(v.fee)}</b>. Ein gelungener Besuch verbessert ${VISIT_GOOD.days} Tage lang deinen Hof-Ruf, ein enttäuschender schadet ihm.</p>
+      <p class="muted">${problems.length ? `So würde es gerade nicht klappen:<br>${problems.map(p => `❌ ${esc(p)}`).join('<br>')}` : '✅ Alles bereit: sauberer Stall, gesunde Tiere.'}</p>
+      ${v.accepted
+        ? `<p class="good">✔ Zugesagt</p>${confirmBtn('visit:no', 'Doch absagen', 'Wirklich absagen?', 'small')}`
+        : '<div class="row"><button class="btn primary" data-act="visit:yes">Zusagen</button><button class="btn" data-act="visit:no">Absagen</button></div>'}
+    </section>`;
+  }
+
+  /** Einnahmen und Ausgaben nach Kategorien: dieser und letzter Monat */
+  function financeTable(): string {
+    const cur = s.finance?.cur ?? {};
+    const prev = s.finance?.prev;
+    const cell = (v: number | undefined) => v ? `<td class="${v > 0 ? 'good' : 'bad'}">${v > 0 ? '+' : '−'}${euro(Math.abs(v))}</td>` : '<td class="muted">–</td>';
+    const rows = (cats: FinanceCat[]) => cats.filter(c => cur[c] || prev?.[c])
+      .map(c => `<tr><th>${FINANCE_CATS[c].emoji} ${FINANCE_CATS[c].name}</th>${cell(cur[c])}${prev ? cell(prev[c]) : ''}</tr>`).join('');
+    const income = rows(['eier', 'tierverkauf', 'auftraege', 'mist', 'besuche', 'schau', 'geschenke', 'kredit']);
+    const costs = rows(['futter', 'einstreu', 'medizin', 'tierarzt', 'tierkauf', 'ausruestung', 'pacht', 'entsorgung', 'sonstiges']);
+    const sum = (m: FinanceMonth) => Object.values(m).reduce((t, v) => t + (v ?? 0), 0);
+    const cols = prev ? 3 : 2;
+    return `<table class="fin">
+      <thead><tr><th></th><th>Dieser Monat<br><small>Tag ${dayOfSeason(s)} von ${DAYS_PER_SEASON}</small></th>${prev ? '<th>Letzter Monat</th>' : ''}</tr></thead>
+      <tbody>
+        <tr class="sec"><th colspan="${cols}">Einnahmen</th></tr>${income || `<tr><td colspan="${cols}" class="muted">noch keine</td></tr>`}
+        <tr class="sec"><th colspan="${cols}">Ausgaben</th></tr>${costs || `<tr><td colspan="${cols}" class="muted">noch keine</td></tr>`}
+        <tr class="sum"><th>Laufendes Ergebnis</th>${cell(monthResult(cur) || undefined)}${prev ? cell(monthResult(prev) || undefined) : ''}</tr>
+        <tr class="sum"><th>Mit Ausrüstung, Kredit, Geschenken</th>${cell(sum(cur) || undefined)}${prev ? cell(sum(prev) || undefined) : ''}</tr>
+      </tbody></table>
+      <p class="muted">Das laufende Ergebnis zeigt, ob sich dein Hof trägt: ohne Käufe von Ausrüstung, Kredite und Geschenke.</p>`;
+  }
+
+  /** Erklärt den Stückpreis: Rassenfaktoren und Bonus der Schwierigkeit */
+  function eggPriceNote(): string {
+    const breeds = Object.keys(s.eggs).filter(b => s.eggs[b] > 0 && BREEDS[b as BreedId].eggValue !== 1) as BreedId[];
+    const parts = breeds.map(b => `${BREEDS[b].name}-Eier zählen ${String(BREEDS[b].eggValue).replace('.', ',')}-fach`);
+    const bonus = diff(s).sellBonus;
+    if (bonus !== 1) parts.push(`inkl. ${Math.round((bonus - 1) * 100)} % Bonus (${diff(s).name})`);
+    return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
+  }
+  /** Was die Eier eines Auftrags auf dem Markt bringen würden */
+  function orderMarketValue(qty: number): number {
+    const pick = A.orderEggs(s, qty);
+    const hatch: Record<string, number> = {};
+    for (const e of s.hatchEggs.slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
+    return eggValue(s, pick.eggs) + eggValue(s, hatch);
+  }
+
   function panelOrders(): string {
     const list = s.orders ?? [];
-    if (!list.length) return `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
+    if (!list.length) return visitCard() + `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
       <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren). Sie zahlen deutlich mehr als der Markt.</p>`;
     const eggsHave = storedEggCount(s);
-    return list.map(o => {
+    return visitCard() + list.map(o => {
       const what = o.kind === 'eier' ? `🥚 ${o.qty} Eier` : o.kind === 'junghenne' ? `🐔 ${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}` : `🍲 ${o.qty} Suppenh${o.qty > 1 ? 'ühner' : 'uhn'} (Henne ab 2 Jahren)`;
       const left = o.dueDay - s.day;
       let have: string, can: boolean;
       if (o.kind === 'eier') {
         can = eggsHave >= o.qty;
-        have = `Im Lager: ${eggsHave} Eier`;
+        const pick = A.orderEggs(s, o.qty);
+        const delivers = [eggBreakdown(s, pick.eggs), pick.hatch ? `${pick.hatch} Brutei${pick.hatch > 1 ? 'er' : ''}` : ''].filter(Boolean).join(' · ');
+        have = `Im Lager: ${eggsHave} Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
       } else {
         const animals = A.orderAnimals(s, o.kind);
         can = animals.length >= o.qty;
         have = can ? `Liefert: ${animals.slice(0, o.qty).map(a => esc(a.name)).join(', ')}` : `Passende Tiere: ${animals.length}`;
       }
-      const market = o.kind === 'eier' ? o.qty * s.eggPrice : 0;
+      const market = o.kind === 'eier' && eggsHave >= o.qty ? orderMarketValue(o.qty) : 0;
       return `<section class="card order">
         <h3>${esc(o.customer)}</h3>
-        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(Markt: ca. ${euro(market)})</small>` : ''}</p>
+        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
         <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
         ${confirmBtn(`order:${o.id}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
       </section>`;
@@ -546,6 +625,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <div class="row">${def.cures.map(cu => {
           const inStock = cu.id !== 'tierarzt' && (s.inventory[cu.id] ?? 0) >= 1;
           const price = cu.vetPrice != null ? cu.vetPrice * diff(s).vetFactor : A.supplyPrice(s, cu.id);
+          if (cu.maxSeverity != null && c.severity > cu.maxSeverity) {
+            return `<button class="btn" disabled>${cu.label} <small>(nur bis ${cu.maxSeverity} %)</small></button>`;
+          }
           return `<button class="btn" data-act="treat:${a.id}:${c.id}:${cu.id}">${cu.label} <small>${inStock ? '(im Lager)' : euro(price)}</small></button>`;
         }).join('')}</div></div>`;
     }).join('');
@@ -554,6 +636,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       : '';
     const brooding = a.broodingUntil > s.day ? `<div class="goodbox">🥚 Brütet ${a.broodEggs.length} Eier aus. Schlupf in ${a.broodingUntil - s.day} Tag(en).</div>` : '';
     const withdrawal = a.withdrawalUntil >= s.day ? `<p class="warnbox">💊 Medikamenten-Wartezeit bis Tag ${a.withdrawalUntil}: Eier werden entsorgt, Schlachten ist nicht erlaubt.</p>` : '';
+    const immunities = (Object.keys(a.immuneUntil ?? {}) as ConditionId[]).filter(id => immune(s, a, id));
+    const immunity = immunities.length
+      ? `<p class="muted">🛡️ Immun gegen ${immunities.map(id => `${CONDITIONS[id].name} bis Tag ${a.immuneUntil![id]}`).join(', ')}</p>`
+      : '';
     return `
       <div class="pet-head">${pic(a)}
         <div><h3>${esc(a.name)} <button class="link" data-act="rename:${a.id}" aria-label="Umbenennen">✏️</button></h3>
@@ -561,7 +647,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p class="muted">${stageName(s, a)} · Persönlichkeit: ${PERSONALITIES[a.personality]}</p></div></div>
       ${broody}${brooding}${withdrawal}
       ${meter('Hunger', a.food, '🌾')}${meter('Durst', a.water, '💧')}${meter('Gesundheit', a.health, '❤️')}${meter('Wohlbefinden', a.wellbeing, '😊')}
-      ${conds ? `<section class="card warn"><h3>Krankheiten</h3>${conds}</section>` : ''}
+      ${conds ? `<section class="card warn"><h3>Krankheiten</h3>${conds}</section>` : ''}${immunity}
       <p>⚖️ ${a.weight.toFixed(2).replace('.', ',')} kg ${a.sex === 'henne' && st === 'erwachsen' ? `· 🥚 ${a.eggsLaid} Eier gelegt` : ''}</p>
       ${a.history.length ? `<p class="muted">📜 ${a.history.map(esc).join(' · ')} · seit Tag ${a.arrivedDay} auf dem Hof</p>` : ''}
       <p class="muted">${BREEDS[a.breed].desc}</p>
@@ -638,7 +724,6 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   /* ---------------- Lager ---------------- */
   function panelStore(): string {
     const eggs = eggCount(s.eggs);
-    const eggList = Object.entries(s.eggs).filter(([, n]) => n > 0).map(([b, n]) => `${n}× ${BREEDS[b as BreedId].name}`).join(', ');
     const inc = has(s, 'brutapparat')
       ? `<section class="card"><h3>🥚 Brutapparat (${s.incubator.length}/12)</h3>
           ${s.incubator.length ? `<p>${groupIncubator()}</p>` : '<p class="muted">Leer.</p>'}
@@ -647,7 +732,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       : `<section class="card"><h3>🥚 Brüten</h3><p class="muted">Bruteier kannst du mit einem Brutapparat oder einer brütigen Henne (Glucke) ausbrüten.</p><button class="btn" data-act="open:shop:ausbau">Brutapparat im Shop</button></section>`;
     return `
       <section class="card"><h3>🥚 Eier</h3>
-        <p>${eggs} Speiseeier${eggList ? ` (${eggList})` : ''} · Wert ${euro(eggValue(s, s.eggs))}</p>
+        <p>${eggs} Speiseeier · Wert auf dem Markt ${euro(eggValue(s, s.eggs))}</p>
+        ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         <p>${s.hatchEggs.length} Bruteier (mit Hahn gelegt, zum Ausbrüten oder Verkaufen)</p>
         <p><b>Zusammen: ${eggs + s.hatchEggs.length} Eier im Lager</b></p>
         <div class="row"><button class="btn" data-act="collect">Im Nest einsammeln</button><button class="btn primary" data-act="open:markt:verkaufen">Verkaufen</button></div>
@@ -657,8 +743,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <section class="card"><h3>📦 Vorräte</h3>
         <ul class="stock">${SUPPLIES.map(sp => `<li><span>${sp.emoji} ${sp.name}</span><b>${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</b></li>`).join('')}
         <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li></ul>
+        <p class="muted">📦 Lagerplatz: Futter ${fmtAmount(feedStock(s))} / ${storageCap(s).feed} kg · Stroh ${fmtAmount(s.inventory.einstreu ?? 0)} / ${storageCap(s).straw} Ballen. Futter verdirbt mit der Zeit${has(s, 'schuppen') ? ', im Lagerschuppen nur halb so schnell' : ''}.</p>
+        ${herbsActive(s) ? `<p class="muted">🍃 Kräuter im Trinkwasser wirken bis Tag ${s.kraeuterUntil}.</p>` : ''}
         <div class="row">
           <button class="btn" data-act="treat" ${(s.inventory.mehlwuermer ?? 0) >= 1 && living(s).length ? '' : 'disabled'}>🪱 Mehlwürmer verstreuen</button>
+          <button class="btn" data-act="herbs" ${(s.inventory.kraeuter ?? 0) >= 1 && s.equip.drinker ? '' : 'disabled'}>🍃 Kräuter ins Trinkwasser</button>
           <button class="btn primary" data-act="open:shop:verbrauch">Nachkaufen</button>
         </div>
       </section>`;
@@ -688,6 +777,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <button class="btn" data-act="open:markt:schau">🏆 Geflügelschau${trophies ? ` · ${trophies} Pokal${trophies > 1 ? 'e' : ''}` : ''}</button></div>
       </section>
       <section class="card"><h3>💶 Finanzen</h3>
+        ${financeTable()}
         <p>Einnahmen gesamt: <b class="good">${euro(s.stats.income)}</b> · Ausgaben gesamt: <b class="bad">${euro(s.stats.expenses)}</b></p>
         <p>Nächste Monatsabrechnung in ${DAYS_PER_SEASON + 1 - dayOfSeason(s)} Tagen: Pacht ${PLOTS[s.plot].rent} € + Strom/Wasser ca. ${euro(s.pendingCosts)}</p>
         ${s.debt > 0 ? `<p>Schulden: <b class="bad">${euro(s.debt)}</b></p><button class="btn" data-act="repay">Zurückzahlen</button>` : ''}
@@ -756,7 +846,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           <li>🐔 Tippe auf ein Tier für seinen Steckbrief. Symbole über den Tieren zeigen Probleme: 💧 Durst, 🌾 Hunger, 🐜 Milben, 🤧 Schnupfen, 🪱 Würmer.</li>
           <li>🥚 Tippe auf die Eier am Stall, die Tränke oder den Futtertrog für schnelle Aktionen.</li>
           <li>🦊 Fuchs, 🦅 Habicht und 🦡 Marder kündigen sich immer an. Reagiere schnell!</li>
-          <li>💊 Krankheiten früh behandeln. Manche Medikamente haben eine Wartezeit.</li>
+          <li>💶 Unter „Mehr → Finanzen“ siehst du, wofür dein Geld draufgeht. Ab 4 Sternen fragen Gruppen nach einem Hofbesuch.</li>
+          <li>💊 Krankheiten früh behandeln: Leichte Fälle heilen oft schon mit günstigen Hausmitteln, schwere brauchen den Tierarzt. Manche Medikamente haben eine Wartezeit. Wer eine Krankheit überstanden hat, ist eine Weile immun.</li>
+          <li>🍃 Vorbeugen ist billiger: Kieselgur gegen Milben, Kräuter im Trinkwasser und ein gedämmter Stall gegen Atemwegsinfekte, die Wechselweide gegen Würmer.</li>
           <li>🕊️ Gestorbene Tiere müssen kostenpflichtig entsorgt werden.</li>
           <li>💾 Das Spiel speichert automatisch. Geschlossen ruht der Hof.</li>
         </ul>
@@ -921,11 +1013,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'treat':
         if (a1) return result(A.treat(s, Number(a1), a2 as ConditionId, a3));
         return result(A.giveTreat(s));
+      case 'herbs': return result(A.giveHerbs(s));
       case 'shopcat': ui.shopCat = a1 as ShopCat; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'mtab': ui.marketTab = a1 as MarketTab; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'buy': return result(A.buyItem(s, a1));
       case 'sell': return result(A.sellItem(s, a1));
-      case 'supply': return result(A.buySupply(s, a1, Number(a2)));
+      case 'supply': return result(A.buySupply(s, a1, Number(a2), a3 === 'bulk'));
+      case 'visit': return result(a1 === 'yes' ? A.acceptVisit(s) : A.declineVisit(s));
       case 'hat': return result(A.wearHat(s, a1 === 'none' ? null : a1));
       case 'offer': return result(A.buyOffer(s, Number(a1), Number(a2)));
       case 'check': return result(A.healthCheck(s, Number(a1)));

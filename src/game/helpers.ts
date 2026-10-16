@@ -1,9 +1,9 @@
 // Abgeleitete Werte aus dem Spielstand (keine Seiteneffekte außer log/toast).
 import {
-  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, DAYS_PER_SEASON, DIFFICULTIES, ITEM, MAX_OVERCROWD, OUT_WINDOW, PLOTS,
-  ROOST_HOUR, ROOST_WINDOW, SEASONS, WALK_MINUTES,
+  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, CONTACTS, DAYS_PER_SEASON, DIFFICULTIES, FEED_SUPPLIES, FINANCE_ONE_OFF, ITEM,
+  MAX_OVERCROWD, OUT_WINDOW, PLOTS, ROOST_HOUR, ROOST_WINDOW, SEASONS, STORAGE, VISIT_CLEAN, WALK_MINUTES,
 } from './data';
-import type { Animal, BreedId, Condition, FeedId, GameState, LogEntry, Season, Stage } from './types';
+import type { Animal, BreedId, Condition, ConditionId, FeedId, FinanceCat, FinanceMonth, GameState, LogEntry, Season, Stage } from './types';
 
 export const diff = (s: GameState) => DIFFICULTIES[s.difficulty];
 export const plot = (s: GameState) => PLOTS[s.plot];
@@ -115,8 +115,24 @@ export const marderSafe = (s: GameState) =>
   !!s.equip.coop && (!!ITEM[s.equip.coop].marderSafe || has(s, 'mardergitter'));
 export const ratSafe = (s: GameState) => !!s.equip.feeder && !!ITEM[s.equip.feeder].ratSafe;
 export const autoWater = (s: GameState) => has(s, 'pumpe') || has(s, 'leitung');
-export const frozen = (s: GameState) =>
-  s.temperature < 0 && !(s.equip.drinker && ITEM[s.equip.drinker].frostSafe) && !has(s, 'leitung');
+/** Stall ist gedämmt und zugfrei: weniger Atemwegsinfekte im Herbst und Winter */
+export const insulated = (s: GameState) => has(s, 'daemmung') || s.equip.coop === 'gartenhaus' || s.equip.coop === 'mobil';
+/** Kräuter im Trinkwasser wirken gerade */
+export const herbsActive = (s: GameState) => (s.kraeuterUntil ?? 0) >= s.day;
+/** Ansteckung: Faktor je Stallgenosse. Bis CONTACTS Tiere 1, darüber wächst die Zahl der engen Kontakte
+ *  nur mit der Wurzel der Herdengröße (others × Faktor = Wurzel aus CONTACTS × others). */
+export const contactFactor = (others: number) => Math.min(1, Math.sqrt(CONTACTS / Math.max(1, others)));
+/** Immun gegen diese Krankheit (nach überstandener Erkrankung) */
+export const immune = (s: GameState, a: Animal, id: ConditionId) => (a.immuneUntil?.[id] ?? 0) >= s.day;
+/** Wie lange nach dem Eisaufhacken getrunken werden kann (Spielstunden) */
+export const ICE_FREE_HOURS = 6;
+/** Fortlaufende Spielstunde, z. B. für Fristen innerhalb eines Tages */
+export const hourIndex = (s: GameState) => s.day * 24 + s.hour;
+/** Die Tränke friert bei Frost ein (beheizte Tränke, Wasserleitung und Bachpumpe nicht) */
+export const freezes = (s: GameState) =>
+  s.temperature < 0 && !(s.equip.drinker && ITEM[s.equip.drinker].frostSafe) && !has(s, 'leitung') && !has(s, 'pumpe');
+/** Die Tränke ist gerade zugefroren: Frost und das Eis ist nicht (mehr) aufgehackt */
+export const frozen = (s: GameState) => freezes(s) && (s.iceFreeUntil ?? 0) <= hourIndex(s);
 export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
 /** Tiere im Auslauf (Küken und brütende Hennen bleiben drinnen) */
 export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);
@@ -175,6 +191,11 @@ export function starFactors(s: GameState): StarFactor[] {
     { label: 'Todesfälle (30 Tage)', value: String(recent), max: 0,
       points: recent >= 3 ? -1.5 : recent >= 1 ? -0.5 : 0,
       tip: 'Jeder Verlust durch Raubtiere, Krankheit oder Vernachlässigung kostet Ansehen. Altersschwäche zählt nicht.' },
+    ...(s.visitEffect && s.visitEffect.until >= s.day ? [{
+      label: 'Letzter Hofbesuch', value: s.visitEffect.points > 0 ? 'begeistert' : 'enttäuscht', max: s.visitEffect.points > 0 ? s.visitEffect.points : 0,
+      points: s.visitEffect.points,
+      tip: `Wirkt noch bis Tag ${s.visitEffect.until}. Hofbesuche gibt es ab 4 Sternen, sie brauchen einen sauberen Stall und gesunde Tiere.`,
+    }] : []),
   ];
 }
 /** Hof-Ruf in Sternen (1–5) */
@@ -207,10 +228,21 @@ export function worstCondition(a: Animal): Condition | undefined {
 }
 
 /* ---------------- Preise ---------------- */
+/** Preis eines Eis dieser Rasse: Tagespreis × Rassenfaktor × Bonus der Schwierigkeit (factor: 1,5 im Hofladen) */
+export function eggUnitPrice(s: GameState, breed: BreedId, factor = 1): number {
+  return round2(s.eggPrice * BREEDS[breed].eggValue * factor * diff(s).sellBonus);
+}
+/** Wert dieser Eier: Summe der gerundeten Stückpreise, damit die Aufschlüsselung immer aufgeht */
 export function eggValue(s: GameState, eggs: Record<string, number>, factor = 1): number {
   let v = 0;
-  for (const [b, n] of Object.entries(eggs)) v += n * s.eggPrice * BREEDS[b as BreedId].eggValue;
-  return round2(v * factor * diff(s).sellBonus);
+  for (const [b, n] of Object.entries(eggs)) v += n * eggUnitPrice(s, b as BreedId, factor);
+  return round2(v);
+}
+/** Aufschlüsselung für die Anzeige, z. B. „1× Legehybride à 0,51 € · 1× Marans à 1,02 €“ (ohne Umbruch innerhalb eines Postens) */
+export function eggBreakdown(s: GameState, eggs: Record<string, number>, factor = 1): string {
+  return (Object.entries(eggs).filter(([, n]) => n > 0) as [BreedId, number][])
+    .sort(([a], [b]) => eggUnitPrice(s, a) - eggUnitPrice(s, b))
+    .map(([b, n]) => `${n}×\u00a0${BREEDS[b].name} à\u00a0${euro(eggUnitPrice(s, b, factor))}`).join(' · ');
 }
 export function animalValue(s: GameState, a: Animal): number {
   const b = BREEDS[a.breed];
@@ -236,8 +268,34 @@ export function log(s: GameState, text: string, kind: LogEntry['kind'] = 'info',
   if (s.log.length > 300) s.log.length = 300;
   if (toast) s.toasts.push(e);
 }
-export function addMoney(s: GameState, amount: number) {
+export function addMoney(s: GameState, amount: number, cat: FinanceCat) {
   s.money = round2(s.money + amount);
   if (amount > 0) s.stats.income = round2(s.stats.income + amount);
   else s.stats.expenses = round2(s.stats.expenses - amount);
+  const f = (s.finance ??= { cur: {}, results: [] });
+  f.cur[cat] = round2((f.cur[cat] ?? 0) + amount);
 }
+/** Laufendes Ergebnis eines Monats: alles außer Investitionen, Krediten und Geschenken */
+export function monthResult(m: FinanceMonth): number {
+  return round2(Object.entries(m).reduce((t, [k, v]) => FINANCE_ONE_OFF.includes(k as FinanceCat) ? t : t + (v ?? 0), 0));
+}
+
+/** Was einem Hofbesuch heute nicht gefallen würde (leer: alles in Ordnung) */
+export function visitProblems(s: GameState): string[] {
+  const out: string[] = [];
+  if (flock(s).length < 3) out.push('Es gibt kaum Hühner zu sehen.');
+  if (s.cleanliness < VISIT_CLEAN) out.push(`Der Stall ist nicht sauber genug (${Math.round(s.cleanliness)} %, nötig sind ${VISIT_CLEAN} %).`);
+  const sick = living(s).filter(a => a.conditions.length);
+  if (sick.length) out.push(`Kranke Tiere: ${sick.map(a => a.name).join(', ')}.`);
+  if (dead(s).length) out.push('Ein totes Tier liegt noch im Gehege.');
+  return out;
+}
+
+/* ---------------- Lager ---------------- */
+/** Platz im Lager: Futter (kg) und Stroh (Ballen) */
+export function storageCap(s: GameState) {
+  const shed = has(s, 'schuppen');
+  return { feed: shed ? STORAGE.feedShed : STORAGE.feed, straw: shed ? STORAGE.strawShed : STORAGE.straw };
+}
+/** Futter im Lager (kg), alle Sorten zusammen */
+export const feedStock = (s: GameState) => round2(FEED_SUPPLIES.reduce((t, id) => t + (s.inventory[id] ?? 0), 0));

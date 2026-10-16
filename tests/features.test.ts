@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
-import { ALBUM_BREED_BONUS, PASTURE_WARN, SHOW_DAY, SHOW_FEE, SHOW_NOTICE } from '../src/game/data';
-import { albumKey, dayOfSeason, lightActive, living, pastureNow, pastureWormFactor, season } from '../src/game/helpers';
+import {
+  ADVICE_PAUSE, ALBUM_BREED_BONUS, PASTURE_WARN, SHOW_DAY, SHOW_FEE, SHOW_NOTICE, STORAGE, VISIT_BAD, VISIT_GOOD, VISIT_HOUR,
+} from '../src/game/data';
+import {
+  albumKey, dayOfSeason, eggBreakdown, eggUnitPrice, eggValue, euro, feedStock, lightActive, living, pastureNow, pastureWormFactor, season, starFactors, visitProblems,
+} from '../src/game/helpers';
 import { advanceHour, refreshOffers } from '../src/game/sim';
 import { runShow, showBasePoints, showProblem } from '../src/game/show';
 import { createAnimal, importSave, newGame } from '../src/game/state';
-import type { GameState } from '../src/game/types';
+import type { FinanceMonth, GameState } from '../src/game/types';
 import { tutorialStep } from '../src/ui/tutorial';
 
 const hours = (s: GameState, n: number, each?: (s: GameState) => void) => {
@@ -250,5 +254,189 @@ describe('Tutorial-Pfeile', () => {
     s.stats.eggsSold = 5;
     s.day = 8;
     expect(tutorialStep(s)).toBeNull();
+  });
+});
+
+describe('Finanzen', () => {
+  it('jede Geldbewegung landet in ihrer Kategorie', () => {
+    const s = farm();
+    expect(s.finance!.cur.ausruestung).toBe(-(140 + 850 + 35 + 95));
+    A.buySupply(s, 'legemehl');
+    s.inventory.mist = 3;
+    A.sellManure(s);
+    expect(s.finance!.cur.futter).toBe(-9);
+    expect(s.finance!.cur.mist).toBe(6);
+  });
+
+  it('zum Monatswechsel wandert alles in den Vormonat, samt Pacht', () => {
+    const s = farm();
+    A.buySupply(s, 'legemehl');
+    s.day = 30;
+    s.hour = 23;
+    advanceHour(s);
+    expect(dayOfSeason(s)).toBe(1);
+    expect(s.finance!.prev!.futter).toBe(-9);
+    expect(s.finance!.prev!.pacht).toBeLessThan(0);
+    expect(s.finance!.cur).toEqual({});
+    // Investitionen zählen nicht zum laufenden Ergebnis
+    expect(s.finance!.results).toEqual([-9 + s.finance!.prev!.pacht!]);
+  });
+});
+
+describe('Opa Heinz gibt Rat', () => {
+  /** Springt ans Monatsende und schließt den Monat mit diesen Buchungen ab */
+  const closeMonth = (s: GameState, day: number, cur: FinanceMonth) => {
+    s.finance!.cur = cur;
+    s.day = day;
+    s.hour = 23;
+    advanceHour(s);
+    return s.celebrations.filter(c => c.title === 'Opa Heinz schaut vorbei');
+  };
+
+  it('nach zwei Monaten Minus nennt er den größten Kostenblock, dann erst mal nicht wieder', () => {
+    const s = farm();
+    hens(s, 3);
+    expect(closeMonth(s, 30, { tierarzt: -100, eier: 40 })).toHaveLength(0); // erst ein Monat Minus
+    const advice = closeMonth(s, 60, { tierarzt: -100, futter: -30, eier: 40 });
+    expect(advice).toHaveLength(1);
+    expect(advice[0].lines[0]).toContain('Tierarzt');
+    expect(advice[0].lines.join(' ')).toContain('Kräuter');
+    expect(closeMonth(s, 90, { futter: -100 })).toHaveLength(1); // Pause
+    expect(90 - s.adviceDay!).toBeLessThan(ADVICE_PAUSE);
+    const later = closeMonth(s, 120, { futter: -100 });
+    expect(later).toHaveLength(2);
+    expect(later[1].lines[0]).toContain('Futter');
+  });
+
+  it('Käufe von Ausrüstung lösen keinen Rat aus', () => {
+    const s = farm();
+    hens(s, 3);
+    closeMonth(s, 30, { ausruestung: -800, eier: 60 });
+    expect(closeMonth(s, 60, { ausruestung: -800, eier: 60 })).toHaveLength(0);
+  });
+});
+
+describe('Großpackungen und Lager', () => {
+  it('der Sack ist günstiger pro Kilo, braucht aber Platz', () => {
+    const s = farm();
+    expect(A.supplyPrice(s, 'legemehl', true) / 25).toBeLessThan(A.supplyPrice(s, 'legemehl') / 10);
+    expect(A.buySupply(s, 'legemehl', 1, true).ok).toBe(true);
+    expect(A.buySupply(s, 'legemehl', 1, true).ok).toBe(true);
+    expect(feedStock(s)).toBe(50);
+    const full = A.buySupply(s, 'koerner', 1, true);
+    expect(full.ok).toBe(false);
+    expect(full.msg).toContain(`höchstens ${STORAGE.feed} kg`);
+    expect(A.buyItem(s, 'schuppen').ok).toBe(true);
+    expect(A.buySupply(s, 'koerner', 4, true).ok).toBe(true);
+    expect(feedStock(s)).toBe(150);
+  });
+
+  it('Stroh als Rundballen, begrenzt ohne Schuppen', () => {
+    const s = farm();
+    s.inventory.einstreu = 0;
+    expect(A.buySupply(s, 'einstreu', 1, true).ok).toBe(true);
+    expect(s.inventory.einstreu).toBe(6);
+    expect(A.buySupply(s, 'einstreu', 1, true).ok).toBe(false);
+    expect(A.buySupply(s, 'einstreu', 2).ok).toBe(true);
+  });
+
+  it('Futter verdirbt, im Lagerschuppen langsamer', () => {
+    const s = farm();
+    s.inventory.legemehl = 50;
+    hours(s, 24);
+    expect(s.inventory.legemehl).toBeCloseTo(49.5, 1);
+    const t = farm();
+    A.buyItem(t, 'schuppen');
+    t.inventory.legemehl = 50;
+    hours(t, 24);
+    expect(t.inventory.legemehl).toBeCloseTo(49.75, 1);
+  });
+});
+
+describe('Hofbesuche', () => {
+  /** Hof mit 6 gesunden Hennen und einem zugesagten Besuch morgen */
+  function withVisit(accept = true) {
+    const s = farm();
+    hens(s, 6);
+    s.visit = { group: 'Kita Pusteblume', day: s.day + 1, fee: 30, accepted: false };
+    if (accept) expect(A.acceptVisit(s).ok).toBe(true);
+    return s;
+  }
+  const untilVisit = (s: GameState, prepare?: (s: GameState) => void) => {
+    while (!(s.day === s.visit!.day && s.hour === VISIT_HOUR - 1)) advanceHour(s);
+    for (const a of living(s)) a.conditions = [];
+    prepare?.(s);
+    advanceHour(s);
+  };
+
+  it('ein gelungener Besuch bringt Geld und Ruf', () => {
+    const s = withVisit();
+    untilVisit(s, x => { x.cleanliness = 100; });
+    expect(s.visit).toBeNull();
+    expect(s.finance!.cur.besuche).toBe(30);
+    expect(s.visitEffect!.points).toBe(VISIT_GOOD.points);
+    expect(starFactors(s).some(f => f.label === 'Letzter Hofbesuch' && f.points > 0)).toBe(true);
+  });
+
+  it('schmutziger Stall: kein Geld und schlechterer Ruf', () => {
+    const s = withVisit();
+    untilVisit(s, x => { x.cleanliness = 20; });
+    expect(s.finance!.cur.besuche).toBeUndefined();
+    expect(s.visitEffect!.points).toBe(VISIT_BAD.points);
+  });
+
+  it('ohne Zusage kommt niemand, und es schadet nicht', () => {
+    const s = withVisit(false);
+    untilVisit(s);
+    expect(s.visit).toBeNull();
+    expect(s.visitEffect).toBeFalsy();
+  });
+
+  it('die Checkliste nennt, was noch fehlt', () => {
+    const s = withVisit();
+    s.cleanliness = 100;
+    expect(visitProblems(s)).toEqual([]);
+    s.cleanliness = 30;
+    living(s)[0].conditions.push({ id: 'milben', severity: 10 });
+    expect(visitProblems(s)).toHaveLength(2);
+  });
+
+  it('ein guter Hof bekommt von selbst Anfragen, ein schlechter nicht', () => {
+    const good = farm();
+    hens(good, 6);
+    days(good, 90, care);
+    expect(good.log.some(l => l.text.startsWith('📩 Anfrage'))).toBe(true);
+    const bad = farm();
+    hens(bad, 6);
+    days(bad, 90, x => { care(x); x.cleanliness = 10; });
+    expect(bad.log.some(l => l.text.startsWith('📩 Anfrage'))).toBe(false);
+  });
+});
+
+describe('Eierpreis', () => {
+  it('Marans-Eier zählen doppelt, und die Aufschlüsselung geht genau auf', () => {
+    const s = farm();
+    s.eggPrice = 0.51;
+    s.eggs = { hybrid: 1, marans: 1 };
+    expect(eggValue(s, s.eggs)).toBe(1.53);
+    expect(eggBreakdown(s, s.eggs).replace(/\u00a0/g, ' ')).toBe(`1× Legehybride à ${euro(0.51)} · 1× Marans à ${euro(1.02)}`.replace(/\u00a0/g, ' '));
+    const before = s.money;
+    A.sellEggs(s);
+    expect(s.money - before).toBeCloseTo(1.53, 2);
+  });
+
+  it('auf Leicht gilt der Bonus pro Ei, die Summe passt zu den Stückpreisen', () => {
+    const s = newGame({ farmName: 'Test', difficulty: 'leicht', plot: 'obst', seed: 1 });
+    s.eggPrice = 0.51;
+    expect(eggUnitPrice(s, 'hybrid')).toBe(0.59);
+    expect(eggValue(s, { hybrid: 3 })).toBe(1.77);
+  });
+
+  it('Aufträge liefern zuerst die günstigsten Eier, Bruteier zuletzt', () => {
+    const s = farm();
+    s.eggs = { marans: 3, hybrid: 2 };
+    s.hatchEggs = [{ breed: 'sussex', fertile: true }];
+    expect(A.orderEggs(s, 4)).toEqual({ eggs: { hybrid: 2, marans: 2 }, hatch: 0 });
+    expect(A.orderEggs(s, 6)).toEqual({ eggs: { hybrid: 2, marans: 3 }, hatch: 1 });
   });
 });

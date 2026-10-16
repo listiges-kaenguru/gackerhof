@@ -72,14 +72,14 @@ export function toggleShowEntry(s: GameState, id: number): { ok: boolean; msg: s
   if (!a) return { ok: false, msg: 'Tier nicht gefunden.' };
   if (sh.entries.includes(id)) {
     sh.entries = sh.entries.filter(x => x !== id);
-    addMoney(s, SHOW_FEE);
+    addMoney(s, SHOW_FEE, 'schau');
     return { ok: true, msg: `${a.name} abgemeldet. Standgeld ${SHOW_FEE} € zurück.` };
   }
   const why = showProblem(s, a);
   if (why) return { ok: false, msg: `${a.name} kann nicht ausgestellt werden: ${why}.` };
   if (sh.entries.length >= SHOW_MAX) return { ok: false, msg: `Höchstens ${SHOW_MAX} Tiere pro Schau.` };
   if (s.money < SHOW_FEE) return { ok: false, msg: `Das Standgeld kostet ${SHOW_FEE} €. Nicht genug Geld.` };
-  addMoney(s, -SHOW_FEE);
+  addMoney(s, -SHOW_FEE, 'schau');
   sh.entries.push(id);
   return { ok: true, msg: `${a.name} ist für die ${sh.title} angemeldet (Standgeld ${SHOW_FEE} €).` };
 }
@@ -104,7 +104,7 @@ export function runShow(s: GameState) {
     s.trophies.push({ day: s.day, title: sh.title, animal: best.name, breed: best.breed, variant: best.variant });
   }
   const total = results.reduce((t, r) => t + r.prize, 0);
-  if (total) addMoney(s, total);
+  if (total) addMoney(s, total, 'schau');
   if (results.length) {
     s.lastShow = { title: sh.title, day: s.day, results };
     const lines = results.map(r => {

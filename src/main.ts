@@ -2,7 +2,7 @@ import './style.css';
 import { DIFFICULTIES, DIFFICULTY_ORDER, PLOTS } from './game/data';
 import { euro } from './game/helpers';
 import { refreshOffers } from './game/sim';
-import { load, newGame, save } from './game/state';
+import { importSave, load, newGame, save } from './game/state';
 import type { Difficulty, GameState, PlotId } from './game/types';
 import { startApp } from './ui/app';
 import { DEFS, INK, playerSvg } from './ui/art';
@@ -15,6 +15,20 @@ function startScreen() {
   const saved = load();
   let difficulty: Difficulty = 'mittel';
   let plot: PlotId = 'obst';
+  /** Importierter Spielstand, der den gespeicherten Hof ersetzen würde (wartet auf Bestätigung) */
+  let pending: GameState | null = null;
+  let importError = '';
+  const farmLabel = (s: GameState) => `„${esc(s.farmName)}“ (Tag ${s.day}, ${euro(s.money)})`;
+  const importCard = () => pending && saved
+    ? `<div class="start-import warnbox">
+        <p>${farmLabel(pending)} laden? Dein gespeicherter Hof ${farmLabel(saved)} wird dabei ersetzt.</p>
+        <div class="row"><button class="btn primary" data-start="import-ok">📂 Laden</button><button class="btn" data-start="import-cancel">Abbrechen</button></div>
+      </div>`
+    : `<div class="start-import">
+        <label class="btn">📂 Spielstand importieren<input type="file" accept="application/json,.json" data-start-import hidden></label>
+        <p class="muted">Eine Datei, die du im Spiel unter <b>Mehr → Spielstand exportieren</b> gespeichert hast, z. B. von einem anderen Gerät.</p>
+        ${importError ? `<p class="bad">${importError}</p>` : ''}
+      </div>`;
   const render = () => {
     root.innerHTML = `
       <div class="start">
@@ -51,6 +65,8 @@ function startScreen() {
             }).join('')}
           </div>
           <button class="btn primary big" data-start="new">🐣 Hof gründen</button>
+          <p class="or">oder einen gespeicherten Hof mitbringen:</p>
+          ${importCard()}
           <p class="version">${infoLinks()}</p>
         </div>
       </div>`;
@@ -70,6 +86,8 @@ function startScreen() {
     if (el.dataset.diff) { difficulty = el.dataset.diff as Difficulty; rerender(name); }
     if (el.dataset.plot) { plot = el.dataset.plot as PlotId; rerender(name); }
     if (el.dataset.start === 'continue' && saved) begin(saved);
+    if (el.dataset.start === 'import-ok' && pending) { save(pending); begin(pending); }
+    if (el.dataset.start === 'import-cancel') { pending = null; rerender(name); }
     if (el.dataset.start === 'new') {
       const s = newGame({ farmName: (name || 'Mein Hof').trim(), difficulty, plot });
       refreshOffers(s);
@@ -77,10 +95,23 @@ function startScreen() {
       begin(s);
     }
   };
+  root.onchange = e => {
+    const input = e.target as HTMLInputElement;
+    if (!input.matches('[data-start-import]') || !input.files?.[0]) return;
+    const name = nameInput()?.value;
+    input.files[0].text().then(txt => {
+      const loaded = importSave(txt);
+      importError = loaded ? '' : 'Diese Datei ist kein gültiger Spielstand.';
+      if (loaded && !saved) { save(loaded); begin(loaded); return; }
+      pending = loaded;
+      rerender(name);
+    }, () => { importError = 'Die Datei ließ sich nicht lesen.'; rerender(name); });
+  };
 }
 
 function begin(s: GameState) {
   root.onclick = null;
+  root.onchange = null;
   if (s.offersDay < 0) refreshOffers(s);
   startApp(root, s, startScreen);
 }

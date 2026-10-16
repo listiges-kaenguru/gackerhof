@@ -16,14 +16,14 @@ export function registerAlbum(s: GameState, a: Animal) {
   const breed = BREEDS[a.breed];
   const breedDone = breed.variants.every(v => s.album![`${a.breed}:${v.id}`]);
   if (n === albumTotal()) {
-    addMoney(s, ALBUM_FULL_BONUS);
+    addMoney(s, ALBUM_FULL_BONUS, 'geschenke');
     log(s, `📒 Das Hühner-Album ist komplett! Der Geflügelzuchtverein schenkt dir ${ALBUM_FULL_BONUS} €.`, 'good');
     s.celebrations.push({ emoji: '📒', title: 'Album komplett!', lines: [
       `Alle ${albumTotal()} Rassen und Farbvarianten waren schon auf deinem Hof.`,
       `🏅 Der Geflügelzuchtverein ernennt dich zum Ehrenmitglied und schenkt dir ${ALBUM_FULL_BONUS} €.`,
     ] });
   } else if (breedDone) {
-    addMoney(s, ALBUM_BREED_BONUS);
+    addMoney(s, ALBUM_BREED_BONUS, 'geschenke');
     log(s, `📒 Alle Farben der Rasse ${breed.name} gesammelt: +${ALBUM_BREED_BONUS} €.`, 'good');
     s.celebrations.push({ emoji: '📒', title: `${breed.name}: alle Farben gesammelt!`, lines: [
       `${breed.variants.map(v => v.name).join(', ')}: Diese Rasse ist im Album komplett.`,
