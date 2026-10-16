@@ -10,6 +10,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ### Behoben
 - Nach einem Update zeigte der Browser oft noch die alte Version, bis die Seite neu geladen wurde. Die neue `.htaccess` (in `public/`, landet in `dist/`) lässt den Browser jede Datei kurz beim Server prüfen; die Dateien mit Hash im Namen unter `assets/` dürfen dagegen ein Jahr im Cache bleiben.
+- Nach **Neues Spiel** reagierte das alte Spiel im Hintergrund weiter auf Klicks und speicherte sich beim Schließen des Tabs. Wer auf dem Startbildschirm die Seite schloss, fand beim nächsten Öffnen den alten Hof wieder unter **Weiterspielen**. Jetzt ist das alte Spiel vollständig beendet.
 
 ## [0.3.2] – 2026-10-14
 

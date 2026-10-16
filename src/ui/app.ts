@@ -966,13 +966,17 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     }
   }
 
+  // Alle Listener außerhalb der App-Elemente (root, window, document) hängen an diesem Signal,
+  // damit sie nach „Neues Spiel“ nicht mehr auf das alte Spiel wirken
+  const listeners = new AbortController();
+  const signal = listeners.signal;
   root.addEventListener('click', e => {
     const el = (e.target as Element).closest<HTMLElement | SVGElement>('[data-act],[data-animal]');
     if (!el) return;
     if (el instanceof HTMLButtonElement && el.disabled) return;
     const act = el.dataset.act ?? `animal:${el.dataset.animal}`;
     handle(act, el as HTMLElement);
-  });
+  }, { signal });
   root.addEventListener('change', e => {
     const input = e.target as HTMLInputElement;
     if (!input.matches('[data-import]') || !input.files?.[0]) return;
@@ -986,7 +990,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       toast('Spielstand geladen.', 'good');
       refreshAll();
     });
-  });
+  }, { signal });
   const onKey = (e: KeyboardEvent) => {
     if ((e.target as HTMLElement).tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
@@ -995,7 +999,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     else if (k === '1' || k === '2' || k === '3') { const v = ([1, 2, 4] as const)[Number(k) - 1]; ui.lastSpeed = v; s.speed = v; renderHud(); }
     else if (k === 'escape') { if (ui.modal) handle('modal-ok', document.body); else { ui.panel = null; refreshAll(); } }
   };
-  window.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey, { signal });
 
   // Panel am Handy (unten eingeblendet) an der Kopfzeile nach unten wischen zum Schließen
   const panelHead = $('.panel-head');
@@ -1026,14 +1030,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   // Während ein Finger/Mausknopf gedrückt ist, nichts ersetzen – sonst gehen Klicks verloren
   let pointerDown = false;
   let dirty = false;
-  root.addEventListener('pointerdown', () => { pointerDown = true; });
+  root.addEventListener('pointerdown', () => { pointerDown = true; }, { signal });
   const release = () => {
     if (!pointerDown) return;
     pointerDown = false;
     if (dirty) setTimeout(refreshAll, 0);
   };
-  window.addEventListener('pointerup', release);
-  window.addEventListener('pointercancel', release);
+  window.addEventListener('pointerup', release, { signal });
+  window.addEventListener('pointercancel', release, { signal });
 
   function refreshAll() {
     if (pointerDown) { dirty = true; return; }
@@ -1090,17 +1094,18 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     raf = requestAnimationFrame(frame);
   }
   const onHide = () => { if (document.hidden) save(s); };
-  document.addEventListener('visibilitychange', onHide);
-  window.addEventListener('pagehide', () => save(s));
+  document.addEventListener('visibilitychange', onHide, { signal });
+  window.addEventListener('pagehide', () => save(s), { signal });
   function stop() {
     running = false;
     cancelAnimationFrame(raf);
-    window.removeEventListener('keydown', onKey);
-    document.removeEventListener('visibilitychange', onHide);
+    listeners.abort();
+    goalsObserver.disconnect();
   }
 
   // Ohne gespeicherte Wahl passt sich die Kapitel-Karte der Bildschirmgröße an
-  new ResizeObserver(() => { if (goalsOpen === null) renderGoals(); }).observe(stageEl);
+  const goalsObserver = new ResizeObserver(() => { if (goalsOpen === null) renderGoals(); });
+  goalsObserver.observe(stageEl);
 
   refreshAll();
   raf = requestAnimationFrame(frame);
