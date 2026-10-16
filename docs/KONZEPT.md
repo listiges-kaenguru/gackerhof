@@ -522,6 +522,6 @@ Der Markt zeigt immer an, **wie viel Platz noch frei ist**. Man kann also nicht 
 | Zeit beim Schließen       | ✅ Der Hof ruht, solange das Spiel geschlossen ist                           |
 | Schlachter-Darstellung    | ✅ Dezent: nur Menüaktion mit Erlös, keine Bilder                            |
 | Schwierigkeitsgrade       | ✅ Leicht, Mittel (realistisch), Schwer (siehe 9.5)                          |
-| Grafikstil                | ✅ Stil A – Cartoon/Flat (Beispiele unter [`docs/stil-beispiele.html`](docs/stil-beispiele.html)) |
+| Grafikstil                | ✅ Stil A – Cartoon/Flat |
 | Name des Spiels           | ⏳ „Gackerhof“ bleibt vorerst Arbeitstitel                                   |
 | Sprache                   | ⏳ Deutsch. Texte werden trotzdem zentral gesammelt, damit eine Übersetzung später möglich bleibt |

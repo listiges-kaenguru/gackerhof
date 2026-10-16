@@ -3,11 +3,12 @@
 Ein Aufbauspiel rund um die Hühnerhaltung, spielbar im Browser auf Desktop und Smartphone.
 Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt deinen eigenen Hühnerhof auf.
 
-- 📄 Spielkonzept: [`KONZEPT.md`](KONZEPT.md)
+- 📖 Anleitung: <https://gackerhof-wiki.schmaralde.de/>
 - 📦 Fertiger Build zum Selbst-Hosten: als ZIP bei den [Releases](https://github.com/listiges-kaenguru/gackerhof/releases)
 - 📝 Änderungen je Version: [`CHANGELOG.md`](CHANGELOG.md)
-- 💡 Ideen für später: [`IDEEN.md`](IDEEN.md)
-- 🎨 Grafikstil-Entwürfe: [`docs/stil-beispiele.html`](docs/stil-beispiele.html) (gewählt: Stil A, Cartoon)
+- 💡 Ideen und offene Punkte: [`IDEEN.md`](IDEEN.md)
+- 📄 Spielkonzept: [`docs/KONZEPT.md`](docs/KONZEPT.md)
+- 🤝 Mitwirken: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## Was schon drin ist
 
@@ -59,11 +60,6 @@ auch die versteckte Datei `.htaccess` (aus `public/`). Sie sorgt dafür, dass Br
 Infoseite und Anleitung liegen im Projekt `../gackerhof-wiki` (<https://gackerhof-wiki.schmaralde.de/>).
 
 Jede Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release mit dem fertigen Build als ZIP (Inhalt von `dist/`, dazu `LICENSE` und `LIESMICH.txt`).
-
-Der Workflow `.github/workflows/pages.yml` baut das Spiel und veröffentlicht es auf GitHub Pages. Er läuft nur auf Knopfdruck
-(**Actions → Spiel veröffentlichen → Run workflow**), damit nichts versehentlich veröffentlicht wird. Dazu einmalig im
-Repository unter **Settings → Pages → Source** „GitHub Actions“ auswählen; bei privaten Repositories setzt GitHub Pages
-einen kostenpflichtigen Tarif voraus.
 
 ## Lizenz
 

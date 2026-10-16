@@ -1,9 +1,10 @@
-# Nicht in die Release-Archive: Entwicklungs- und Arbeitsdateien
-.github/ export-ignore
-.gitignore export-ignore
+# Release-Archive (GitHub „Source code“, git archive) enthalten nur, was zum Betrieb gebraucht wird,
+# dazu README und LICENSE. Entwicklungsdateien bleiben draußen.
 .gitattributes export-ignore
-tests/ export-ignore
-docs/ export-ignore
-IDEEN.md export-ignore
-KONZEPT.md export-ignore
+.gitignore export-ignore
 CHANGELOG.md export-ignore
+CLAUDE.md export-ignore
+CONTRIBUTING.md export-ignore
+IDEEN.md export-ignore
+docs/ export-ignore
+tests/ export-ignore
