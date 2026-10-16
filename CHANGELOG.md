@@ -5,6 +5,12 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Versionsprüfung:** Unter **Mehr** steht unter der Versionsnummer, ob auf GitHub schon eine neuere Version
+  erschienen ist (mit Link zum Release), sonst „Das ist die neueste Version.“ Der Browser fragt dafür die GitHub-API
+  höchstens einmal am Tag und erst beim Öffnen von **Mehr**; ohne Netz bleibt die Zeile leer. Das ist die einzige
+  Verbindung des Spiels nach außen.
+
 ### Intern
 - Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei ALL-INKL),
   Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nur noch in der Entwurfssammlung,
