@@ -21,6 +21,7 @@ import { portrait } from './art';
 import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
 import { infoLinks, SOURCE_URL, WIKI_URL } from './links';
+import { updateInfo } from './update';
 
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
 type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
@@ -802,6 +803,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p class="muted">Tastenkürzel: E Eier · W Wasser · F Futter · K Klappe · L Reinlocken · M Ausmisten · Leertaste Pause · 1/2/3 Tempo</p>
       </section>
       <p class="version">Gackerhof Version ${__APP_VERSION__}</p>
+      <p class="version">${updateInfo(__APP_VERSION__, () => renderPanel())}</p>
       <p class="version">Freie Software unter der <a href="${SOURCE_URL}/blob/HEAD/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a> · <a href="${SOURCE_URL}" target="_blank" rel="noopener">Quelltext auf GitHub</a></p>
       <p class="version">${infoLinks()}</p>`;
   }

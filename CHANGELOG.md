@@ -16,6 +16,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - **Stalldämmung und Zugluftschutz** (Shop → Erweiterungen, 60 €): Im Herbst und Winter gibt es viel weniger Atemwegsinfekte, auch die zugige Holzkiste verliert ihren Nachteil. Gartenhaus-Stall und Hühnermobil gelten als schon gedämmt.
 - **Kräuter fürs Trinkwasser** (Shop → Futter & Medizin, 5 € je Beutel): Vorbeugend über **Lager → Kräuter ins Trinkwasser** 10 Tage lang deutlich weniger Atemwegsinfekte. Ein leichter Infekt (bis 30 %) heilt damit ganz ohne Tierarzt und ohne Wartezeit. Erst schwere Fälle brauchen den Tierarzt.
 - **Immunität:** Wer einen Atemwegsinfekt oder als Küken Kokzidiose überstanden hat, ist 30 Tage lang dagegen immun. Der Steckbrief zeigt das an. Gegen Milben und Würmer gibt es wie in echt keine Immunität, dafür Kieselgur, Sandbad und Wechselweide.
+- **Versionsprüfung:** Unter **Mehr** steht unter der Versionsnummer, ob auf GitHub schon eine neuere Version
+  erschienen ist (mit Link zum Release), sonst „Das ist die neueste Version.“ Der Browser fragt dafür die GitHub-API
+  höchstens einmal am Tag und erst beim Öffnen von **Mehr**; ohne Netz bleibt die Zeile leer. Das ist die einzige
+  Verbindung des Spiels nach außen.
 
 ### Geändert
 - **Eierpreis nachvollziehbar:** Markt und Lager schlüsseln den Wert der Eier nach Rassen auf, z. B. „5× Legehybride à 0,51 € · 2× Marans à 1,02 €“, und nennen die Faktoren (Marans-Eier zählen doppelt, Seidenhuhn-Eier 1,2-fach, auf „Leicht“ 15 % Bonus). Bisher zeigte der Markt nur die Summe, was wie ein Rechenfehler wirkte. Der Gesamtpreis ist jetzt genau die Summe der angezeigten Stückpreise.

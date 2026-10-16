@@ -27,6 +27,7 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Geflügelschau jede Jahreszeit mit Bewertung, Preisgeld und Pokal
 - Tutorial-Pfeile, die in den ersten Tagen auf das nächste Ziel zeigen
 - Automatisches Speichern, Export und Import des Spielstands, offline spielbar (PWA)
+- Hinweis unter **Mehr**, wenn auf GitHub eine neuere Version erschienen ist (Abfrage höchstens einmal am Tag)
 
 ## Steuerung
 
