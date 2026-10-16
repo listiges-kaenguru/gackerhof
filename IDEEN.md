@@ -18,6 +18,7 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 | **Mehrere Speicherplätze** | Mehrere Höfe pro Browser, z. B. für Geschwister am selben Tablet. Auswahl im Startbildschirm. | klein |
 | **Getrennte Speicher für Testversionen** | Eigener Speicherschlüssel je Version oder Kanal (z. B. „Test“), damit sich Test- und Hauptversion auf derselben Domain nicht in die Quere kommen. | klein |
 | **Speichern auf dem Server** | Derselbe Hof auf allen Geräten. Braucht ein Backend mit Datenbank und Anmeldung, und der Webserver muss Code ausführen können (PHP, Node o. Ä.). | groß |
+| **Import auf dem Startbildschirm** | Spielstand direkt im Startbildschirm importieren; bisher geht es nur über den Umweg eines neuen Hofs (so beschreibt es die Anleitung im Wiki). | klein |
 | **Spielstand per QR-Code übertragen** | Alternative zum Datei-Export: Spielstand als QR-Code vom Rechner aufs Handy übertragen. | mittel |
 
 ### Veröffentlichung
