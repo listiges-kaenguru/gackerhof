@@ -3,14 +3,16 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
-## Unveröffentlicht
+## [0.3.3] – 2026-10-16
 
-### Intern
-- Code aufgeräumt, ohne Änderung am Spiel: ungenutzte Funktionen entfernt, doppelte Ausdrücke in gemeinsame Helfer zusammengeführt (Eier im Nest, Futtervorrat, Futterwahl, schwerste Krankheit, Jahreszeit eines Tages), feste Zahlen in der Oberfläche durch die Konstanten aus `data.ts` ersetzt und die Zielprüfungen nicht mehr jede Spielstunde neu angelegt.
+Prototyp in den Branches `proto-v0.3.3` und `proto-built-v0.3.3`. Fehlerbehebungen und aufgeräumter Code, am Spiel selbst ändert sich nichts.
 
 ### Behoben
 - Nach einem Update zeigte der Browser oft noch die alte Version, bis die Seite neu geladen wurde. Die neue `.htaccess` (in `public/`, landet in `dist/`) lässt den Browser jede Datei kurz beim Server prüfen; die Dateien mit Hash im Namen unter `assets/` dürfen dagegen ein Jahr im Cache bleiben.
 - Nach **Neues Spiel** reagierte das alte Spiel im Hintergrund weiter auf Klicks und speicherte sich beim Schließen des Tabs. Wer auf dem Startbildschirm die Seite schloss, fand beim nächsten Öffnen den alten Hof wieder unter **Weiterspielen**. Jetzt ist das alte Spiel vollständig beendet.
+
+### Intern
+- Code aufgeräumt, ohne Änderung am Spiel: ungenutzte Funktionen entfernt, doppelte Ausdrücke in gemeinsame Helfer zusammengeführt (Eier im Nest, Futtervorrat, Futterwahl, schwerste Krankheit, Jahreszeit eines Tages), feste Zahlen in der Oberfläche durch die Konstanten aus `data.ts` ersetzt und die Zielprüfungen nicht mehr jede Spielstunde neu angelegt.
 
 ## [0.3.2] – 2026-10-14
 
