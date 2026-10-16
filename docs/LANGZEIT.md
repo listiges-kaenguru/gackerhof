@@ -105,17 +105,17 @@ Dazu kommen Pacht und Strom, etwa 25–30 € pro Monat für den ganzen Hof.
 | B1 | **Hofladen ausbauen** | Stufen wie beim Stall: Vertrauenskasse → Eierautomat mit Kühlung → Hofladen mit Regal. Jede Stufe hebt die Höchstmenge pro Tag (z. B. 17 → 30 → 50 Eier) und lockt mehr Kundschaft. |
 | B2 | **Eier-Abo / Stammkunden** | Familien abonnieren eine feste Menge pro Woche zu einem guten Preis. Das gibt planbares Einkommen. Wer nicht liefert, verliert Kunden und Ruf. |
 | B3 | **Ruf bestimmt den Preis** | Der Eierpreis im Hofladen steigt mit den Sternen (z. B. 1 Stern ×1,2 … 5 Sterne ×1,8 statt pauschal ×1,5). Gute Haltung zahlt sich aus, wie es `KONZEPT.md` §9.3 verspricht. |
-| B4 | **Großpackungen und Mengenrabatt** (`KONZEPT.md` §5.7) | Futter und Einstreu im 25-kg-Sack bzw. als Rundballen günstiger pro Einheit, dafür bindet es Geld und braucht Lagerplatz. Futter verdirbt. |
+| B4 | ✅ (erledigt: 25-kg-Sack, Rundballen, Lagerplatz, Lagerschuppen 150 €, Verderb 0,5–1 % am Tag) **Großpackungen und Mengenrabatt** (`KONZEPT.md` §5.7) | Futter und Einstreu im 25-kg-Sack bzw. als Rundballen günstiger pro Einheit, dafür bindet es Geld und braucht Lagerplatz. Futter verdirbt. |
 | B5 | **Gemüsebeet mit Hühnermist** (steht schon in `IDEEN.md`) | Mist düngt das Beet. Gemüse verkauft man oder verfüttert es als Grünfutter: weniger Futterkosten, mehr Wohlbefinden. |
 | B6 | **Zucht als Geschäft** | Gut gepflegte Rassetiere mit hoher Schauqualität erzielen auf dem Markt deutlich mehr. Bruteier von prämierten Tieren sind gefragt. Preise der Geflügelschau anheben, denn 25 € für „vorzüglich“ sind kaum der Mühe wert. |
-| B7 | **Hofbesuche** | Ab 4 Sternen fragen Kita oder Schulklasse nach einem Besuch. Das bringt etwas Geld und Ruf. Voraussetzung ist ein sauberer, gesunder Hof. |
+| B7 | ✅ (erledigt: ab 4 Sternen, 25–50 €, ±0,5 Sterne für 30 bzw. 15 Tage) **Hofbesuche** | Ab 4 Sternen fragen Kita oder Schulklasse nach einem Besuch. Das bringt etwas Geld und Ruf. Voraussetzung ist ein sauberer, gesunder Hof. |
 | B8 | **Veredeln** (später) | Eine „Hofküche“ verarbeitet überzählige Eier zu Eiernudeln oder Eierlikör, die mehr wert sind und länger halten. Verhindert, dass Überschuss im Lager verdirbt. |
 
 ### C. Kosten planbar machen
 
 | # | Vorschlag | Beschreibung |
 |---|---|---|
-| C1 | **Finanzübersicht** unter **Mehr → Finanzen** | Einnahmen und Ausgaben des Monats nach Kategorien (Futter, Tierarzt, Medizin, Einstreu, Pacht/Strom, Eier, Mist, Aufträge), dazu der Vormonat. Der Spieler sieht sofort: „Der Tierarzt frisst mein Geld.“ Entspricht `KONZEPT.md` §13.5 („Die Tagesbilanz zeigt, wohin das Geld geflossen ist“). |
+| C1 | ✅ (erledigt) **Finanzübersicht** unter **Mehr → Finanzen** | Einnahmen und Ausgaben des Monats nach Kategorien (Futter, Tierarzt, Medizin, Einstreu, Pacht/Strom, Eier, Mist, Aufträge), dazu der Vormonat. Der Spieler sieht sofort: „Der Tierarzt frisst mein Geld.“ Entspricht `KONZEPT.md` §13.5 („Die Tagesbilanz zeigt, wohin das Geld geflossen ist“). |
 | C2 | **Bestandstierarzt** | Ein Vertrag mit festem Monatsbeitrag, dafür günstigere Behandlungen und ein Hinweis, wenn sich eine Krankheit anbahnt. Das gibt es auch in echt. Lohnt sich erst ab einer größeren Herde: eine schöne Entscheidung. |
 | C3 | **Prognose** | Kleiner Hinweis wie „Bei diesem Verlauf reicht dein Geld noch etwa 20 Tage.“ |
 
@@ -123,7 +123,7 @@ Dazu kommen Pacht und Strom, etwa 25–30 € pro Monat für den ganzen Hof.
 
 | # | Vorschlag | Beschreibung |
 |---|---|---|
-| D1 | **Opa Heinz gibt Rat** | Ist der Kontostand zwei Monate in Folge gesunken, schaut Opa Heinz vorbei und nennt den größten Kostenblock samt Lösung („Deine Hühner niesen dauernd. Dämm mal den Stall.“). Kostet nichts und hilft beim Lernen. |
+| D1 | ✅ (erledigt: höchstens alle zwei Monate) **Opa Heinz gibt Rat** | Ist der Kontostand zwei Monate in Folge gesunken, schaut Opa Heinz vorbei und nennt den größten Kostenblock samt Lösung („Deine Hühner niesen dauernd. Dämm mal den Stall.“). Kostet nichts und hilft beim Lernen. |
 | D2 | **Nebenjob als Notlösung** | Aushilfe im Landhandel bringt etwas Geld, aber du bist ein paar Stunden am Tag weg und kannst nicht eingreifen. Ohne Automatik wird es dann eng. Das greift den Büro-Job-Humor aus der Game-Over-Idee in `IDEEN.md` auf. |
 | D3 | **Notverkauf mit Vorschlag** | Bevor es zum Game Over kommt, schlägt das Spiel vor, Ausrüstung oder überzählige Tiere zu verkaufen, und zeigt, was das bringt. |
 | D4 | **Game Over** (Idee aus `IDEEN.md`) | Erst wenn das Konto lange im Minus ist und keine Besserung in Sicht ist. Mit freundlicher Bilanz und der Wahl „neuer Hof“ oder „mit Kredit weitermachen“ (dann mit Zinsen). |

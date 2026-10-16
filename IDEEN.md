@@ -7,6 +7,8 @@ Erledigtes wird hier gestrichen und ins [CHANGELOG](CHANGELOG.md) übernommen.
 
 - [ ] **Wiki beim nächsten Release anpassen** (alles unter „Unveröffentlicht“ im CHANGELOG), Seiten in `../gackerhof-wiki`:
   - **Frost:** Nach dem Eisaufhacken können die Hühner etwa 6 Stunden trinken, Bachpumpe und Wasserleitung frieren nicht ein (Tagesablauf, Shop, Tipps).
+  - **Finanzen und Lager:** Finanzübersicht unter Mehr → Finanzen, Rat von Opa Heinz, Großpackungen, Lagerplatz (60 kg / 8 Ballen), Lagerschuppen, Futter verdirbt (Shop, Lager, Tipps, Mehr).
+  - **Hofbesuche:** ab 4 Sternen, Bedingungen, Lohn und Wirkung auf den Hof-Ruf (Markt/Aufträge, Hof-Ruf).
   - **Krankheiten:** Stalldämmung, Kräuter fürs Trinkwasser (Vorbeugung und Hausmittel bis 30 %), Immunität nach Atemwegsinfekt und Kokzidiose, geringere Ansteckung in großen Herden (Krankheiten, Shop, Tipps).
 
 Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt.

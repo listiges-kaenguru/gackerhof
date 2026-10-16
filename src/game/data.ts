@@ -1,6 +1,6 @@
 // Spieldaten: Rassen, Grundstücke, Shop-Artikel, Verbrauchsmaterial, Krankheiten.
 // Alle Preise beziehen sich auf den Schwierigkeitsgrad „Mittel“.
-import type { BreedId, ConditionId, Difficulty, PlotId, Season } from './types';
+import type { BreedId, ConditionId, Difficulty, FinanceCat, PlotId, Season } from './types';
 
 /* ------------------------------------------------------------------ */
 /* Zeit                                                               */
@@ -316,6 +316,8 @@ export const ITEMS: ItemDef[] = [
   { id: 'sandbad', cat: 'ausbau', name: 'Sandbad', price: 15, desc: 'Hühner pflegen ihr Gefieder: weniger Milben.' },
   { id: 'daemmung', cat: 'ausbau', name: 'Stalldämmung und Zugluftschutz', price: 60,
     desc: 'Dichtet Ritzen ab und dämmt den Stall: im Herbst und Winter viel weniger Atemwegsinfekte. Gartenhaus-Stall und Hühnermobil sind schon gedämmt.' },
+  { id: 'schuppen', cat: 'ausbau', name: 'Lagerschuppen', price: 150,
+    desc: 'Trocken und mäusesicher: Platz für 300 kg Futter und 30 Ballen Stroh, Futter verdirbt nur halb so schnell.' },
   { id: 'autofutter', cat: 'ausbau', name: 'Automatische Fütterung', price: 700,
     desc: 'Füllt die Futterstelle jeden Morgen aus dem Lager auf.' },
   { id: 'pumpe', cat: 'ausbau', name: 'Bachpumpe', price: 450, plot: 'bach', desc: 'Wasser aus dem Bach: Tränke ist immer voll, auch bei Frost.' },
@@ -348,19 +350,34 @@ export interface SupplyDef {
   price: number;
   desc: string;
   emoji: string;
+  /** Kategorie in der Finanzübersicht */
+  cat: 'futter' | 'einstreu' | 'medizin';
+  /** Großpackung: mehr Menge, günstiger pro Einheit */
+  bulk?: { name: string; amount: number; price: number };
+  /** Anteil, der im Lager pro Tag verdirbt */
+  spoil?: number;
 }
 export const SUPPLIES: SupplyDef[] = [
-  { id: 'koerner', name: 'Körnerfutter', unit: 'kg', amount: 10, price: 6, emoji: '🌾', desc: 'Günstiges Grundfutter.' },
-  { id: 'legemehl', name: 'Legemehl', unit: 'kg', amount: 10, price: 9, emoji: '🥣', desc: 'Ausgewogen: +15 % Legeleistung.' },
-  { id: 'kuekenstarter', name: 'Kükenstarter', unit: 'kg', amount: 5, price: 7, emoji: '🐣', desc: 'Pflichtfutter für Küken.' },
-  { id: 'mehlwuermer', name: 'Mehlwürmer', unit: 'Portionen', amount: 5, price: 6, emoji: '🪱', desc: 'Leckerli: +Wohlbefinden für alle.' },
-  { id: 'einstreu', name: 'Einstreu (Stroh)', unit: 'Ballen', amount: 1, price: 5, emoji: '🌿', desc: 'Zum Ausmisten. Ein Ballen pro Reinigung.' },
-  { id: 'kraeuter', name: 'Kräuter fürs Trinkwasser', unit: 'Beutel', amount: 1, price: 5, emoji: '🍃', desc: 'Oregano und Thymian: 10 Tage weniger Atemwegsinfekte. Hilft auch bei leichtem Infekt.' },
-  { id: 'kieselgur', name: 'Kieselgur', unit: 'Dosen', amount: 1, price: 6, emoji: '🧂', desc: 'Gegen Milben, wirkt auch 10 Tage vorbeugend im Stall.' },
-  { id: 'milbenspray', name: 'Milbenspray', unit: 'Flaschen', amount: 1, price: 12, emoji: '🧴', desc: 'Beseitigt Milbenbefall bei einem Tier zuverlässig.' },
-  { id: 'wurmkur', name: 'Wurmkur', unit: 'Packungen', amount: 1, price: 10, emoji: '💊', desc: 'Gegen Würmer. 5 Tage Wartezeit für Eier.' },
-  { id: 'kokzidiostatikum', name: 'Kokzidiose-Mittel', unit: 'Packungen', amount: 1, price: 12, emoji: '💉', desc: 'Gegen Kokzidiose bei Küken.' },
+  { id: 'koerner', name: 'Körnerfutter', unit: 'kg', amount: 10, price: 6, emoji: '🌾', desc: 'Günstiges Grundfutter.', cat: 'futter',
+    bulk: { name: '25-kg-Sack', amount: 25, price: 12 }, spoil: 0.005 },
+  { id: 'legemehl', name: 'Legemehl', unit: 'kg', amount: 10, price: 9, emoji: '🥣', desc: 'Ausgewogen: +15 % Legeleistung.', cat: 'futter',
+    bulk: { name: '25-kg-Sack', amount: 25, price: 18 }, spoil: 0.01 },
+  { id: 'kuekenstarter', name: 'Kükenstarter', unit: 'kg', amount: 5, price: 7, emoji: '🐣', desc: 'Pflichtfutter für Küken.', cat: 'futter', spoil: 0.01 },
+  { id: 'mehlwuermer', name: 'Mehlwürmer', unit: 'Portionen', amount: 5, price: 6, emoji: '🪱', desc: 'Leckerli: +Wohlbefinden für alle.', cat: 'futter' },
+  { id: 'einstreu', name: 'Einstreu (Stroh)', unit: 'Ballen', amount: 1, price: 5, emoji: '🌿', desc: 'Zum Ausmisten. Ein Ballen pro Reinigung.', cat: 'einstreu',
+    bulk: { name: 'Rundballen (6 Ballen)', amount: 6, price: 21 } },
+  { id: 'kraeuter', name: 'Kräuter fürs Trinkwasser', unit: 'Beutel', amount: 1, price: 5, emoji: '🍃', desc: 'Oregano und Thymian: 10 Tage weniger Atemwegsinfekte. Hilft auch bei leichtem Infekt.', cat: 'medizin' },
+  { id: 'kieselgur', name: 'Kieselgur', unit: 'Dosen', amount: 1, price: 6, emoji: '🧂', desc: 'Gegen Milben, wirkt auch 10 Tage vorbeugend im Stall.', cat: 'medizin' },
+  { id: 'milbenspray', name: 'Milbenspray', unit: 'Flaschen', amount: 1, price: 12, emoji: '🧴', desc: 'Beseitigt Milbenbefall bei einem Tier zuverlässig.', cat: 'medizin' },
+  { id: 'wurmkur', name: 'Wurmkur', unit: 'Packungen', amount: 1, price: 10, emoji: '💊', desc: 'Gegen Würmer. 5 Tage Wartezeit für Eier.', cat: 'medizin' },
+  { id: 'kokzidiostatikum', name: 'Kokzidiose-Mittel', unit: 'Packungen', amount: 1, price: 12, emoji: '💉', desc: 'Gegen Kokzidiose bei Küken.', cat: 'medizin' },
 ];
+/** Futtersorten, die sich den Lagerplatz für Futter teilen */
+export const FEED_SUPPLIES = ['koerner', 'legemehl', 'kuekenstarter'];
+/** Lagerplatz ohne und mit Lagerschuppen */
+export const STORAGE = { feed: 60, straw: 8, feedShed: 300, strawShed: 30 };
+/** Im Lagerschuppen verdirbt Futter langsamer */
+export const SHED_SPOIL = 0.5;
 export const SUPPLY = Object.fromEntries(SUPPLIES.map(s => [s.id, s])) as Record<string, SupplyDef>;
 
 /* ------------------------------------------------------------------ */
@@ -433,6 +450,45 @@ export const SHOW_GRADES: { min: number; grade: string; name: string; prize: num
   { min: 0, grade: 'b', name: 'befriedigend', prize: 0 },
 ];
 export const SHOW_TROPHY_PRIZE = 50;
+
+/* ------------------------------------------------------------------ */
+/* Finanzen, Hofbesuche                                               */
+/* ------------------------------------------------------------------ */
+export const FINANCE_CATS: Record<FinanceCat, { name: string; emoji: string }> = {
+  eier: { name: 'Eier', emoji: '🥚' },
+  tierverkauf: { name: 'Tierverkauf und Schlachter', emoji: '🐔' },
+  auftraege: { name: 'Aufträge', emoji: '📋' },
+  mist: { name: 'Mist', emoji: '💩' },
+  besuche: { name: 'Hofbesuche', emoji: '👧' },
+  schau: { name: 'Geflügelschau', emoji: '🏆' },
+  geschenke: { name: 'Geschenke und Belohnungen', emoji: '🎁' },
+  kredit: { name: 'Kredit', emoji: '🏦' },
+  futter: { name: 'Futter', emoji: '🌾' },
+  einstreu: { name: 'Einstreu', emoji: '🌿' },
+  medizin: { name: 'Medizin', emoji: '💊' },
+  tierarzt: { name: 'Tierarzt', emoji: '🩺' },
+  tierkauf: { name: 'Tierkauf', emoji: '🐣' },
+  ausruestung: { name: 'Ausrüstung', emoji: '🛒' },
+  pacht: { name: 'Pacht, Strom, Wasser', emoji: '📅' },
+  entsorgung: { name: 'Entsorgung', emoji: '🕊️' },
+  sonstiges: { name: 'Sonstiges', emoji: '📎' },
+};
+/** Zählen nicht zum laufenden Ergebnis (Investitionen, Kredite, Geschenke) */
+export const FINANCE_ONE_OFF: FinanceCat[] = ['ausruestung', 'kredit', 'geschenke'];
+/** Opa Heinz gibt höchstens so oft Rat (Tage) */
+export const ADVICE_PAUSE = 55;
+
+/** Hofbesuche: ab diesem Hof-Ruf, Wahrscheinlichkeit pro Tag je Stern ab 4, Ankunft, Wirkung auf den Ruf */
+export const VISIT_MIN_STARS = 4;
+export const VISIT_CHANCE = 0.035;
+export const VISIT_HOUR = 10;
+export const VISIT_CLEAN = 60;
+export const VISIT_GOOD = { days: 30, points: 0.5 };
+export const VISIT_BAD = { days: 15, points: -0.5 };
+export const VISIT_GROUPS = [
+  'Kita Pusteblume', 'Klasse 2b der Grundschule', 'Seniorentreff Abendrot', 'Pfadfinder Waldläufer', 'Kindergeburtstag von Familie Becker',
+  'Landfrauenverein',
+];
 
 /* ------------------------------------------------------------------ */
 /* Sonstiges                                                          */

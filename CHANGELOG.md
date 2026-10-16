@@ -6,6 +6,12 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 ## [Unveröffentlicht]
 
 ### Neu
+- **Finanzübersicht** unter **Mehr → Finanzen**: Einnahmen und Ausgaben des laufenden und des letzten Monats nach Kategorien (Eier, Tierverkauf, Aufträge, Mist, Hofbesuche, Futter, Einstreu, Medizin, Tierarzt, Tierkauf, Ausrüstung, Pacht/Strom/Wasser …). Das **laufende Ergebnis** zeigt ohne Ausrüstung, Kredite und Geschenke, ob sich der Hof trägt.
+- **Opa Heinz gibt Rat:** Steht das laufende Ergebnis zwei Monate in Folge im Minus, schaut er vorbei, nennt den größten Kostenblock und gibt passende Tipps (z. B. Dämmung und Kräuter gegen Tierarztkosten, Trittfutterautomat und Großpackungen gegen hohe Futterkosten). Höchstens alle zwei Monate.
+- **Großpackungen:** Körnerfutter und Legemehl im 25-kg-Sack (12 € bzw. 18 €, ein Fünftel günstiger pro Kilo), Stroh als Rundballen mit 6 Ballen (21 € statt 30 €).
+- **Lagerplatz und Lagerschuppen:** Ins Lager passen 60 kg Futter und 8 Ballen Stroh. Der neue **Lagerschuppen** (Erweiterungen, 150 €) schafft Platz für 300 kg und 30 Ballen.
+- **Futter verdirbt:** Legemehl und Kükenstarter verlieren im Lager etwa 1 % am Tag, Körner 0,5 %, im Lagerschuppen nur halb so viel. Große Vorräte lohnen sich deshalb erst bei vielen Hühnern.
+- **Hofbesuche:** Ab 4 Sternen fragen Kita, Schulklassen oder Vereine nach einem Besuch (Markt → Aufträge). Wer zusagt und am Besuchstag um 10 Uhr einen sauberen Stall (mindestens 60 %), gesunde Tiere und kein totes Tier im Gehege hat, bekommt 25–50 € und 30 Tage lang einen besseren Hof-Ruf. Geht der Besuch daneben, gibt es kein Geld und 15 Tage lang einen schlechteren Ruf. Eine Checkliste zeigt vorher, was noch fehlt.
 - **Stalldämmung und Zugluftschutz** (Shop → Erweiterungen, 60 €): Im Herbst und Winter gibt es viel weniger Atemwegsinfekte, auch die zugige Holzkiste verliert ihren Nachteil. Gartenhaus-Stall und Hühnermobil gelten als schon gedämmt.
 - **Kräuter fürs Trinkwasser** (Shop → Futter & Medizin, 5 € je Beutel): Vorbeugend über **Lager → Kräuter ins Trinkwasser** 10 Tage lang deutlich weniger Atemwegsinfekte. Ein leichter Infekt (bis 30 %) heilt damit ganz ohne Tierarzt und ohne Wartezeit. Erst schwere Fälle brauchen den Tierarzt.
 - **Immunität:** Wer einen Atemwegsinfekt oder als Küken Kokzidiose überstanden hat, ist 30 Tage lang dagegen immun. Der Steckbrief zeigt das an. Gegen Milben und Würmer gibt es wie in echt keine Immunität, dafür Kieselgur, Sandbad und Wechselweide.

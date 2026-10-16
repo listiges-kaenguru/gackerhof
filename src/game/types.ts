@@ -106,6 +106,22 @@ export interface Order {
   dueDay: number;
 }
 
+/** Kategorien der Finanzübersicht (Mehr → Finanzen) */
+export type FinanceCat =
+  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
+  | 'futter' | 'einstreu' | 'medizin' | 'tierarzt' | 'tierkauf' | 'ausruestung' | 'pacht' | 'entsorgung' | 'sonstiges';
+
+/** Geldbewegungen eines Monats je Kategorie (Einnahmen positiv, Ausgaben negativ) */
+export type FinanceMonth = Partial<Record<FinanceCat, number>>;
+
+/** Anfrage für einen Hofbesuch (Kita, Schulklasse …) */
+export interface Visit {
+  group: string;
+  day: number; // Besuchstag, Ankunft um VISIT_HOUR
+  fee: number;
+  accepted: boolean;
+}
+
 export interface Celebration {
   emoji: string;
   title: string;
@@ -244,6 +260,14 @@ export interface GameState {
     income: number;
     expenses: number;
   };
+  /** Finanzübersicht: laufender und letzter Monat, Ergebnis der letzten Monate (ohne Investitionen) */
+  finance?: { cur: FinanceMonth; prev?: FinanceMonth; results: number[] };
+  /** Tag, an dem Opa Heinz zuletzt Rat gegeben hat */
+  adviceDay?: number;
+  /** Anfrage oder zugesagter Hofbesuch */
+  visit?: Visit | null;
+  /** Wirkung des letzten Hofbesuchs auf den Hof-Ruf */
+  visitEffect?: { until: number; points: number } | null;
   /** laufende Kosten (Strom, Wasser), die zur Monatsabrechnung fällig werden */
   pendingCosts: number;
   chapter: number;

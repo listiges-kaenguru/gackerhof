@@ -1,26 +1,26 @@
 // Alles, was der Spieler tun kann. Jede Aktion liefert ein Ergebnis mit Meldung zurück.
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, HEALTH_CHECK_COST, ITEM, MANURE_PRICE, PREVENTION_DAYS, SOUP_AGE,
-  SUPPLY,
+  BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, FEED_SUPPLIES, HEALTH_CHECK_COST, ITEM, MANURE_PRICE,
+  PREVENTION_DAYS, SOUP_AGE, SUPPLY, VISIT_HOUR,
 } from './data';
 import {
   addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggValue, eventActive,
-  feederCap, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log, maxInside, outsideAnimals,
-  round2, stage, storedEggCount,
+  feederCap, feedStock, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log, maxInside, outsideAnimals,
+  round2, stage, storageCap, storedEggCount,
 } from './helpers';
 import { registerAlbum } from './album';
 import { chance, intBetween } from './rng';
 import { moveFlock } from './sim';
 import { createAnimal } from './state';
-import type { Animal, ConditionId, Difficulty, FeedId, GameState } from './types';
+import type { Animal, ConditionId, Difficulty, FeedId, FinanceCat, GameState } from './types';
 
 export interface Result { ok: boolean; msg: string }
 const ok = (msg: string): Result => ({ ok: true, msg });
 const fail = (msg: string): Result => ({ ok: false, msg });
 
-function pay(s: GameState, amount: number): boolean {
+function pay(s: GameState, amount: number, cat: FinanceCat): boolean {
   if (s.money < amount) return false;
-  addMoney(s, -amount);
+  addMoney(s, -amount, cat);
   return true;
 }
 
@@ -32,10 +32,24 @@ export function itemPrice(s: GameState, id: string): number {
   const base = ITEM[id].price;
   return id === 'auslauf' ? base + s.runExtensions * 30 : base;
 }
-export function supplyPrice(s: GameState, id: string): number {
+export function supplyPrice(s: GameState, id: string, bulk = false): number {
   const surcharge = FEEDS.includes(id) && eventActive(s, 'futterteuer') ? 1.5 : 1;
-  return round2(SUPPLY[id].price * surcharge);
+  const sp = SUPPLY[id];
+  return round2((bulk && sp.bulk ? sp.bulk.price : sp.price) * surcharge);
 }
+/** Passt diese Menge noch ins Lager? Liefert sonst den Grund. */
+export function storageProblem(s: GameState, id: string, amount: number): string | null {
+  const cap = storageCap(s);
+  const shed = has(s, 'schuppen') ? '' : ' Ein Lagerschuppen schafft mehr Platz.';
+  if (FEED_SUPPLIES.includes(id) && feedStock(s) + amount > cap.feed + 0.01) {
+    return `Kein Platz im Lager: höchstens ${cap.feed} kg Futter (jetzt ${fmtKg(feedStock(s))} kg).${shed}`;
+  }
+  if (id === 'einstreu' && (s.inventory.einstreu ?? 0) + amount > cap.straw) {
+    return `Kein Platz im Lager: höchstens ${cap.straw} Ballen Stroh.${shed}`;
+  }
+  return null;
+}
+const fmtKg = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
 
 /** Kann der Artikel gekauft werden? Liefert sonst den Grund. */
 export function canBuy(s: GameState, id: string): string | null {
@@ -72,8 +86,8 @@ export function buyItem(s: GameState, id: string): Result {
       if (flock(s).length > cap) log(s, `⚠️ Der neue Stall hat nur ${cap} Plätze für ${flock(s).length} Tiere!`, 'warn', true);
     }
   }
-  addMoney(s, -price);
-  if (tradeIn) addMoney(s, tradeIn);
+  addMoney(s, -price, 'ausruestung');
+  if (tradeIn) addMoney(s, tradeIn, 'ausruestung');
   if (it.slot) {
     s.equip[it.slot] = id;
     if (it.slot === 'drinker') s.water = Math.min(s.water, it.cap ?? 0);
@@ -109,17 +123,21 @@ export function sellItem(s: GameState, id: string): Result {
   } else if (s.extras.includes(id)) {
     removeExtra(s, id);
   } else return fail('Nicht vorhanden.');
-  addMoney(s, value);
+  addMoney(s, value, 'ausruestung');
   log(s, `💶 Verkauft: ${it.name} für ${value.toFixed(2)} €`, 'info');
   return ok(`${it.name} für ${value.toFixed(2)} € verkauft.`);
 }
 
-export function buySupply(s: GameState, id: string, times = 1): Result {
+/** Verbrauchsmaterial kaufen: times Packungen, bei bulk die Großpackung */
+export function buySupply(s: GameState, id: string, times = 1, bulk = false): Result {
   const sp = SUPPLY[id];
-  const price = round2(supplyPrice(s, id) * times);
-  if (!pay(s, price)) return fail('Nicht genug Geld');
-  s.inventory[id] = round2((s.inventory[id] ?? 0) + sp.amount * times);
-  return ok(`${sp.amount * times} ${sp.unit} ${sp.name} gekauft.`);
+  const amount = (bulk && sp.bulk ? sp.bulk.amount : sp.amount) * times;
+  const why = storageProblem(s, id, amount);
+  if (why) return fail(why);
+  const price = round2(supplyPrice(s, id, bulk) * times);
+  if (!pay(s, price, sp.cat)) return fail('Nicht genug Geld');
+  s.inventory[id] = round2((s.inventory[id] ?? 0) + amount);
+  return ok(`${bulk && sp.bulk ? `${sp.bulk.name} ` : ''}${amount} ${sp.unit} ${sp.name} gekauft.`);
 }
 
 export function wearHat(s: GameState, id: string | null): Result {
@@ -264,12 +282,12 @@ export function treat(s: GameState, animalId: number, cond: ConditionId, cureId:
   }
   if (cure.vetPrice != null) {
     const price = round2(cure.vetPrice * diff(s).vetFactor);
-    if (!pay(s, price)) return fail(`Der Tierarzt kostet ${price} €. Nicht genug Geld.`);
+    if (!pay(s, price, 'tierarzt')) return fail(`Der Tierarzt kostet ${price} €. Nicht genug Geld.`);
   } else if ((s.inventory[cureId] ?? 0) >= 1) {
     s.inventory[cureId] -= 1;
   } else {
     const price = supplyPrice(s, cureId);
-    if (!pay(s, price)) return fail(`${SUPPLY[cureId].name} kostet ${price} €. Nicht genug Geld.`);
+    if (!pay(s, price, 'medizin')) return fail(`${SUPPLY[cureId].name} kostet ${price} €. Nicht genug Geld.`);
   }
   c.severity -= cure.effect;
   const healed = c.severity <= 0;
@@ -293,10 +311,27 @@ export function giveHerbs(s: GameState): Result {
   return ok(`🍃 Kräuter ins Trinkwasser gegeben: Bis Tag ${s.kraeuterUntil} gibt es deutlich weniger Atemwegsinfekte.`);
 }
 
+/* ---------------- Hofbesuche ---------------- */
+export function acceptVisit(s: GameState): Result {
+  const v = s.visit;
+  if (!v || v.accepted) return fail('Keine offene Anfrage.');
+  v.accepted = true;
+  log(s, `📩 Zugesagt: ${v.group} kommt am Tag ${v.day} um ${VISIT_HOUR} Uhr.`, 'info');
+  return ok(`Zugesagt! ${v.group} kommt am Tag ${v.day} um ${VISIT_HOUR} Uhr. Bis dahin: Stall sauber, Tiere gesund.`);
+}
+
+export function declineVisit(s: GameState): Result {
+  const v = s.visit;
+  if (!v) return fail('Keine Anfrage.');
+  s.visit = null;
+  log(s, `📩 Abgesagt: ${v.group} kommt nicht.`, 'info');
+  return ok(`${v.group} hast du abgesagt. Das ist nicht schlimm.`);
+}
+
 export function disposeBody(s: GameState, id: number): Result {
   const a = animal(s, id);
   if (!a || !a.dead) return fail('Nicht gefunden.');
-  if (!pay(s, DISPOSAL_COST)) return fail(`Die Tierkörperbeseitigung kostet ${DISPOSAL_COST} €. Nicht genug Geld.`);
+  if (!pay(s, DISPOSAL_COST, 'entsorgung')) return fail(`Die Tierkörperbeseitigung kostet ${DISPOSAL_COST} €. Nicht genug Geld.`);
   s.animals = s.animals.filter(x => x.id !== id);
   log(s, `🕊️ ${a.name} wurde von der Tierkörperbeseitigung abgeholt (${DISPOSAL_COST} €).`, 'info');
   return ok(`${a.name} wurde abgeholt. Kosten: ${DISPOSAL_COST} €.`);
@@ -307,7 +342,7 @@ export function sellAnimal(s: GameState, id: number): Result {
   if (!a || a.dead) return fail('Nicht gefunden.');
   if (a.broodEggs.length) return fail(`${a.name} brütet gerade.`);
   const v = animalValue(s, a);
-  addMoney(s, v);
+  addMoney(s, v, 'tierverkauf');
   s.animals = s.animals.filter(x => x.id !== id);
   log(s, `💶 ${a.name} auf dem Geflügelmarkt verkauft für ${v.toFixed(2)} €.`, 'info');
   return ok(`${a.name} für ${v.toFixed(2)} € verkauft.`);
@@ -321,7 +356,7 @@ export function butcher(s: GameState, id: number): Result {
   if (a.conditions.some(c => c.severity > 30)) return fail('Kranke Tiere nimmt der Schlachter nicht an.');
   if (a.broodEggs.length) return fail(`${a.name} brütet gerade.`);
   const v = butcherValue(s, a);
-  addMoney(s, v);
+  addMoney(s, v, 'tierverkauf');
   s.animals = s.animals.filter(x => x.id !== id);
   log(s, `🔪 ${a.name} wurde zum Schlachter gebracht. Erlös nach Gebühr: ${v.toFixed(2)} €.`, 'info');
   return ok(`${a.name} zum Schlachter gebracht. Erlös: ${v.toFixed(2)} €.`);
@@ -342,7 +377,7 @@ export function buyOffer(s: GameState, offerId: number, qty = 1): Result {
   if (o.kind !== 'brutei' && o.kind !== 'kueken' && !s.equip.coop) return fail('Erst einen Stall kaufen, dann Tiere!');
   if (o.kind === 'kueken' && !s.equip.coop && !has(s, 'kuekenstation')) return fail('Küken brauchen eine Kükenstation oder einen Stall.');
   const price = round2(o.price * qty);
-  if (!pay(s, price)) return fail('Nicht genug Geld.');
+  if (!pay(s, price, 'tierkauf')) return fail('Nicht genug Geld.');
   o.qty -= qty;
   const names: string[] = [];
   for (let i = 0; i < qty; i++) {
@@ -377,7 +412,7 @@ export function healthCheck(s: GameState, offerId: number): Result {
   const o = s.offers.find(x => x.id === offerId);
   if (!o || o.kind !== 'legehenne') return fail('Nicht möglich.');
   if (o.checked) return fail('Schon geprüft.');
-  if (!pay(s, HEALTH_CHECK_COST)) return fail('Nicht genug Geld.');
+  if (!pay(s, HEALTH_CHECK_COST, 'tierkauf')) return fail('Nicht genug Geld.');
   o.checked = true;
   return ok('Gesundheitscheck durchgeführt.');
 }
@@ -386,7 +421,7 @@ export function sellEggs(s: GameState): Result {
   const n = eggCount(s.eggs);
   if (!n) return fail('Keine Eier im Lager.');
   const v = eggValue(s, s.eggs);
-  addMoney(s, v);
+  addMoney(s, v, 'eier');
   s.eggs = {};
   s.stats.eggsSold += n;
   log(s, `💶 ${n} Eier auf dem Markt verkauft für ${v.toFixed(2)} €.`, 'good');
@@ -405,7 +440,7 @@ export function sellHatchEggs(s: GameState, asFood = false): Result {
   const n = s.hatchEggs.length;
   if (!n) return fail('Keine Bruteier im Lager.');
   const v = asFood ? hatchEggFoodValue(s) : hatchEggValue(s);
-  addMoney(s, v);
+  addMoney(s, v, 'eier');
   s.hatchEggs = [];
   s.stats.eggsSold += n;
   return ok(`${n} Eier ${asFood ? 'als Speiseeier' : 'als Bruteier'} für ${v.toFixed(2)} € verkauft.`);
@@ -415,7 +450,7 @@ export function sellManure(s: GameState): Result {
   const n = s.inventory.mist ?? 0;
   if (n < 1) return fail('Kein Mist im Lager.');
   const v = n * MANURE_PRICE;
-  addMoney(s, v);
+  addMoney(s, v, 'mist');
   s.inventory.mist = 0;
   return ok(`${n} Sack Hühnermist als Dünger verkauft: ${v.toFixed(2)} €.`);
 }
@@ -477,7 +512,7 @@ export function fulfillOrder(s: GameState, orderId: number): Result {
     const ids = new Set(list.map(a => a.id));
     s.animals = s.animals.filter(a => !ids.has(a.id));
   }
-  addMoney(s, o.reward);
+  addMoney(s, o.reward, 'auftraege');
   s.orders = (s.orders ?? []).filter(x => x !== o);
   log(s, `📋 Auftrag erledigt: ${o.customer} zahlt ${o.reward} €.`, 'good');
   return ok(`Geliefert! ${o.customer} zahlt ${o.reward} €. Danke!`);
@@ -488,7 +523,7 @@ export function repayDebt(s: GameState): Result {
   if (s.debt <= 0) return fail('Keine Schulden.');
   const amount = Math.min(s.debt, Math.max(0, s.money));
   if (amount <= 0) return fail('Kein Geld zum Zurückzahlen.');
-  addMoney(s, -amount);
+  addMoney(s, -amount, 'kredit');
   s.debt = round2(s.debt - amount);
   return ok(s.debt <= 0 ? 'Alle Schulden zurückgezahlt!' : `${amount.toFixed(2)} € zurückgezahlt. Rest: ${s.debt.toFixed(2)} €.`);
 }
