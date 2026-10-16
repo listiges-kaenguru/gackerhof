@@ -26,6 +26,7 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 | Idee | Beschreibung | Aufwand |
 |---|---|---|
 | **Geschützter Zugang** | Online spielbar, aber nur für freigegebene Personen, z. B. über Cloudflare Pages mit Cloudflare Access. | mittel |
+| **Eigenständige Apps** | Offline-Apps für Android, Linux und Windows, unabhängig vom Hosting. Konzept mit Plan, Voraussetzungen und Hürden in [`docs/APPS.md`](docs/APPS.md). | groß |
 
 ### Gameplay (aus dem Konzept, noch offen)
 
