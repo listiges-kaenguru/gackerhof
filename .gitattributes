@@ -1,0 +1,9 @@
+# Nicht in die Release-Archive: Entwicklungs- und Arbeitsdateien
+.github/ export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore
+tests/ export-ignore
+docs/ export-ignore
+IDEEN.md export-ignore
+KONZEPT.md export-ignore
+CHANGELOG.md export-ignore
