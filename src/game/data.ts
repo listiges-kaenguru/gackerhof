@@ -65,6 +65,8 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyDef> = {
     lastChance: false, opaLoan: false,
   },
 };
+/** Von leicht nach schwer */
+export const DIFFICULTY_ORDER = Object.keys(DIFFICULTIES) as Difficulty[];
 
 /* ------------------------------------------------------------------ */
 /* Grundstücke                                                        */
@@ -399,7 +401,7 @@ export const CONDITIONS: Record<ConditionId, ConditionDef> = {
 export const PASTURE_WARN = 45;
 /** Legeleistung je Jahreszeit; mit Stalllicht im Herbst/Winter höher */
 export const SEASON_LAY = { fruehling: 1.1, sommer: 1, herbst: 0.6, winter: 0.45 } as const;
-export const SEASON_LAY_LIGHT = { herbst: 0.88, winter: 0.8 } as const;
+export const SEASON_LAY_LIGHT: Partial<Record<Season, number>> = { herbst: 0.88, winter: 0.8 };
 /** Prämien im Hühner-Album */
 export const ALBUM_BREED_BONUS = 20;
 export const ALBUM_FULL_BONUS = 100;

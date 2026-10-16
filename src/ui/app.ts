@@ -1,18 +1,20 @@
 // Benutzeroberfläche: Kopfzeile, Hinweise, Schnellaktionen, Navigation, Panels, Dialoge.
 import * as A from '../game/actions';
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DISPOSAL_COST, HATS, HEALTH_CHECK_COST, ITEM, ITEMS, MS_PER_MINUTE, PASTURE_WARN, PERSONALITIES,
-  PLOTS, SEASON_NAMES, SHOP_CATS, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
+  ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, HATS,
+  HEALTH_CHECK_COST, ITEM, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN, PERSONALITIES, PLOTS, SEASON_NAMES, SHOP_CATS, SHOW_FEE,
+  SHOW_GRADES, SHOW_MAX, SHOW_NOTICE, SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, type ItemDef, type ShopCat,
 } from '../game/data';
 import {
-  age, ageText, albumKey, albumTotal, animalValue, breedLabel, daysText, butcherValue, chicks, coopCap, crowding, dayOfSeason, dead, diff, drinkerCap, eggCount,
-  eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, has, hawkProtection, isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, outsideAnimals, starFactors,
-  pastureNow, ratSafe, runCap, season, sexKnown, stage, stageName, stars, year,
+  age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason, daysText, dead,
+  diff, drinkerCap, eggCount, eggValue, euro, eventActive, feederCap, flock, foxProtection, frozen, grainStock, has, hawkProtection,
+  isDaytime, isNight, lightActive, living, lockedOut, marderSafe, maxInside, nestCount, outsideAnimals, pastureNow, ratSafe, runCap,
+  season, seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storedEggCount, year,
 } from '../game/helpers';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
-import type { Animal, Difficulty, GameState } from '../game/types';
+import type { Animal, BreedId, ConditionId, Difficulty, GameState, MarketOffer } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc } from './scene';
 import { tutorialStep } from './tutorial';
@@ -21,6 +23,22 @@ import { infoLinks, SOURCE_URL, WIKI_URL } from './links';
 type Panel = 'hof' | 'shop' | 'markt' | 'tiere' | 'tier' | 'album' | 'lager' | 'mehr';
 type MarketTab = 'kaufen' | 'verkaufen' | 'auftraege' | 'schau';
 interface Modal { kind: 'report' | 'intro' | 'gameover' | 'help' | 'celebrate'; lines?: string[] }
+type Speed = GameState['speed'];
+
+const SPEEDS: [Speed, string, string][] = [[0, '⏸', 'Pause'], [1, '▶', 'Normal'], [2, '⏩', 'Schnell'], [4, '⏭', 'Sehr schnell']];
+const PANEL_TITLES: Record<Panel, string> = {
+  hof: '🏡 Hofübersicht', shop: '🛒 Landhandel Meier', markt: '🐣 Geflügelmarkt', tiere: '🐔 Deine Tiere',
+  tier: '🐔 Steckbrief', album: '📒 Hühner-Album', lager: '📦 Lager', mehr: '☰ Mehr',
+};
+/** Wohin ein Tipp auf ein Kapitel-Ziel führt */
+const GOAL_ACT: Record<string, string> = {
+  zaun: 'open:shop:gehege', stall: 'open:shop:stall', traenke: 'open:shop:wasser', futter: 'open:shop:futter',
+  huehner3: 'open:markt', eier10: 'open:markt:verkaufen', hahn: 'open:markt', schlupf: 'open:lager', aufzucht: 'open:tiere',
+  fuchs50: 'open:shop:fuchs', hofladen: 'open:shop:ausbau', sterne3: 'open:hof', eier150: 'open:markt:verkaufen', tiere10: 'open:markt',
+};
+/** Tastenkürzel für Hof-Aktionen */
+const KEY_ACTS: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean', l: 'lure' };
+const GOALS_KEY = 'gackerhof-goals-open';
 
 export function startApp(root: HTMLElement, initial: GameState, onNewGame: () => void) {
   let s = initial;
@@ -34,7 +52,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     modal: null as Modal | null,
     confirm: '' as string,
     confirmTimer: 0,
-    lastSpeed: 1 as 1 | 2 | 4,
+    lastSpeed: 1 as Exclude<Speed, 0>,
   };
 
   root.innerHTML = `
@@ -64,9 +82,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const goalsEl = $('.goals-widget');
   const stageEl = $('.stage');
   // Kapitel-Karte: gespeicherte Wahl des Spielers, sonst je nach Platz auf- oder zugeklappt
-  const GOALS_KEY = 'gackerhof-goals-open';
   const storedGoals = (() => { try { return localStorage.getItem(GOALS_KEY); } catch { return null; } })();
-  let goalsOpen = storedGoals ? storedGoals === '1' : null as boolean | null;
+  let goalsOpen: boolean | null = storedGoals ? storedGoals === '1' : null;
   const goalsDefault = () => stageEl.clientWidth >= 640 && stageEl.clientHeight >= 300;
   let lastGoalsDone = new Set(s.goals.filter(g => g.done).map(g => g.id));
   const hud = $('.hud'), alertsEl = $('.alerts'), toastsEl = $('.toasts'), quick = $('.quickbar'), tabs = $('.tabs');
@@ -87,7 +104,6 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   function renderHud() {
     const st = stars(s);
     const phaseIcon = isNight(s.hour) ? '🌙' : s.temperature >= 28 ? '🥵' : s.temperature <= 0 ? '❄️' : s.hour < 8 ? '🌅' : s.hour >= 18 ? '🌇' : '☀️';
-    const speeds: [0 | 1 | 2 | 4, string, string][] = [[0, '⏸', 'Pause'], [1, '▶', 'Normal'], [2, '⏩', 'Schnell'], [4, '⏭', 'Sehr schnell']];
     setHtml(hud, 'hud', `
       <div class="hud-farm"><span class="farm-name">${esc(s.farmName)}</span><button class="stars" data-act="open:hof" title="Hof-Ruf: antippen für Details" aria-label="Hof-Ruf ${st} von 5 Sternen">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></button></div>
       <div class="hud-chips">
@@ -96,7 +112,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <span class="chip" title="Uhrzeit und Wetter">${phaseIcon} ${String(s.hour).padStart(2, '0')}:${String(Math.floor((s.minute ?? 0) / 10) * 10).padStart(2, '0')} · ${s.temperature} °C</span>
       </div>
       <div class="speed" role="group" aria-label="Spieltempo">
-        ${speeds.map(([v, icon, label]) => `<button data-act="speed:${v}" class="${s.speed === v ? 'on' : ''}" title="${label}" aria-label="${label}">${icon}</button>`).join('')}
+        ${SPEEDS.map(([v, icon, label]) => `<button data-act="speed:${v}" class="${s.speed === v ? 'on' : ''}" title="${label}" aria-label="${label}">${icon}</button>`).join('')}
         <button data-act="help" title="Hilfe" aria-label="Hilfe">?</button>
       </div>`);
   }
@@ -105,6 +121,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const out: { icon: string; text: string; act: string; kind: 'bad' | 'warn' | 'info' | 'good' }[] = [];
     const f = flock(s);
     const ch = chicks(s);
+    const hasAnimals = f.length > 0 || ch.length > 0;
+    const hawkNow = s.hawkAlertDay === s.day && s.hour < 15;
     if (!s.equip.fence) out.push({ icon: '🛒', text: 'Tipp: Zuerst einen Zaun kaufen', act: 'open:shop:gehege', kind: 'info' });
     else if (!s.equip.coop) out.push({ icon: '🛒', text: 'Tipp: Jetzt einen Stall kaufen', act: 'open:shop:stall', kind: 'info' });
     else if (!s.equip.drinker) out.push({ icon: '🛒', text: 'Tipp: Eine Tränke aufstellen', act: 'open:shop:wasser', kind: 'info' });
@@ -112,20 +130,20 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     else if (!living(s).length && !dead(s).length) out.push({ icon: '🐣', text: 'Tipp: Hühner auf dem Markt kaufen', act: 'open:markt', kind: 'info' });
     for (const a of dead(s)) out.push({ icon: '🕊️', text: `${a.name} entsorgen (${DISPOSAL_COST} €)`, act: `animal:${a.id}`, kind: 'bad' });
     if (s.foxAlertDay === s.day && f.length) out.push({ icon: '🦊', text: `Fuchs in der Nähe! Schutz ${Math.round(foxProtection(s) * 100)} %`, act: 'open:hof', kind: 'bad' });
-    if (s.hawkAlertDay === s.day && s.hour < 15 && outsideAnimals(s).length) out.push({ icon: '🦅', text: 'Habicht! Hühner reinlocken', act: 'lure', kind: 'bad' });
+    if (hawkNow && outsideAnimals(s).length) out.push({ icon: '🦅', text: 'Habicht! Hühner reinlocken', act: 'lure', kind: 'bad' });
     const locked = lockedOut(s);
-    const outNight = !isDaytime(s.hour) && s.doorOpen ? outsideAnimals(s).filter(x => !x.dead) : [];
-    if (outNight.length && (s.hour >= 21 || s.hour < 6)) out.push({ icon: '🏠', text: `Stall voll: ${outNight.length} schlafen draußen`, act: 'open:hof', kind: 'bad' });
+    // Nachts bei offener Klappe draußen: Der Stall ist voll
+    const outNight = isNight(s.hour) && s.doorOpen ? outsideAnimals(s).length : 0;
+    if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
     const ords = s.orders ?? [];
     if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
-    if (locked.length && !(s.hawkAlertDay === s.day && s.hour < 15)) out.push({ icon: '🚪', text: `${locked.length === 1 ? `${locked[0].name} ist` : `${locked.length} Hühner sind`} ausgesperrt: reinlocken`, act: 'lure', kind: isDaytime(s.hour) ? 'warn' : 'bad' });
+    if (locked.length && !hawkNow) out.push({ icon: '🚪', text: `${locked.length === 1 ? `${locked[0].name} ist` : `${locked.length} Hühner sind`} ausgesperrt: reinlocken`, act: 'lure', kind: isDaytime(s.hour) ? 'warn' : 'bad' });
     if (s.marderAlertDay === s.day && !marderSafe(s)) out.push({ icon: '🦡', text: 'Marder in der Nähe!', act: 'open:shop:fuchs', kind: 'bad' });
     if (f.length && isNight(s.hour) && s.doorOpen && !has(s, 'autoklappe')) out.push({ icon: '🚪', text: 'Klappe ist nachts offen!', act: 'door', kind: 'bad' });
-    if (s.equip.drinker && (f.length || ch.length) && frozen(s)) out.push({ icon: '🧊', text: 'Tränke gefroren', act: 'water', kind: 'bad' });
-    else if (s.equip.drinker && (f.length || ch.length) && s.water < drinkerCap(s) * 0.25) out.push({ icon: '💧', text: s.water <= 0.01 ? 'Tränke leer!' : 'Tränke fast leer', act: 'water', kind: s.water <= 0.01 ? 'bad' : 'warn' });
+    if (s.equip.drinker && hasAnimals && frozen(s)) out.push({ icon: '🧊', text: 'Tränke gefroren', act: 'water', kind: 'bad' });
+    else if (s.equip.drinker && hasAnimals && s.water < drinkerCap(s) * 0.25) out.push({ icon: '💧', text: s.water <= 0.01 ? 'Tränke leer!' : 'Tränke fast leer', act: 'water', kind: s.water <= 0.01 ? 'bad' : 'warn' });
     if (s.equip.feeder && f.length && s.feed < feederCap(s) * 0.2) {
-      const stock = (s.inventory.koerner ?? 0) + (s.inventory.legemehl ?? 0);
-      out.push(stock > 0
+      out.push(grainStock(s) > 0
         ? { icon: '🌾', text: s.feed <= 0.01 ? 'Futter leer!' : 'Futter fast leer', act: 'feed', kind: s.feed <= 0.01 ? 'bad' : 'warn' }
         : { icon: '🛒', text: 'Kein Futter mehr im Lager', act: 'open:shop:verbrauch', kind: 'bad' });
     }
@@ -133,7 +151,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (ch.some(c => c.motherId == null) && !has(s, 'kuekenstation')) out.push({ icon: '🥶', text: 'Küken frieren: Kükenstation', act: 'open:shop:ausbau', kind: 'bad' });
     const sick = living(s).filter(a => a.conditions.length);
     if (sick.length) out.push({ icon: CONDITIONS[sick[0].conditions[0].id].emoji, text: `${sick.length === 1 ? `${sick[0].name} ist krank` : `${sick.length} Tiere krank`}`, act: sick.length === 1 ? `animal:${sick[0].id}` : 'open:tiere', kind: 'warn' });
-    const nest = eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
+    const nest = nestCount(s);
     if (nest) out.push({ icon: '🥚', text: `${nest} Ei${nest > 1 ? 'er' : ''} im Nest`, act: 'collect', kind: 'good' });
     if (f.length && !s.doorOpen && !locked.length && s.hour >= 7 && s.hour < 19 && !(eventActive(s, 'stallpflicht') && !has(s, 'netz')) && s.hawkAlertDay !== s.day) out.push({ icon: '🚪', text: 'Klappe öffnen', act: 'door', kind: 'info' });
     if (s.equip.coop && s.cleanliness < 35) out.push({ icon: '🧹', text: 'Stall ausmisten', act: 'clean', kind: 'warn' });
@@ -170,12 +188,6 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const v = p[id];
     return v ? [Math.min(v[0], v[1]), v[1]] : null;
   }
-  const GOAL_ACT: Record<string, string> = {
-    zaun: 'open:shop:gehege', stall: 'open:shop:stall', traenke: 'open:shop:wasser', futter: 'open:shop:futter',
-    huehner3: 'open:markt', eier10: 'open:markt:verkaufen', hahn: 'open:markt', schlupf: 'open:lager', aufzucht: 'open:tiere',
-    fuchs50: 'open:shop:fuchs', hofladen: 'open:shop:ausbau', sterne3: 'open:hof', eier150: 'open:markt:verkaufen', tiere10: 'open:markt',
-  };
-
   function renderGoals() {
     const ch = CHAPTERS[s.chapter];
     if (!ch || !s.goals.length) { setHtml(goalsEl, 'goals', ''); return; }
@@ -210,7 +222,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   }
 
   function renderQuick() {
-    const nest = eggCount(s.nestEggs) + s.nestHatchEggs.length + s.blockedEggs;
+    const nest = nestCount(s);
     const wPct = s.equip.drinker ? Math.round((s.water / drinkerCap(s)) * 100) : 0;
     const fPct = s.equip.feeder ? Math.round((s.feed / feederCap(s)) * 100) : 0;
     const bar = (p: number) => `<i class="lvl"><b style="width:${Math.max(0, Math.min(100, p))}%" class="${p < 25 ? 'low' : ''}"></b></i>`;
@@ -226,7 +238,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const sick = living(s).filter(a => a.conditions.length).length + dead(s).length;
     const t: [Panel, string, string, string][] = [
       ['hof', '🏡', 'Hof', ''], ['shop', '🛒', 'Shop', ''], ['markt', '🐣', 'Markt', ''],
-      ['tiere', '🐔', 'Tiere', sick ? `<b class="dot">${sick}</b>` : ''], ['lager', '📦', 'Lager', ''], ['mehr', '☰', 'Mehr', s.goals.some(g => g.done) ? '' : ''],
+      ['tiere', '🐔', 'Tiere', sick ? `<b class="dot">${sick}</b>` : ''], ['lager', '📦', 'Lager', ''], ['mehr', '☰', 'Mehr', ''],
     ];
     setHtml(tabs, 'tabs', t.map(([id, icon, label, badge]) => {
       const on = ui.panel === id || (id === 'tiere' && ui.panel === 'tier') || (id === ui.albumFrom && ui.panel === 'album');
@@ -244,15 +256,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (!force && panel.contains(document.activeElement) && document.activeElement?.tagName === 'INPUT') return;
     panel.hidden = false;
     root.querySelector('.app')!.classList.add('has-panel');
-    const titles: Record<Panel, string> = {
-      hof: '🏡 Hofübersicht', shop: '🛒 Landhandel Meier', markt: '🐣 Geflügelmarkt', tiere: '🐔 Deine Tiere',
-      tier: '🐔 Steckbrief', album: '📒 Hühner-Album', lager: '📦 Lager', mehr: '☰ Mehr',
-    };
-    panelTitle.textContent = titles[ui.panel];
+    panelTitle.textContent = PANEL_TITLES[ui.panel];
     backBtn.hidden = ui.panel !== 'tier' && ui.panel !== 'album';
-    const html = {
-      hof: panelHof, shop: panelShop, markt: panelMarket, tiere: panelAnimals, tier: panelAnimal, album: panelAlbum, lager: panelStore, mehr: panelMore,
-    }[ui.panel]();
+    const html = panels[ui.panel]();
     if (cache.panel !== html || force) {
       const top = panelBody.scrollTop;
       const chipScroll = panelBody.querySelector('.cats')?.scrollLeft ?? 0;
@@ -263,6 +269,10 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       if (cats) cats.scrollLeft = chipScroll;
     }
   }
+
+  const panels: Record<Panel, () => string> = {
+    hof: panelHof, shop: panelShop, markt: panelMarket, tiere: panelAnimals, tier: panelAnimal, album: panelAlbum, lager: panelStore, mehr: panelMore,
+  };
 
   /* ---------------- Bausteine ---------------- */
   const meter = (label: string, v: number, icon: string) =>
@@ -281,7 +291,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const st = stars(s);
     const f = flock(s);
     const factors = starFactors(s);
-    const sign = (p: number) => (p > 0 ? `<b class="good">+${String(p).replace('.', ',')}</b>` : p < 0 ? `<b class="bad">${String(p).replace('.', ',')}</b>` : '<b class="muted">±0</b>');
+    const num = (p: number) => String(p).replace('.', ',');
+    const sign = (p: number) => (p > 0 ? `<b class="good">+${num(p)}</b>` : p < 0 ? `<b class="bad">${num(p)}</b>` : '<b class="muted">±0</b>');
     return `
       <section class="card">
         <h3>⭐ Hof-Ruf: <span class="stars-big">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></span></h3>
@@ -426,7 +437,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (ui.marketTab === 'schau') return tabsHtml + panelShow();
     if (ui.marketTab === 'kaufen') {
       const kindName = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
-      const kindIcon = (o: { kind: string; breed: keyof typeof BREEDS; variant?: string }) => o.kind === 'brutei' ? '🥚'
+      const kindIcon = (o: MarketOffer) => o.kind === 'brutei' ? '🥚'
         : portrait(o.breed, o.kind === 'hahn' ? 'rooster' : o.kind === 'kueken' ? 'chick' : 'hen', false, o.variant);
       const sellers = [...new Set(s.offers.map(o => o.seller))];
       const next = 7 - (s.day - s.offersDay);
@@ -455,7 +466,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
         ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
-        ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * 2)}</button></div>` : ''}
+        ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * MANURE_PRICE)}</button></div>` : ''}
         ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
       </section>
       <section class="card"><h3>🐔 Tiere verkaufen</h3>
@@ -472,7 +483,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const list = s.orders ?? [];
     if (!list.length) return `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
       <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren). Sie zahlen deutlich mehr als der Markt.</p>`;
-    const eggsHave = eggCount(s.eggs) + s.hatchEggs.length;
+    const eggsHave = storedEggCount(s);
     return list.map(o => {
       const what = o.kind === 'eier' ? `🥚 ${o.qty} Eier` : o.kind === 'junghenne' ? `🐔 ${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}` : `🍲 ${o.qty} Suppenh${o.qty > 1 ? 'ühner' : 'uhn'} (Henne ab 2 Jahren)`;
       const left = o.dueDay - s.day;
@@ -490,7 +501,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <h3>${esc(o.customer)}</h3>
         <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(Markt: ca. ${euro(market)})</small>` : ''}</p>
         <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
-        ${o.kind === 'eier' ? confirmBtn(`order:${o.id}`, 'Liefern', 'Wirklich liefern?', can ? 'primary' : '') : confirmBtn(`order:${o.id}`, 'Liefern', 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        ${confirmBtn(`order:${o.id}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
       </section>`;
     }).join('');
   }
@@ -570,9 +581,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (sh) {
       const left = sh.day - s.day;
       head = `<section class="card show-head"><h3>🏆 ${esc(sh.title)}</h3>
-        <p>Tag ${sh.day} (${SEASON_NAMES[season({ ...s, day: sh.day })]}) · ${left < 0 ? 'Termin folgt' : left === 0 ? (s.hour < 12 ? '<b>heute um 12 Uhr</b>' : 'heute') : `in <b>${left} Tag${left === 1 ? '' : 'en'}</b>`}${sh.level === 2 ? ' · <b class="good">Landesschau: doppelte Preise</b>' : ''}</p>
-        ${sh.announced ? `<p>Angemeldet: <b>${sh.entries.length}/${SHOW_MAX}</b> · Standgeld ${SHOW_FEE} € pro Tier</p>` : `<p class="muted">Die Anmeldung öffnet eine Woche vorher (Tag ${sh.day - 7}).${stars(s) >= 4 ? '' : ' Mit 4 Sternen Hof-Ruf geht es auf die Landesschau.'}</p>`}
-        <p class="muted small">Preise: ${prizes} · 🏆 Pokal für das beste Tier mit 97 Punkten (+${50 * (sh.level ?? 1)} €)</p></section>`;
+        <p>Tag ${sh.day} (${SEASON_NAMES[seasonOfDay(sh.day)]}) · ${left < 0 ? 'Termin folgt' : left === 0 ? (s.hour < 12 ? '<b>heute um 12 Uhr</b>' : 'heute') : `in <b>${left} Tag${left === 1 ? '' : 'en'}</b>`}${sh.level === 2 ? ' · <b class="good">Landesschau: doppelte Preise</b>' : ''}</p>
+        ${sh.announced ? `<p>Angemeldet: <b>${sh.entries.length}/${SHOW_MAX}</b> · Standgeld ${SHOW_FEE} € pro Tier</p>` : `<p class="muted">Die Anmeldung öffnet eine Woche vorher (Tag ${sh.day - SHOW_NOTICE}).${stars(s) >= 4 ? '' : ' Mit 4 Sternen Hof-Ruf geht es auf die Landesschau.'}</p>`}
+        <p class="muted small">Preise: ${prizes} · 🏆 Pokal für das beste Tier mit 97 Punkten (+${SHOW_TROPHY_PRIZE * (sh.level ?? 1)} €)</p></section>`;
     }
     const candidates = living(s).filter(a => BREEDS[a.breed].showBreed && stage(s, a) === 'erwachsen');
     const rows = candidates.map(a => {
@@ -611,8 +622,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const total = albumTotal();
     return `<p class="infobar">📒 <b>${have}/${total}</b> Rassen und Farben entdeckt. Ein Eintrag zählt, sobald ein Tier dieser Farbe auf deinem Hof lebt. Küken zeigen ihre Farbe erst als Junghuhn.</p>
       <div class="goals-bar album-bar"><b style="width:${(have / total) * 100}%"></b></div>
-      <p class="muted small">🎁 Alle Farben einer Rasse: 20 € · Ganzes Album: 100 €. Küken erben die Farbe von Mutter oder Vater, selten gibt es eine Überraschung.</p>
-      ${(Object.keys(BREEDS) as (keyof typeof BREEDS)[]).map(b => {
+      <p class="muted small">🎁 Alle Farben einer Rasse: ${ALBUM_BREED_BONUS} € · Ganzes Album: ${ALBUM_FULL_BONUS} €. Küken erben die Farbe von Mutter oder Vater, selten gibt es eine Überraschung.</p>
+      ${(Object.keys(BREEDS) as BreedId[]).map(b => {
         const def = BREEDS[b];
         const n = def.variants.filter(v => album[`${b}:${v.id}`]).length;
         return `<section class="card"><h3>${def.name} <small>${n}/${def.variants.length}${n === def.variants.length ? ' ✅' : ''}</small></h3>
@@ -627,7 +638,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   /* ---------------- Lager ---------------- */
   function panelStore(): string {
     const eggs = eggCount(s.eggs);
-    const eggList = Object.entries(s.eggs).filter(([, n]) => n > 0).map(([b, n]) => `${n}× ${BREEDS[b as keyof typeof BREEDS].name}`).join(', ');
+    const eggList = Object.entries(s.eggs).filter(([, n]) => n > 0).map(([b, n]) => `${n}× ${BREEDS[b as BreedId].name}`).join(', ');
     const inc = has(s, 'brutapparat')
       ? `<section class="card"><h3>🥚 Brutapparat (${s.incubator.length}/12)</h3>
           ${s.incubator.length ? `<p>${groupIncubator()}</p>` : '<p class="muted">Leer.</p>'}
@@ -668,16 +679,17 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       ? `<h3>📖 Kapitel ${s.chapter}: ${ch.title}</h3><ul class="goals">${s.goals.map(g => `<li class="${g.done ? 'done' : ''}">${g.done ? '✅' : '⬜'} ${g.text}</li>`).join('')}</ul><p class="muted">Belohnung: ${ch.reward} € von Opa Heinz</p>`
       : '<h3>📖 Alle Kapitel geschafft!</h3><p>Du bist jetzt ein echter Hühnerprofi. Weitere Kapitel folgen in einer späteren Version.</p>';
     const hats = ['stroh', ...s.cosmetics.filter(c => c.startsWith('hut_'))];
-    const lower = (['leicht', 'mittel'] as Difficulty[]).filter(d => ['leicht', 'mittel', 'schwer'].indexOf(d) < ['leicht', 'mittel', 'schwer'].indexOf(s.difficulty));
+    const lower = DIFFICULTY_ORDER.slice(0, DIFFICULTY_ORDER.indexOf(s.difficulty));
+    const trophies = (s.trophies ?? []).length;
     return `
       <section class="card">${goals}</section>
       <section class="card"><h3>📒 Sammlung</h3>
         <div class="row"><button class="btn" data-act="album">📒 Hühner-Album ${Object.keys(s.album ?? {}).length}/${albumTotal()}</button>
-        <button class="btn" data-act="open:markt:schau">🏆 Geflügelschau${(s.trophies ?? []).length ? ` · ${(s.trophies ?? []).length} Pokal${(s.trophies ?? []).length > 1 ? 'e' : ''}` : ''}</button></div>
+        <button class="btn" data-act="open:markt:schau">🏆 Geflügelschau${trophies ? ` · ${trophies} Pokal${trophies > 1 ? 'e' : ''}` : ''}</button></div>
       </section>
       <section class="card"><h3>💶 Finanzen</h3>
         <p>Einnahmen gesamt: <b class="good">${euro(s.stats.income)}</b> · Ausgaben gesamt: <b class="bad">${euro(s.stats.expenses)}</b></p>
-        <p>Nächste Monatsabrechnung in ${30 - ((s.day - 1) % 30)} Tagen: Pacht ${PLOTS[s.plot].rent} € + Strom/Wasser ca. ${euro(s.pendingCosts)}</p>
+        <p>Nächste Monatsabrechnung in ${DAYS_PER_SEASON + 1 - dayOfSeason(s)} Tagen: Pacht ${PLOTS[s.plot].rent} € + Strom/Wasser ca. ${euro(s.pendingCosts)}</p>
         ${s.debt > 0 ? `<p>Schulden: <b class="bad">${euro(s.debt)}</b></p><button class="btn" data-act="repay">Zurückzahlen</button>` : ''}
         <p class="muted">${s.stats.eggsSold} Eier verkauft · ${s.stats.hatched} Küken geschlüpft · ${s.stats.deaths} Tiere gestorben, davon ${s.stats.predatorLosses} durch Raubtiere</p>
       </section>
@@ -849,6 +861,12 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     renderTabs();
   }
 
+  /** Nach Verkauf/Schlachten vom Steckbrief zurück zur Tierliste */
+  function leaveProfile(r: A.Result): A.Result {
+    if (r.ok && ui.panel === 'tier') ui.panel = 'tiere';
+    return r;
+  }
+
   function handle(actStr: string, el: HTMLElement) {
     const [cmd, a1, a2, a3] = actStr.split(':');
     if (el.dataset.confirm && ui.confirm !== actStr) {
@@ -861,8 +879,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     ui.confirm = '';
     switch (cmd) {
       case 'tab':
-        if (a1 === 'hof' && ui.panel === 'hof') { ui.panel = null; refreshAll(); }
-        else if (ui.panel === a1 || (a1 === 'tiere' && ui.panel === 'tier')) { ui.panel = null; refreshAll(); }
+        // Erneutes Antippen des offenen Tabs schließt das Panel
+        if (ui.panel === a1 || (a1 === 'tiere' && ui.panel === 'tier')) { ui.panel = null; refreshAll(); }
         else openPanel(a1 as Panel);
         return;
       case 'open':
@@ -879,8 +897,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'tut-off': return result(A.setTutorial(s, false));
       case 'tut-on': return result(A.setTutorial(s, true));
       case 'speed': {
-        const v = Number(a1) as 0 | 1 | 2 | 4;
-        if (v) ui.lastSpeed = v as 1 | 2 | 4;
+        const v = Number(a1) as Speed;
+        if (v) ui.lastSpeed = v;
         s.speed = v;
         return renderHud();
       }
@@ -901,7 +919,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'lure': return result(A.lureIn(s));
       case 'clean': return result(A.cleanCoop(s));
       case 'treat':
-        if (a1) return result(A.treat(s, Number(a1), a2 as never, a3));
+        if (a1) return result(A.treat(s, Number(a1), a2 as ConditionId, a3));
         return result(A.giveTreat(s));
       case 'shopcat': ui.shopCat = a1 as ShopCat; renderPanel(true); panelBody.scrollTop = 0; return;
       case 'mtab': ui.marketTab = a1 as MarketTab; renderPanel(true); panelBody.scrollTop = 0; return;
@@ -917,8 +935,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'order': return result(A.fulfillOrder(s, Number(a1)));
       case 'animal': ui.animalId = Number(a1); return openPanel('tier');
       case 'dispose': { const r = A.disposeBody(s, Number(a1)); if (r.ok) ui.panel = 'tiere'; return result(r); }
-      case 'sellAnimal': { const r = A.sellAnimal(s, Number(a1)); if (r.ok && ui.panel === 'tier') ui.panel = 'tiere'; return result(r); }
-      case 'butcher': { const r = A.butcher(s, Number(a1)); if (r.ok && ui.panel === 'tier') ui.panel = 'tiere'; return result(r); }
+      case 'sellAnimal': return result(leaveProfile(A.sellAnimal(s, Number(a1))));
+      case 'butcher': return result(leaveProfile(A.butcher(s, Number(a1))));
       case 'rename': {
         const an = s.animals.find(x => x.id === Number(a1));
         const name = prompt('Neuer Name:', an?.name ?? '');
@@ -972,8 +990,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const onKey = (e: KeyboardEvent) => {
     if ((e.target as HTMLElement).tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
     const k = e.key.toLowerCase();
-    const map: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean', l: 'lure' };
-    if (map[k]) { handle(map[k], document.body); e.preventDefault(); }
+    if (KEY_ACTS[k]) { handle(KEY_ACTS[k], document.body); e.preventDefault(); }
     else if (k === ' ') { s.speed = s.speed ? 0 : ui.lastSpeed; renderHud(); e.preventDefault(); }
     else if (k === '1' || k === '2' || k === '3') { const v = ([1, 2, 4] as const)[Number(k) - 1]; ui.lastSpeed = v; s.speed = v; renderHud(); }
     else if (k === 'escape') { if (ui.modal) handle('modal-ok', document.body); else { ui.panel = null; refreshAll(); } }

@@ -1,7 +1,7 @@
 import { BREEDS, DIFFICULTIES, HEN_NAMES, ROOSTER_NAMES, PERSONALITIES } from './data';
-import { between, chance, intBetween, pick } from './rng';
+import { between, chance, pick } from './rng';
 import type { Animal, BreedId, Difficulty, GameState, Goal, Personality, PlotId, Sex } from './types';
-import { albumKey, living, stage } from './helpers';
+import { age, albumKey, living, stage } from './helpers';
 import { ensureShow } from './show';
 
 export const SAVE_VERSION = 1;
@@ -154,13 +154,8 @@ export function randomVariant(s: GameState, breed: BreedId, uniform = false): st
 export function targetWeight(s: GameState, a: Animal): number {
   const b = BREEDS[a.breed];
   const full = a.sex === 'hahn' ? b.weightRooster : b.weightHen;
-  const d = s.day - a.hatchedDay;
-  const f = Math.min(1, 0.05 + d / 30);
+  const f = Math.min(1, 0.05 + age(s, a) / 30);
   return Math.round(full * f * (0.9 + 0.2 * (a.health / 100)) * 100) / 100;
-}
-
-export function randomAge(s: GameState, min: number, max: number) {
-  return intBetween(s, min, max);
 }
 
 /* ---------------- Speichern & Laden ---------------- */

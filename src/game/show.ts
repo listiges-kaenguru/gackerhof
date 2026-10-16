@@ -3,7 +3,7 @@ import {
   BREEDS, DAYS_PER_SEASON, SEASON_NAMES, SHOW_DAY, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SHOW_NOTICE, SHOW_TROPHY_PRIZE,
 } from './data';
 import {
-  addMoney, age, breedLabel, dayOfSeason, isSenior, living, log, season, stage, stars,
+  addMoney, age, breedLabel, dayOfSeason, isSenior, living, log, seasonOfDay, stage, stars,
 } from './helpers';
 import { intBetween } from './rng';
 import type { Animal, GameState, ShowResult } from './types';
@@ -15,13 +15,10 @@ export function ensureShow(s: GameState) {
   if (s.show && s.show.day >= s.day) return;
   let day = s.day - (dayOfSeason(s) - 1) + SHOW_DAY - 1;
   if (day < s.day || (day === s.day && s.hour >= 12)) day += DAYS_PER_SEASON;
-  s.show = { day, title: showName(s, day, 1), level: 1, entries: [], announced: false };
+  s.show = { day, title: showName(day, 1), level: 1, entries: [], announced: false };
 }
 
-function showName(s: GameState, day: number, level: 1 | 2) {
-  const se = season({ ...s, day });
-  return `${level === 2 ? 'Landes' : 'Kreis'}-${SHOW_NAMES[se]}`;
-}
+const showName = (day: number, level: 1 | 2) => `${level === 2 ? 'Landes' : 'Kreis'}-${SHOW_NAMES[seasonOfDay(day)]}`;
 
 /** Tage bis zur Schau, null wenn noch nicht angekündigt */
 export function showCountdown(s: GameState): number | null {
@@ -35,8 +32,8 @@ export function announceShow(s: GameState) {
   if (sh.announced || sh.day - s.day > SHOW_NOTICE) return;
   sh.announced = true;
   sh.level = stars(s) >= 4 ? 2 : 1;
-  sh.title = showName(s, sh.day, sh.level);
-  log(s, `🏆 ${sh.title} am Tag ${sh.day} (${SEASON_NAMES[season({ ...s, day: sh.day })]})! Du kannst bis zu ${SHOW_MAX} Rassetiere anmelden (Markt → Schau).${sh.level === 2 ? ' Dein guter Hof-Ruf bringt dich auf die Landesschau: doppelte Preise!' : ''}`, 'info', true);
+  sh.title = showName(sh.day, sh.level);
+  log(s, `🏆 ${sh.title} am Tag ${sh.day} (${SEASON_NAMES[seasonOfDay(sh.day)]})! Du kannst bis zu ${SHOW_MAX} Rassetiere anmelden (Markt → Schau).${sh.level === 2 ? ' Dein guter Hof-Ruf bringt dich auf die Landesschau: doppelte Preise!' : ''}`, 'info', true);
 }
 
 /** Darf das Tier ausgestellt werden? Liefert sonst den Grund. */

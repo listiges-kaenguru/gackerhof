@@ -1,9 +1,9 @@
 import './style.css';
-import { DIFFICULTIES, PLOTS } from './game/data';
+import { DIFFICULTIES, DIFFICULTY_ORDER, PLOTS } from './game/data';
 import { euro } from './game/helpers';
 import { refreshOffers } from './game/sim';
 import { load, newGame, save } from './game/state';
-import type { Difficulty, PlotId } from './game/types';
+import type { Difficulty, GameState, PlotId } from './game/types';
 import { startApp } from './ui/app';
 import { DEFS, INK, playerSvg } from './ui/art';
 import { infoLinks } from './ui/links';
@@ -38,7 +38,7 @@ function startScreen() {
           </label>
           <h2>Schwierigkeit</h2>
           <div class="choices three">
-            ${(Object.keys(DIFFICULTIES) as Difficulty[]).map(d => {
+            ${DIFFICULTY_ORDER.map(d => {
               const def = DIFFICULTIES[d];
               return `<button class="choice ${difficulty === d ? 'on' : ''}" data-diff="${d}"><span class="big-ico">${def.emoji}</span><b>${def.name}</b><small>${def.desc}</small><small class="money">Startgeld ${def.startMoney} €</small></button>`;
             }).join('')}
@@ -56,12 +56,19 @@ function startScreen() {
       </div>`;
   };
   render();
+  const nameInput = () => root.querySelector<HTMLInputElement>('#farm');
+  /** Neu zeichnen, ohne den schon eingetippten Hofnamen zu verlieren */
+  const rerender = (name?: string) => {
+    render();
+    const input = nameInput();
+    if (input && name != null) input.value = name;
+  };
   root.onclick = e => {
     const el = (e.target as Element).closest<HTMLElement>('[data-diff],[data-plot],[data-start]');
     if (!el) return;
-    const name = (root.querySelector('#farm') as HTMLInputElement | null)?.value;
-    if (el.dataset.diff) { difficulty = el.dataset.diff as Difficulty; render(); restoreName(name); }
-    if (el.dataset.plot) { plot = el.dataset.plot as PlotId; render(); restoreName(name); }
+    const name = nameInput()?.value;
+    if (el.dataset.diff) { difficulty = el.dataset.diff as Difficulty; rerender(name); }
+    if (el.dataset.plot) { plot = el.dataset.plot as PlotId; rerender(name); }
     if (el.dataset.start === 'continue' && saved) begin(saved);
     if (el.dataset.start === 'new') {
       const s = newGame({ farmName: (name || 'Mein Hof').trim(), difficulty, plot });
@@ -70,13 +77,9 @@ function startScreen() {
       begin(s);
     }
   };
-  function restoreName(name?: string) {
-    const input = root.querySelector('#farm') as HTMLInputElement | null;
-    if (input && name != null) input.value = name;
-  }
 }
 
-function begin(s: ReturnType<typeof newGame>) {
+function begin(s: GameState) {
   root.onclick = null;
   if (s.offersDay < 0) refreshOffers(s);
   startApp(root, s, startScreen);
