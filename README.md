@@ -4,6 +4,7 @@ Ein Aufbauspiel rund um die Hühnerhaltung, spielbar im Browser auf Desktop und 
 Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt deinen eigenen Hühnerhof auf.
 
 - 📄 Spielkonzept: [`KONZEPT.md`](KONZEPT.md)
+- 📦 Fertiger Build zum Selbst-Hosten: als ZIP bei den [Releases](https://github.com/listiges-kaenguru/gackerhof/releases)
 - 📝 Änderungen je Version: [`CHANGELOG.md`](CHANGELOG.md)
 - 💡 Ideen für später: [`IDEEN.md`](IDEEN.md)
 - 🎨 Grafikstil-Entwürfe: [`docs/stil-beispiele.html`](docs/stil-beispiele.html) (gewählt: Stil A, Cartoon)
@@ -56,6 +57,8 @@ Aufbau:
 Gehostet wird das Spiel bei ALL-INKL unter <https://gackerhof.schmaralde.de/>: nach `npm run build` den Inhalt von `dist/` hochladen,
 auch die versteckte Datei `.htaccess` (aus `public/`). Sie sorgt dafür, dass Browser neue Versionen sofort laden.
 Infoseite und Anleitung liegen im Projekt `../gackerhof-wiki` (<https://gackerhof-wiki.schmaralde.de/>).
+
+Jede Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release mit dem fertigen Build als ZIP (Inhalt von `dist/`, dazu `LICENSE` und `LIESMICH.txt`).
 
 Der Workflow `.github/workflows/pages.yml` baut das Spiel und veröffentlicht es auf GitHub Pages. Er läuft nur auf Knopfdruck
 (**Actions → Spiel veröffentlichen → Run workflow**), damit nichts versehentlich veröffentlicht wird. Dazu einmalig im
