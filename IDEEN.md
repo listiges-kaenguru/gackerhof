@@ -1,9 +1,17 @@
-# 💡 Ideen-Liste
+# 💡 Ideen & ToDo
 
-Sammlung von Ideen für spätere Versionen. Nichts davon ist fest eingeplant.
-Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
+Offene Punkte und Ideen für spätere Versionen. Nichts unter „Ideen“ ist fest eingeplant.
+Erledigtes wird hier gestrichen und ins [CHANGELOG](CHANGELOG.md) übernommen.
 
-## Spielstand & Speichern
+## ToDo
+
+- [ ] **Fehler: Gefrorene Tränke.** Bei Frost (unter 0 °C) können die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. `frozen()` hängt nur an der Tagestemperatur, und `hourly()` lässt bei `iced` gar nicht trinken. Auch die Bachpumpe hilft nicht. Die Meldungen („Wasser muss täglich neu aufgefüllt werden“, „Eis aufgehackt“) versprechen etwas anderes. Beheben, z. B. nach dem Aufhacken einige Stunden Trinken erlauben. Danach die Anleitung in `../gackerhof-wiki` (Tagesablauf, Shop, Tipps) anpassen.
+
+Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt.
+
+## Ideen
+
+### Spielstand & Speichern
 
 | Idee | Beschreibung | Aufwand |
 |---|---|---|
@@ -12,13 +20,13 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 | **Speichern auf dem Server** | Derselbe Hof auf allen Geräten. Braucht ein Backend mit Datenbank und Anmeldung, und der Webserver muss Code ausführen können (PHP, Node o. Ä.). | groß |
 | **Spielstand per QR-Code übertragen** | Alternative zum Datei-Export: Spielstand als QR-Code vom Rechner aufs Handy übertragen. | mittel |
 
-## Veröffentlichung
+### Veröffentlichung
 
 | Idee | Beschreibung | Aufwand |
 |---|---|---|
 | **Geschützter Zugang** | Online spielbar, aber nur für freigegebene Personen, z. B. über Cloudflare Pages mit Cloudflare Access. | mittel |
 
-## Gameplay (aus dem Konzept, noch offen)
+### Gameplay (aus dem Konzept, noch offen)
 
 - **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt), „Eiermillionär“
 - **Kapitel 4 „Rassezucht“ und 5 „Der große Hof“**
@@ -27,19 +35,13 @@ Umgesetzte Ideen wandern ins [CHANGELOG](CHANGELOG.md).
 - **Weitere Ereignisse:** Nachbar beschwert sich über den Hahn, verstecktes Nest suchen, ausgebüxtes Huhn einfangen
 - **Hühnermist als Dünger** im eigenen Gemüsebeet statt nur verkaufen
 
-## Verbesserungen aus Test
-
-Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt. Neue Testergebnisse gern wieder hier sammeln.
-
-- **ToDo – Fehler: Gefrorene Tränke.** Bei Frost (unter 0 °C) können die Hühner aus einer normalen Tränke den ganzen Tag nicht trinken, auch nicht nach „Eis aufgehackt“. `frozen()` hängt nur an der Tagestemperatur, und `hourly()` lässt bei `iced` gar nicht trinken. Auch die Bachpumpe hilft nicht. Die Meldungen („Wasser muss täglich neu aufgefüllt werden“, „Eis aufgehackt“) versprechen etwas anderes. Beheben, z. B. nach dem Aufhacken einige Stunden Trinken erlauben. Danach die Anleitung in `../gackerhof-wiki` (Tagesablauf, Shop, Tipps) anpassen.
-
-## Oberfläche & Präsentation
+### Oberfläche & Präsentation
 
 - **Sound:** Gackern, Hahnenschrei am Morgen, Hintergrundmusik (abschaltbar)
 - **Fotomodus** mit Rahmen zum Teilen
 - **Weitere Sprachen** (Texte zentral sammeln)
 
-## Spätere Erweiterungen
+### Spätere Erweiterungen
 
 - **Weitere Geflügelarten:** Laufenten (Wasserbecken, fressen Schnecken), Gänse (Grasweide, Wachgans gegen Füchse), Wachteln
 - **Game Over:** Wenn der Spieler längere Zeit pleite ist und kaum Chancen bestehen, das wieder aufzuholen, soll es ein Game Over geben. Dann muss er zurück in seinen langweiligen Büro-Job.

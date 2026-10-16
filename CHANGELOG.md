@@ -3,6 +3,13 @@
 Alle wichtigen Änderungen am Gackerhof stehen hier, die neuesten oben.
 Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
+## [Unveröffentlicht]
+
+### Intern
+- Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei ALL-INKL),
+  Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nur noch in der Entwurfssammlung,
+  `CLAUDE.md` und `CONTRIBUTING.md` ergänzt, `IDEEN.md` in ToDo und Ideen gegliedert.
+
 ## [0.3.3] – 2026-10-16
 
 Erster Release auf GitHub (Tag `v0.3.3`), weiterhin ein Prototyp. Den fertigen Build gibt es als ZIP beim Release. Fehlerbehebungen und aufgeräumter Code, am Spiel selbst ändert sich nichts.
