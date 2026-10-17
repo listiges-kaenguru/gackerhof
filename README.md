@@ -42,8 +42,11 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 ```bash
 npm install
 npm run dev      # Entwicklungsserver auf http://localhost:5173
-npm test         # Tests für Spiellogik und Balancing
-npm run build    # Produktions-Build nach dist/
+npm test               # Tests für Spiellogik, Balancing, Speichern/Import, Versionsprüfung
+npm run test:coverage  # dazu Zeilen-Coverage (Bericht in coverage/)
+npm run test:mutation  # Mutation Testing der Spiellogik mit Stryker (dauert, Bericht in reports/)
+npm run test:browser   # Browsertest: präparierte Spielstände importieren (braucht Playwright, siehe CLAUDE.md)
+npm run build          # Produktions-Build nach dist/
 ```
 
 Aufbau:
@@ -52,7 +55,7 @@ Aufbau:
 |---|---|
 | `src/game/` | Spiellogik ohne Grafik: Daten, Simulation, Aktionen, Speichern |
 | `src/ui/` | Oberfläche: Cartoon-Grafiken (SVG), Hof-Szene, Panels |
-| `tests/` | Vitest-Tests, u. a. ein simulierter Spieler über 60 Tage |
+| `tests/` | Vitest-Tests (u. a. ein simulierter Spieler über 60 Tage), Browsertest, Spielstände früherer Versionen |
 
 ## Veröffentlichen
 

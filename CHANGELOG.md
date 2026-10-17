@@ -5,6 +5,25 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Sicherheit
+
+- Spielstände aus fremden Dateien werden vor dem Laden vollständig geprüft. Bisher ließ sich über eine präparierte Datei
+  (z. B. in einer Tier-ID oder einer Zahl) Code in die Seite einschleusen. Zusätzlich gibt die Oberfläche IDs, Zähler
+  und Geldbeträge nur noch als Zahl aus.
+
+### Behoben
+
+- Ein kaputter oder unvollständiger Spielstand wird beim Import abgelehnt („kein gültiger Spielstand“), statt das Spiel
+  abstürzen zu lassen und den bisherigen Hof zu überschreiben. Spielstände früherer Versionen laden weiter.
+
+### Intern
+- Mutation Testing über Stryker mit Command-Runner (`npx vitest run`): Der Vitest-Runner von Stryker 10 schaltet mit
+  Vitest 5 die Mutanten nicht ein und meldete deshalb fast alle als überlebt.
+
+- Neue Tests: Speichern und Import (auch mit Spielständen aus 0.2.1, 0.3.3 und 0.4.0), Versionsprüfung ohne Netz,
+  Spieleraktionen mit Geld, Browsertest für präparierte Spielstände. Coverage (`npm run test:coverage`) und
+  Mutation Testing mit Stryker (`npm run test:mutation`) eingerichtet.
+
 ## [0.4.0] – 2026-10-17
 
 Mehr Langzeitspaß, weiterhin ein Prototyp. Im ersten Winter verdurstet die Herde nicht mehr, Krankheiten kosten weniger, und neue Einnahmen und Großpackungen bringen den Hof leichter ins Plus. Dazu kommen eine Finanzübersicht, Hofbesuche und eine Versionsprüfung. Spielstände aus 0.3.3 lassen sich weiterspielen.

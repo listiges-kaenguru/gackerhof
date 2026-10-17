@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation Testing der Spiellogik (npm run test:mutation). Command-Runner, weil der Vitest-Runner von Stryker 10 mit Vitest 5 die Mutanten nicht einschaltet (geprüft 2026-10-17: auch entfernte Prüfungen 'überlebten'). Reine Daten (data.ts, types.ts) sind ausgenommen.",
+  "testRunner": "command",
+  "coverageAnalysis": "off",
+  "mutate": [
+    "src/game/**/*.ts",
+    "!src/game/data.ts",
+    "!src/game/types.ts"
+  ],
+  "reporters": [
+    "clear-text",
+    "progress",
+    "json"
+  ],
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  },
+  "tempDirName": ".stryker-tmp",
+  "concurrency": 4,
+  "commandRunner": {
+    "command": "npx vitest run --bail=1 --reporter=dot"
+  }
+}

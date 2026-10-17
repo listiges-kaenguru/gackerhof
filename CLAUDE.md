@@ -17,7 +17,13 @@ Aufbauspiel rund um die Hühnerhaltung im Browser (TypeScript, Vite, PWA). Live 
 - Keine externen Ressourcen zur Laufzeit (Schrift Fredoka liegt in `public/fonts/`). Einzige Ausnahme: die
   Versionsprüfung in `src/ui/update.ts` (GitHub-API, höchstens einmal am Tag); sie steht im Datenschutz im Wiki.
 - Spiellogik in `src/game/` ohne Grafik, Oberfläche in `src/ui/`. Neue Logik mit Tests in `tests/` absichern.
-- Vor jedem Commit: `npm test` und `npm run build` (inkl. `tsc --noEmit`).
+- Vor jedem Commit: `~/projects/testumgebung/pt test` (Vitest, Build mit `tsc --noEmit`, Browsertest).
+- Spielstände aus fremder Quelle (Import, localStorage) prüft `src/game/validate.ts` vor dem Laden. Neue Felder im
+  Spielstand dort ergänzen (für ältere Stände optional) – sonst lehnt der Import sie ab. `tests/spielstaende/` enthält
+  echte Exporte früherer Versionen; sie müssen weiter laden.
+- Werte aus dem Spielstand nie roh in HTML: Texte mit `esc()`, IDs und Zähler mit `num()` (`src/ui/scene.ts`).
+- Coverage: `npm run test:coverage`, Mutation Testing: `npm run test:mutation` (Stryker, Spiellogik). Der Browsertest
+  (`tests/browser.mjs`) nutzt Playwright aus der Testumgebung (`$PW`), keine eigene Abhängigkeit.
 - Version in `package.json` erhöhen; das Spiel zeigt sie unter **Mehr** an.
 - Neue Entwicklungsdateien in `.gitattributes` als `export-ignore` eintragen (Release-ZIP nur mit Benötigtem).
 - **Wiki mitziehen:** Ändern sich Zahlen, Regeln oder Bedienung, die Seiten in `../gackerhof-wiki` anpassen

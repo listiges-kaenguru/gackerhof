@@ -503,6 +503,10 @@ function rndIn(r: { x0: number; x1: number; y0: number; y1: number }): [number, 
   return [r.x0 + Math.random() * (r.x1 - r.x0), r.y0 + Math.random() * (r.y1 - r.y0)];
 }
 const dist = (sp: Sprite) => Math.hypot(sp.tx - sp.x, sp.ty - sp.y);
+/** Zahl für HTML: ganzzahlig erzwingen, damit IDs und Zähler aus dem Spielstand nie HTML werden (zweite Sicherung) */
+export function num(v: unknown): number {
+  return Math.trunc(Number(v)) || 0;
+}
 export function esc(t: string) {
   return t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
