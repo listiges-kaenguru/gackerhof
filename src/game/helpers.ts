@@ -259,7 +259,8 @@ export function butcherValue(s: GameState, a: Animal): number {
 }
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 export const euro = (n: number) =>
-  n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  // Number(): zweite Sicherung, falls doch einmal kein Zahlwert ankommt – ein Text bliebe sonst unverändert (HTML)
+  (Number(n) || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
 /* ---------------- Meldungen ---------------- */
 export function log(s: GameState, text: string, kind: LogEntry['kind'] = 'info', toast = false) {

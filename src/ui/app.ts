@@ -18,7 +18,7 @@ import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
 import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer } from '../game/types';
 import { portrait } from './art';
-import { Scene, esc } from './scene';
+import { Scene, esc, num } from './scene';
 import { tutorialStep } from './tutorial';
 import { infoLinks, SOURCE_URL, WIKI_URL } from './links';
 import { updateInfo } from './update';
@@ -131,7 +131,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     else if (!s.equip.drinker) out.push({ icon: '🛒', text: 'Tipp: Eine Tränke aufstellen', act: 'open:shop:wasser', kind: 'info' });
     else if (!s.equip.feeder) out.push({ icon: '🛒', text: 'Tipp: Eine Futterstelle kaufen', act: 'open:shop:futter', kind: 'info' });
     else if (!living(s).length && !dead(s).length) out.push({ icon: '🐣', text: 'Tipp: Hühner auf dem Markt kaufen', act: 'open:markt', kind: 'info' });
-    for (const a of dead(s)) out.push({ icon: '🕊️', text: `${a.name} entsorgen (${DISPOSAL_COST} €)`, act: `animal:${a.id}`, kind: 'bad' });
+    for (const a of dead(s)) out.push({ icon: '🕊️', text: `${a.name} entsorgen (${DISPOSAL_COST} €)`, act: `animal:${num(a.id)}`, kind: 'bad' });
     if (s.foxAlertDay === s.day && f.length) out.push({ icon: '🦊', text: `Fuchs in der Nähe! Schutz ${Math.round(foxProtection(s) * 100)} %`, act: 'open:hof', kind: 'bad' });
     if (hawkNow && outsideAnimals(s).length) out.push({ icon: '🦅', text: 'Habicht! Hühner reinlocken', act: 'lure', kind: 'bad' });
     const locked = lockedOut(s);
@@ -164,7 +164,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (f.length && !s.doorOpen && !locked.length && s.hour >= 7 && s.hour < 19 && !(eventActive(s, 'stallpflicht') && !has(s, 'netz')) && s.hawkAlertDay !== s.day) out.push({ icon: '🚪', text: 'Klappe öffnen', act: 'door', kind: 'info' });
     if (s.equip.coop && s.cleanliness < 35) out.push({ icon: '🧹', text: 'Stall ausmisten', act: 'clean', kind: 'warn' });
     if (crowding(s) > 1) out.push({ icon: '😤', text: 'Zu eng! Mehr Platz schaffen', act: 'open:hof', kind: 'warn' });
-    for (const a of living(s).filter(x => x.broodyUntil >= s.day)) out.push({ icon: '🪺', text: `${a.name} ist brütig`, act: `animal:${a.id}`, kind: 'good' });
+    for (const a of living(s).filter(x => x.broodyUntil >= s.day)) out.push({ icon: '🪺', text: `${a.name} ist brütig`, act: `animal:${num(a.id)}`, kind: 'good' });
     if (eventActive(s, 'stallpflicht')) out.push({ icon: '📢', text: 'Stallpflicht!', act: 'door', kind: 'warn' });
     const showIn = showCountdown(s);
     if (showIn != null && showIn >= 0 && (s.show!.entries.length || living(s).some(a => !showProblem(s, a)))) {
@@ -470,14 +470,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           const check = o.kind === 'legehenne'
             ? (o.checked
               ? `<span class="tag ${o.hiddenMites || (o.hiddenAge ?? 0) > 300 ? 'bad' : 'good'}">🔍 ${daysText(o.hiddenAge ?? 0)} alt, ${o.hiddenMites ? 'hat Milben!' : 'gesund'}</span>`
-              : `<button class="btn small" data-act="check:${o.id}">🔍 Check ${HEALTH_CHECK_COST} €</button>`)
+              : `<button class="btn small" data-act="check:${num(o.id)}">🔍 Check ${HEALTH_CHECK_COST} €</button>`)
             : '';
           return `<div class="offer">
             <span class="offer-ico">${kindIcon(o)}</span>
             <div class="offer-main"><b>${kindName[o.kind]}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
             <div class="offer-buy">
-              <button class="btn primary" data-act="offer:${o.id}:1" ${s.money < o.price ? 'disabled' : ''}>+1</button>
-              ${o.qty > 1 ? `<button class="btn small" data-act="offer:${o.id}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
+              <button class="btn primary" data-act="offer:${num(o.id)}:1" ${s.money < o.price ? 'disabled' : ''}>+1</button>
+              ${o.qty > 1 ? `<button class="btn small" data-act="offer:${num(o.id)}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
             </div></div>`;
         }).join('')}</section>`).join('') : '<p class="muted">Alles ausverkauft.</p>') +
         `<p class="muted">Neue Angebote in ${next} Tag${next === 1 ? '' : 'en'}. Jede Woche gibt es mindestens einen Hahn und Bruteier. Aus Bruteiern schlüpfen etwa zur Hälfte Hähne.</p>`;
@@ -497,8 +497,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         ${living(s).length ? living(s).map(a => `<div class="offer">
           <span class="offer-ico">${pic(a)}</span>
           <div class="offer-main"><b>${esc(a.name)}</b> · ${stageName(s, a)}<br><small>${breedOf(a)} · ${ageText(s, a)}</small></div>
-          <div class="offer-buy">${confirmBtn(`sellAnimal:${a.id}`, `Markt ${euro(animalValue(s, a))}`, 'Wirklich?', 'small')}
-            ${stage(s, a) !== 'kueken' ? confirmBtn(`butcher:${a.id}`, `Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich?', 'small') : ''}</div>
+          <div class="offer-buy">${confirmBtn(`sellAnimal:${num(a.id)}`, `Markt ${euro(animalValue(s, a))}`, 'Wirklich?', 'small')}
+            ${stage(s, a) !== 'kueken' ? confirmBtn(`butcher:${num(a.id)}`, `Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich?', 'small') : ''}</div>
         </div>`).join('') : '<p class="muted">Keine Tiere.</p>'}
       </section>`;
   }
@@ -581,7 +581,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <h3>${esc(o.customer)}</h3>
         <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
         <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
-        ${confirmBtn(`order:${o.id}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        ${confirmBtn(`order:${num(o.id)}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
       </section>`;
     }).join('');
   }
@@ -604,7 +604,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   function animalRow(a: Animal): string {
     const icons = a.dead ? '🕊️' : a.conditions.map(c => CONDITIONS[c.id].emoji).join('') + (a.water < 30 ? '💧' : '') + (a.food < 30 ? '🌾' : '') + (a.broodyUntil >= s.day ? '🪺' : '') + (a.broodingUntil > s.day ? '🥚' : '');
     const h = a.dead ? 0 : a.health;
-    return `<button class="animal-row ${a.dead ? 'is-dead' : ''}" data-act="animal:${a.id}">
+    return `<button class="animal-row ${a.dead ? 'is-dead' : ''}" data-act="animal:${num(a.id)}">
       ${pic(a, a.dead)}
       <span class="ar-main"><b>${esc(a.name)}</b> <small>${a.dead ? `† ${a.deathCause}` : `${stageName(s, a)} · ${breedOf(a)} · ${ageText(s, a)}`}</small>
         ${a.dead ? '' : `<span class="mini"><i style="width:${h}%" class="${h < 40 ? 'bad' : h < 70 ? 'warn' : ''}"></i></span>`}</span>
@@ -617,7 +617,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (a.dead) {
       return `<div class="pet-head">${pic(a, true)}<div><h3>${esc(a.name)}</h3><p>${breedOf(a)} · ${a.deathCause} (Tag ${a.deathDay})</p></div></div>
         <p class="muted">Ein totes Tier kann nicht mehr geschlachtet werden. Die Tierkörperbeseitigung muss bezahlt werden. Bis dahin steigt das Krankheitsrisiko für die anderen Tiere.</p>
-        <button class="btn primary" data-act="dispose:${a.id}">🕊️ Entsorgen lassen (${DISPOSAL_COST} €)</button>`;
+        <button class="btn primary" data-act="dispose:${num(a.id)}">🕊️ Entsorgen lassen (${DISPOSAL_COST} €)</button>`;
     }
     const st = stage(s, a);
     const conds = a.conditions.map(c => {
@@ -629,11 +629,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
           if (cu.maxSeverity != null && c.severity > cu.maxSeverity) {
             return `<button class="btn" disabled>${cu.label} <small>(nur bis ${cu.maxSeverity} %)</small></button>`;
           }
-          return `<button class="btn" data-act="treat:${a.id}:${c.id}:${cu.id}">${cu.label} <small>${inStock ? '(im Lager)' : euro(price)}</small></button>`;
+          return `<button class="btn" data-act="treat:${num(a.id)}:${c.id}:${cu.id}">${cu.label} <small>${inStock ? '(im Lager)' : euro(price)}</small></button>`;
         }).join('')}</div></div>`;
     }).join('');
     const broody = a.broodyUntil >= s.day
-      ? `<div class="goodbox">🪺 ${esc(a.name)} ist brütig! ${s.hatchEggs.length ? `<button class="btn primary" data-act="brood:${a.id}">${Math.min(8, s.hatchEggs.length)} Bruteier unterlegen</button>` : 'Du hast keine Bruteier im Lager. Kauf welche auf dem Markt oder halte einen Hahn.'}</div>`
+      ? `<div class="goodbox">🪺 ${esc(a.name)} ist brütig! ${s.hatchEggs.length ? `<button class="btn primary" data-act="brood:${num(a.id)}">${Math.min(8, s.hatchEggs.length)} Bruteier unterlegen</button>` : 'Du hast keine Bruteier im Lager. Kauf welche auf dem Markt oder halte einen Hahn.'}</div>`
       : '';
     const brooding = a.broodingUntil > s.day ? `<div class="goodbox">🥚 Brütet ${a.broodEggs.length} Eier aus. Schlupf in ${a.broodingUntil - s.day} Tag(en).</div>` : '';
     const withdrawal = a.withdrawalUntil >= s.day ? `<p class="warnbox">💊 Medikamenten-Wartezeit bis Tag ${a.withdrawalUntil}: Eier werden entsorgt, Schlachten ist nicht erlaubt.</p>` : '';
@@ -643,7 +643,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       : '';
     return `
       <div class="pet-head">${pic(a)}
-        <div><h3>${esc(a.name)} <button class="link" data-act="rename:${a.id}" aria-label="Umbenennen">✏️</button></h3>
+        <div><h3>${esc(a.name)} <button class="link" data-act="rename:${num(a.id)}" aria-label="Umbenennen">✏️</button></h3>
         <p>${breedOf(a)} · ${sexKnown(s, a) ? (a.sex === 'henne' ? '♀ Henne' : '♂ Hahn') : 'Geschlecht und Farbe noch unklar'} · ${ageText(s, a)}</p>
         <p class="muted">${stageName(s, a)} · Persönlichkeit: ${PERSONALITIES[a.personality]}</p></div></div>
       ${broody}${brooding}${withdrawal}
@@ -653,8 +653,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       ${a.history.length ? `<p class="muted">📜 ${a.history.map(esc).join(' · ')} · seit Tag ${a.arrivedDay} auf dem Hof</p>` : ''}
       <p class="muted">${BREEDS[a.breed].desc}</p>
       <div class="row">
-        ${confirmBtn(`sellAnimal:${a.id}`, `Verkaufen ${euro(animalValue(s, a))}`, 'Wirklich verkaufen?')}
-        ${st !== 'kueken' ? confirmBtn(`butcher:${a.id}`, `Zum Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich zum Schlachter?') : ''}
+        ${confirmBtn(`sellAnimal:${num(a.id)}`, `Verkaufen ${euro(animalValue(s, a))}`, 'Wirklich verkaufen?')}
+        ${st !== 'kueken' ? confirmBtn(`butcher:${num(a.id)}`, `Zum Schlachter ${euro(butcherValue(s, a))}`, 'Wirklich zum Schlachter?') : ''}
       </div>
       <p class="muted small">Beim Schlachter gibt es Gewicht × Kilopreis abzüglich Gebühr. Kranke Tiere und Tiere in der Wartezeit werden nicht angenommen.</p>`;
   }
@@ -684,8 +684,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       if (a.weight / full < 0.95) tips.push('zu leicht');
       if (s.cleanliness < 60) tips.push('Stall ausmisten (Gefieder)');
       const btn = !sh?.announced ? '' : entered
-        ? `<button class="btn small" data-act="show:${a.id}">Abmelden</button>`
-        : `<button class="btn small primary" data-act="show:${a.id}" ${why || sh.entries.length >= SHOW_MAX || s.money < SHOW_FEE ? 'disabled' : ''}>Anmelden</button>`;
+        ? `<button class="btn small" data-act="show:${num(a.id)}">Abmelden</button>`
+        : `<button class="btn small primary" data-act="show:${num(a.id)}" ${why || sh.entries.length >= SHOW_MAX || s.money < SHOW_FEE ? 'disabled' : ''}>Anmelden</button>`;
       return `<div class="offer ${entered ? 'entered' : ''}">
         <span class="offer-ico">${pic(a)}</span>
         <div class="offer-main"><b>${esc(a.name)}</b>${entered ? ' <span class="tag good">angemeldet</span>' : ''}<br><small>${breedOf(a)} · ${ageText(s, a)}</small><br>
@@ -782,7 +782,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <p>Einnahmen gesamt: <b class="good">${euro(s.stats.income)}</b> · Ausgaben gesamt: <b class="bad">${euro(s.stats.expenses)}</b></p>
         <p>Nächste Monatsabrechnung in ${DAYS_PER_SEASON + 1 - dayOfSeason(s)} Tagen: Pacht ${PLOTS[s.plot].rent} € + Strom/Wasser ca. ${euro(s.pendingCosts)}</p>
         ${s.debt > 0 ? `<p>Schulden: <b class="bad">${euro(s.debt)}</b></p><button class="btn" data-act="repay">Zurückzahlen</button>` : ''}
-        <p class="muted">${s.stats.eggsSold} Eier verkauft · ${s.stats.hatched} Küken geschlüpft · ${s.stats.deaths} Tiere gestorben, davon ${s.stats.predatorLosses} durch Raubtiere</p>
+        <p class="muted">${num(s.stats.eggsSold)} Eier verkauft · ${num(s.stats.hatched)} Küken geschlüpft · ${num(s.stats.deaths)} Tiere gestorben, davon ${num(s.stats.predatorLosses)} durch Raubtiere</p>
       </section>
       <section class="card"><h3>🎩 Dein Hut</h3>
         <div class="row">${hats.map(h => `<button class="chipbtn ${s.hat === h ? 'on' : ''}" data-act="hat:${h}">${HATS[h]}</button>`).join('')}<button class="chipbtn ${!s.hat ? 'on' : ''}" data-act="hat:none">Ohne</button></div>
@@ -835,7 +835,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     } else if (ui.modal.kind === 'gameover') {
       html = `<div class="opa">😢</div><h2>Der Hof muss aufgeben</h2>
         <p>Kein Geld und keine Tiere mehr. Nach ${s.day} Tagen ist Schluss.</p>
-        <p>${s.stats.eggsSold} Eier verkauft · ${s.stats.hatched} Küken geschlüpft.</p>
+        <p>${num(s.stats.eggsSold)} Eier verkauft · ${num(s.stats.hatched)} Küken geschlüpft.</p>
         <p>Opa Heinz meint: „Kopf hoch! Jeder fängt mal klein an. Nächstes Mal klappt's.“</p>
         <button class="btn primary big" data-act="newgame-now">Nochmal versuchen</button>`;
     } else if (ui.modal.kind === 'help') {

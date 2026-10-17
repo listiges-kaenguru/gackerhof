@@ -112,6 +112,7 @@ function removeExtra(s: GameState, id: string) {
 /** Gebrauchte Ausrüstung verkaufen (40 % des Neupreises) */
 export function sellItem(s: GameState, id: string): Result {
   const it = ITEM[id];
+  if (!it) return fail('Nicht vorhanden.');
   if (it.cosmetic) return fail('Gimmicks kann man nicht verkaufen.');
   const value = round2(it.price * 0.4);
   if (it.slot && s.equip[it.slot] === id) {
@@ -537,7 +538,9 @@ export function repayDebt(s: GameState): Result {
 }
 
 export function lowerDifficulty(s: GameState, to: Difficulty): Result {
-  if (DIFFICULTY_ORDER.indexOf(to) >= DIFFICULTY_ORDER.indexOf(s.difficulty)) return fail('Der Schwierigkeitsgrad kann nur gesenkt werden.');
+  if (!DIFFICULTY_ORDER.includes(to) || DIFFICULTY_ORDER.indexOf(to) >= DIFFICULTY_ORDER.indexOf(s.difficulty)) {
+    return fail('Der Schwierigkeitsgrad kann nur gesenkt werden.');
+  }
   s.difficulty = to;
   return ok(`Schwierigkeitsgrad ist jetzt ${DIFFICULTIES[to].name}.`);
 }

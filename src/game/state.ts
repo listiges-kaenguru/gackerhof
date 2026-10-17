@@ -2,6 +2,7 @@ import { BREEDS, DIFFICULTIES, HEN_NAMES, ROOSTER_NAMES, PERSONALITIES } from '.
 import { between, chance, pick } from './rng';
 import type { Animal, BreedId, Difficulty, GameState, Goal, Personality, PlotId, Sex } from './types';
 import { age, albumKey, living, stage } from './helpers';
+import { isValidSave } from './validate';
 import { ensureShow } from './show';
 
 export const SAVE_VERSION = 1;
@@ -168,8 +169,9 @@ export function load(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const s = JSON.parse(raw) as GameState;
-    if (s.version !== SAVE_VERSION) return null;
+    const s: unknown = JSON.parse(raw);
+    // Auch der localStorage ist eine fremde Quelle (von Hand oder durch Erweiterungen veränderbar)
+    if (!isValidSave(s, SAVE_VERSION)) return null;
     return migrate(s);
   } catch {
     return null;
@@ -211,8 +213,8 @@ export function exportSave(s: GameState): string {
 }
 export function importSave(json: string): GameState | null {
   try {
-    const s = JSON.parse(json) as GameState;
-    if (s.version !== SAVE_VERSION || !Array.isArray(s.animals)) return null;
+    const s: unknown = JSON.parse(json);
+    if (!isValidSave(s, SAVE_VERSION)) return null;
     return migrate(s);
   } catch {
     return null;

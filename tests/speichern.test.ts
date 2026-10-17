@@ -141,3 +141,18 @@ describe('Speichern und Laden im Browser-Speicher', () => {
     expect(() => clearSave()).not.toThrow();
   });
 });
+
+describe('Spielstände früherer Versionen', () => {
+  // Echte Exporte, erzeugt mit dem Code der jeweiligen Version (Hof mit 4 Hühnern nach 10 Spieltagen)
+  const dateien = import.meta.glob<string>('./spielstaende/*.json', { query: '?raw', import: 'default', eager: true });
+  it.each(['v0.2.1', 'v0.3.3', 'v0.4.0'])('lädt einen Spielstand aus %s und spielt weiter', tag => {
+    const json = dateien[`./spielstaende/${tag}.json`];
+    expect(json).toBeTypeOf('string');
+    const s = importSave(json);
+    expect(s).not.toBeNull();
+    expect(s!.farmName).toBe(`Hof aus ${tag}`);
+    expect(s!.animals).toHaveLength(4);
+    expect(() => { for (let i = 0; i < 48; i++) advanceHour(s!); }).not.toThrow();
+    expect(Number.isFinite(s!.money)).toBe(true);
+  });
+});
