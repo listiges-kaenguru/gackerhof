@@ -3,7 +3,7 @@
 // bleiben (48 Spielstunden ohne Fehler, Geld bleibt eine endliche Zahl).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceHour } from '../src/game/sim';
-import { clearSave, exportSave, importSave, load, newGame, save } from '../src/game/state';
+import { clearSave, createAnimal, exportSave, importSave, load, newGame, save } from '../src/game/state';
 import type { GameState } from '../src/game/types';
 
 /** Einfacher localStorage im Speicher; mit kaputt = true wirft jeder Zugriff (z. B. privater Modus, Speicher voll) */
@@ -78,6 +78,30 @@ describe('Import eines Spielstands', () => {
     abgelehntOderSpielbar(alsJson(basis(), aenderung));
   });
 
+  // Genau ein Feld eines sonst gültigen Hofs mit Tieren verfälscht: Die Prüfung muss genau dieses Feld erkennen
+  const mitTieren = () => {
+    const s = basis();
+    for (let i = 0; i < 24 * 3; i++) advanceHour(s);
+    s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 200 }), createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 200 }));
+    expect(importSave(exportSave(s))).not.toBeNull();
+    return s;
+  };
+  type Tier = Record<string, unknown>;
+  it.each([
+    ['Tier-ID als Text mit HTML', (o: Record<string, unknown>) => { (o.animals as Tier[])[0].id = '1"><img src=x onerror=alert(1)>'; }],
+    ['Tier-ID negativ', (o: Record<string, unknown>) => { (o.animals as Tier[])[0].id = -1; }],
+    ['Tier-ID nicht unter nextId', (o: Record<string, unknown>) => { o.nextId = 0; }],
+    ['doppelte Tier-ID', (o: Record<string, unknown>) => { (o.animals as Tier[])[1].id = (o.animals as Tier[])[0].id; }],
+    ['unbekannte Rasse', (o: Record<string, unknown>) => { (o.animals as Tier[])[0].breed = 'drache'; }],
+    ['unbekannte Rasse bei Bruteiern', (o: Record<string, unknown>) => { o.hatchEggs = [{ breed: 'drache' }]; }],
+    ['unbekannte Rasse im Marktangebot', (o: Record<string, unknown>) => { (o.offers as Tier[])[0].breed = 'drache'; }],
+    ['unbekannter Farbschlag', (o: Record<string, unknown>) => { (o.animals as Tier[])[0].variant = '<b>x</b>'; }],
+    ['Statistik als Text', (o: Record<string, unknown>) => { (o.stats as Record<string, unknown>).eggsSold = '<img src=x onerror=alert(1)>'; }],
+    ['Statistik fehlt', (o: Record<string, unknown>) => { delete (o.stats as Record<string, unknown>).income; }],
+  ])('lehnt ab: %s', (_, aenderung) => {
+    expect(importSave(alsJson(mitTieren(), aenderung))).toBeNull();
+  });
+
   it('verschmutzt keine Prototypen (__proto__ im Spielstand)', () => {
     const json = alsJson(basis()).replace(/^\{/, '{"__proto__":{"verschmutzt":true},"constructor":{"prototype":{"auch":true}},');
     const s = importSave(json);
@@ -127,6 +151,14 @@ describe('Speichern und Laden im Browser-Speicher', () => {
     expect(load()).toBeNull();
     lokal.daten.set('gackerhof-save-v1', JSON.stringify({ version: 99 }));
     expect(load()).toBeNull();
+  });
+  it('liefert nichts bei verändertem Inhalt mit gültiger Version (localStorage ist eine fremde Quelle)', () => {
+    lokal.daten.set('gackerhof-save-v1', alsJson(basis(), o => { o.animals = [{ id: '<img src=x onerror=alert(1)>' }]; }));
+    expect(load()).toBeNull();
+    lokal.daten.set('gackerhof-save-v1', alsJson(basis(), o => { o.money = 'viel'; }));
+    expect(load()).toBeNull();
+    lokal.daten.set('gackerhof-save-v1', alsJson(basis()));
+    expect(load()?.farmName).toBe('Testhof');
   });
   it('speichert keine Hinweis-Meldungen mit', () => {
     const s = basis();
