@@ -9,9 +9,15 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
+    "test:browser": "node tests/browser.mjs"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "typescript": "~5.9",
     "vite": "^8.3.3",
     "vitest": "^5.0.3"

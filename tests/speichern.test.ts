@@ -1,0 +1,143 @@
+// Speichern, Laden und Import – auch mit kaputten oder präparierten Spielständen.
+// Ein importierter Spielstand kommt aus einer fremden Datei: Er muss abgelehnt werden oder danach spielbar
+// bleiben (48 Spielstunden ohne Fehler, Geld bleibt eine endliche Zahl).
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { advanceHour } from '../src/game/sim';
+import { clearSave, exportSave, importSave, load, newGame, save } from '../src/game/state';
+import type { GameState } from '../src/game/types';
+
+/** Einfacher localStorage im Speicher; mit kaputt = true wirft jeder Zugriff (z. B. privater Modus, Speicher voll) */
+function speicher(kaputt = false) {
+  const daten = new Map<string, string>();
+  const fehler = () => { throw new Error('Speicher gesperrt'); };
+  return {
+    getItem: (k: string) => (kaputt ? fehler() : daten.get(k) ?? null),
+    setItem: (k: string, v: string) => (kaputt ? fehler() : void daten.set(k, v)),
+    removeItem: (k: string) => (kaputt ? fehler() : void daten.delete(k)),
+    daten,
+  };
+}
+
+const basis = () => newGame({ farmName: 'Testhof', difficulty: 'mittel', plot: 'obst', seed: 42 });
+const alsJson = (s: GameState, aenderung: (o: Record<string, unknown>) => void = () => {}) => {
+  const o = JSON.parse(exportSave(s)) as Record<string, unknown>;
+  aenderung(o);
+  return JSON.stringify(o);
+};
+/** Abgelehnt (null) oder spielbar: 48 Stunden ohne Fehler, Geld endlich */
+function abgelehntOderSpielbar(json: string) {
+  const s = importSave(json);
+  if (s === null) return;
+  expect(() => { for (let i = 0; i < 48; i++) advanceHour(s); }).not.toThrow();
+  expect(Number.isFinite(s.money)).toBe(true);
+  expect(Array.isArray(s.animals)).toBe(true);
+}
+
+describe('Import eines Spielstands', () => {
+  it('übernimmt einen exportierten Spielstand unverändert', () => {
+    const s = basis();
+    for (let i = 0; i < 30; i++) advanceHour(s);
+    const zurueck = importSave(exportSave(s))!;
+    expect(zurueck).not.toBeNull();
+    expect({ ...zurueck, toasts: [] }).toEqual({ ...s, toasts: [] });
+  });
+
+  it.each([
+    ['kaputtes JSON', '{"version":'],
+    ['leere Datei', ''],
+    ['null', 'null'],
+    ['Text', '"Spielstand"'],
+    ['Zahl', '42'],
+    ['Liste', '[]'],
+  ])('lehnt %s ab', (_, json) => {
+    expect(importSave(json)).toBeNull();
+  });
+
+  it('lehnt eine fremde Version ab', () => {
+    expect(importSave(alsJson(basis(), o => { o.version = 99; }))).toBeNull();
+    expect(importSave(alsJson(basis(), o => { o.version = '1'; }))).toBeNull();
+  });
+
+  it('lehnt Spielstände ohne Tierliste ab', () => {
+    expect(importSave(alsJson(basis(), o => { delete o.animals; }))).toBeNull();
+    expect(importSave(alsJson(basis(), o => { o.animals = 'keine'; }))).toBeNull();
+  });
+
+  it.each([
+    ['leeres Tier', (o: Record<string, unknown>) => { o.animals = [{}]; }],
+    ['null als Tier', (o: Record<string, unknown>) => { o.animals = [null]; }],
+    ['Geld als Text', (o: Record<string, unknown>) => { o.money = '1000'; }],
+    ['Geld unendlich', (o: Record<string, unknown>) => { o.money = 1e309; }],
+    ['negativer Tag', (o: Record<string, unknown>) => { o.day = -5; }],
+    ['Stunde 99', (o: Record<string, unknown>) => { o.hour = 99; }],
+    ['Lager null', (o: Record<string, unknown>) => { o.inventory = null; }],
+    ['unbekannte Schwierigkeit', (o: Record<string, unknown>) => { o.difficulty = 'unmoeglich'; }],
+    ['unbekanntes Grundstück', (o: Record<string, unknown>) => { o.plot = 'mond'; }],
+    ['Ausrüstung fehlt', (o: Record<string, unknown>) => { delete o.equip; }],
+  ])('%s: abgelehnt oder weiter spielbar', (_, aenderung) => {
+    abgelehntOderSpielbar(alsJson(basis(), aenderung));
+  });
+
+  it('verschmutzt keine Prototypen (__proto__ im Spielstand)', () => {
+    const json = alsJson(basis()).replace(/^\{/, '{"__proto__":{"verschmutzt":true},"constructor":{"prototype":{"auch":true}},');
+    const s = importSave(json);
+    if (s) for (let i = 0; i < 5; i++) advanceHour(s);
+    expect(({} as Record<string, unknown>).verschmutzt).toBeUndefined();
+    expect(({} as Record<string, unknown>).auch).toBeUndefined();
+  });
+
+  it('bleibt bei einer sehr großen Datei schnell', () => {
+    const riesig = alsJson(basis(), o => { o.farmName = 'x'.repeat(10_000_000); });
+    const start = performance.now();
+    importSave(riesig);
+    expect(performance.now() - start).toBeLessThan(2000);
+  });
+
+  it('ergänzt bei älteren Spielständen die neuen Felder', () => {
+    const json = alsJson(basis(), o => {
+      for (const k of ['pasture', 'pastureSide', 'pastureSwitchDay', 'lightOn', 'trophies', 'album', 'marketVersion', 'banners']) delete o[k];
+    });
+    const s = importSave(json)!;
+    expect(s.pasture).toEqual([100, 100]);
+    expect(s.lightOn).toBe(true);
+    expect(s.trophies).toEqual([]);
+    expect(s.marketVersion).toBe(2);
+    expect(() => { for (let i = 0; i < 24; i++) advanceHour(s); }).not.toThrow();
+  });
+});
+
+describe('Speichern und Laden im Browser-Speicher', () => {
+  let lokal: ReturnType<typeof speicher>;
+  beforeEach(() => { lokal = speicher(); vi.stubGlobal('localStorage', lokal); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('lädt einen gespeicherten Spielstand', () => {
+    const s = basis();
+    save(s);
+    expect(load()?.farmName).toBe('Testhof');
+  });
+  it('liefert nichts ohne Spielstand oder nach dem Löschen', () => {
+    expect(load()).toBeNull();
+    save(basis());
+    clearSave();
+    expect(load()).toBeNull();
+  });
+  it('liefert nichts bei kaputtem oder fremdem Inhalt', () => {
+    lokal.daten.set('gackerhof-save-v1', '{kaputt');
+    expect(load()).toBeNull();
+    lokal.daten.set('gackerhof-save-v1', JSON.stringify({ version: 99 }));
+    expect(load()).toBeNull();
+  });
+  it('speichert keine Hinweis-Meldungen mit', () => {
+    const s = basis();
+    s.toasts = [{ id: 1, text: 'flüchtig', kind: 'info' } as never];
+    save(s);
+    expect(JSON.parse(lokal.daten.get('gackerhof-save-v1')!).toasts).toEqual([]);
+  });
+  it('läuft weiter, wenn der Speicher gesperrt ist', () => {
+    vi.stubGlobal('localStorage', speicher(true));
+    expect(() => save(basis())).not.toThrow();
+    expect(load()).toBeNull();
+    expect(() => clearSave()).not.toThrow();
+  });
+});

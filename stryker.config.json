@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation Testing der Spiellogik (npm run test:mutation). Reine Daten (data.ts, types.ts) sind ausgenommen.",
+  "testRunner": "vitest",
+  "coverageAnalysis": "perTest",
+  "mutate": ["src/game/**/*.ts", "!src/game/data.ts", "!src/game/types.ts"],
+  "reporters": ["clear-text", "progress", "json"],
+  "jsonReporter": { "fileName": "reports/mutation/mutation.json" },
+  "thresholds": { "high": 80, "low": 60, "break": null },
+  "tempDirName": ".stryker-tmp",
+  "concurrency": 4
+}
