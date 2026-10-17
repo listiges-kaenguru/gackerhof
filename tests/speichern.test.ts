@@ -102,6 +102,45 @@ describe('Import eines Spielstands', () => {
     expect(importSave(alsJson(mitTieren(), aenderung))).toBeNull();
   });
 
+  // Optionale Felder, die ein frischer Hof noch nicht hat (Schau, Besuch, Finanzen …): gefüllt gültig, verfälscht abgelehnt
+  type O = Record<string, unknown>;
+  const voll = (o: O) => {
+    o.incubator = [{ breed: 'hybrid', hatchDay: 30, candled: false }];
+    o.show = { day: 20, title: 'Kreisschau', level: 1, entries: [1], announced: true };
+    o.lastShow = { title: 'Frühjahrsschau', day: 5, results: [{ animalId: 1, name: 'Berta', breed: 'hybrid', points: 90, grade: 'sg', prize: 5, trophy: false }] };
+    o.trophies = [{ day: 5, title: 'Pokal', animal: 'Berta', breed: 'hybrid' }];
+    o.album = { hybrid: { day: 2, name: 'Berta' } };
+    o.finance = { cur: { eier: 3 }, prev: { futter: -2 }, results: [1, -2] };
+    o.visit = { group: 'Kita', day: 9, fee: 20, accepted: false };
+    o.visitEffect = { until: 12, points: 3 };
+    o.celebrations = [{ emoji: '🎉', title: 'Geschafft', lines: ['eins'] }];
+    o.report = ['Tagesbericht'];
+  };
+  it('übernimmt einen Spielstand mit allen optionalen Feldern', () => {
+    const s = importSave(alsJson(basis(), voll));
+    expect(s).not.toBeNull();
+    expect(s!.show?.title).toBe('Kreisschau');
+    expect(s!.visit?.group).toBe('Kita');
+  });
+  it.each([
+    ['Brutei ohne Schlupftag', (o: O) => { (o.incubator as O[])[0].hatchDay = 'bald'; }],
+    ['Schau mit Stufe 3', (o: O) => { (o.show as O).level = 3; }],
+    ['Schau-Teilnehmer als Text', (o: O) => { (o.show as O).entries = ['<b>'] ; }],
+    ['Schau-Ergebnis ohne Punkte', (o: O) => { ((o.lastShow as O).results as O[])[0].points = '100'; }],
+    ['Pokal mit unbekannter Rasse', (o: O) => { (o.trophies as O[])[0].breed = 'drache'; }],
+    ['Album-Eintrag ohne Namen', (o: O) => { (o.album as O).hybrid = { day: 2 }; }],
+    ['Finanzen mit Text', (o: O) => { (o.finance as O).cur = { eier: '<img>' }; }],
+    ['Finanzen Vormonat kaputt', (o: O) => { (o.finance as O).prev = 'x'; }],
+    ['Besuch mit negativer Gebühr', (o: O) => { (o.visit as O).fee = -5; }],
+    ['Besuchseffekt ohne Punkte', (o: O) => { o.visitEffect = { until: 3 }; }],
+    ['Feier mit Zeilen als Text', (o: O) => { (o.celebrations as O[])[0].lines = 'eine'; }],
+    ['Bericht mit Zahl', (o: O) => { o.report = [42]; }],
+    ['Weide mit drei Werten', (o: O) => { o.pasture = [1, 2, 3]; }],
+    ['Ereignis unbekannt', (o: O) => { o.events = [{ id: 'erdbeben', until: 3 }]; }],
+  ])('lehnt ab: %s', (_, aenderung) => {
+    expect(importSave(alsJson(basis(), o => { voll(o); aenderung(o); }))).toBeNull();
+  });
+
   it('verschmutzt keine Prototypen (__proto__ im Spielstand)', () => {
     const json = alsJson(basis()).replace(/^\{/, '{"__proto__":{"verschmutzt":true},"constructor":{"prototype":{"auch":true}},');
     const s = importSave(json);
