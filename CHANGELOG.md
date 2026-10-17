@@ -17,6 +17,8 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   abstürzen zu lassen und den bisherigen Hof zu überschreiben. Spielstände früherer Versionen laden weiter.
 
 ### Intern
+- Mutation Testing über Stryker mit Command-Runner (`npx vitest run`): Der Vitest-Runner von Stryker 10 schaltet mit
+  Vitest 5 die Mutanten nicht ein und meldete deshalb fast alle als überlebt.
 
 - Neue Tests: Speichern und Import (auch mit Spielständen aus 0.2.1, 0.3.3 und 0.4.0), Versionsprüfung ohne Netz,
   Spieleraktionen mit Geld, Browsertest für präparierte Spielstände. Coverage (`npm run test:coverage`) und
