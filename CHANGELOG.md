@@ -5,6 +5,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+## [0.4.1] – 2026-10-18
+
+Sicherheitskorrektur für den Import von Spielständen. Spielstände aus 0.4.0 und früher lassen sich weiterspielen.
+
 ### Sicherheit
 
 - Spielstände aus fremden Dateien werden vor dem Laden vollständig geprüft. Bisher ließ sich über eine präparierte Datei
@@ -17,12 +21,12 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   abstürzen zu lassen und den bisherigen Hof zu überschreiben. Spielstände früherer Versionen laden weiter.
 
 ### Intern
-- Mutation Testing über Stryker mit Command-Runner (`npx vitest run`): Der Vitest-Runner von Stryker 10 schaltet mit
-  Vitest 5 die Mutanten nicht ein und meldete deshalb fast alle als überlebt.
 
 - Neue Tests: Speichern und Import (auch mit Spielständen aus 0.2.1, 0.3.3 und 0.4.0), Versionsprüfung ohne Netz,
   Spieleraktionen mit Geld, Browsertest für präparierte Spielstände. Coverage (`npm run test:coverage`) und
   Mutation Testing mit Stryker (`npm run test:mutation`) eingerichtet.
+- Stryker nutzt den Command-Runner (`npx vitest run`): Der Vitest-Runner von Stryker 10 schaltet mit Vitest 5 die
+  Mutanten nicht ein und meldete deshalb fast alle als überlebt.
 
 ## [0.4.0] – 2026-10-17
 
