@@ -13,6 +13,9 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Konfiguration ändern, weil Stryker mit dem Command-Runner sonst veraltete Ergebnisse übernehmen würde.
 - Der Stryker-Befehl ruft Vitest direkt auf und lässt Testdateien aus, die die Spiellogik nicht laden. Das spart pro
   Mutant etwa ein Drittel der Zeit (Stichprobe `state.ts`: 194 statt 288 Sekunden).
+- Jeder Vitest-Lauf im Stryker-Befehl nutzt höchstens 2 Worker, die Zeitgrenze liegt 10 statt 5 Sekunden über dem
+  ersten Testlauf. Ohne Begrenzung startete jeder Lauf einen Thread je Testdatei; bei 4 parallelen Läufen wurden so
+  Hunderte Mutanten fälschlich als Timeout und damit als erkannt gezählt.
 
 ## [0.4.1] – 2026-10-18
 
