@@ -16,6 +16,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - Jeder Vitest-Lauf im Stryker-Befehl nutzt höchstens 2 Worker, die Zeitgrenze liegt 10 statt 5 Sekunden über dem
   ersten Testlauf. Ohne Begrenzung startete jeder Lauf einen Thread je Testdatei; bei 4 parallelen Läufen wurden so
   Hunderte Mutanten fälschlich als Timeout und damit als erkannt gezählt.
+- Neue Tests für die Prüfung fremder Spielstände (`tests/validate.test.ts`, direkt und Feld für Feld), für neuen Hof,
+  neue Tiere und ältere Spielstände (`tests/state.test.ts`) und für die genaue Wirkung der Spieleraktionen auf Geld,
+  Finanzkategorien, Lager und Tiere (`tests/aktionen-wirkung.test.ts`). Mutation Score im Kernumfang von 52 % auf
+  93,7 % (validate 99 %, state 98 %, actions 90 %); übrig sind vor allem Meldungstexte und gleichwertige Mutanten.
+  Der alte Bericht vom 17./18.10. hatte viele Mutanten fälschlich als erkannt gezählt.
 
 ## [0.4.1] – 2026-10-18
 
