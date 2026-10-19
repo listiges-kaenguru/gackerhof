@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:coverage": "vitest run --coverage",
-    "test:mutation": "stryker run",
+    "test:mutation": "node scripts/mutation.ts",
+    "test:mutation:alle": "node scripts/mutation.ts alle",
     "test:browser": "node tests/browser.mjs"
   },
   "devDependencies": {

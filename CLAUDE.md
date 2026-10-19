@@ -22,8 +22,14 @@ Aufbauspiel rund um die Hühnerhaltung im Browser (TypeScript, Vite, PWA). Live 
   Spielstand dort ergänzen (für ältere Stände optional) – sonst lehnt der Import sie ab. `tests/spielstaende/` enthält
   echte Exporte früherer Versionen; sie müssen weiter laden.
 - Werte aus dem Spielstand nie roh in HTML: Texte mit `esc()`, IDs und Zähler mit `num()` (`src/ui/scene.ts`).
-- Coverage: `npm run test:coverage`, Mutation Testing: `npm run test:mutation` (Stryker, Spiellogik). Der Browsertest
-  (`tests/browser.mjs`) nutzt Playwright aus der Testumgebung (`$PW`), keine eigene Abhängigkeit.
+- Coverage: `npm run test:coverage`. Der Browsertest (`tests/browser.mjs`) nutzt Playwright aus der Testumgebung
+  (`$PW`), keine eigene Abhängigkeit.
+- Mutation Testing (Stryker) über `scripts/mutation.ts`: `npm run test:mutation` mutiert nur `validate.ts`,
+  `state.ts`, `actions.ts`, `npm run test:mutation:alle` die ganze Spiellogik. Beide laufen inkrementell
+  (`reports/mutation/inkrementell-*.json`) und prüfen nur geänderten Code neu. Weil der Command-Runner keine
+  Testzuordnung kennt, erzwingt das Skript einen kompletten Neulauf (`--force`), sobald sich `tests/` (außer
+  `browser.mjs`), `stryker.config.json`, `vite.config.ts` oder `package-lock.json` ändern. Neue Testdateien, die
+  `src/game` nicht laden, im Stryker-Befehl ausschließen (`--exclude`); sie kosten pro Mutant nur Zeit.
 - Version in `package.json` erhöhen; das Spiel zeigt sie unter **Mehr** an.
 - Neue Entwicklungsdateien in `.gitattributes` als `export-ignore` eintragen (Release-ZIP nur mit Benötigtem).
 - **Wiki mitziehen:** Ändern sich Zahlen, Regeln oder Bedienung, die Seiten in `../gackerhof-wiki` anpassen

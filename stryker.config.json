@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "Mutation Testing der Spiellogik (npm run test:mutation). Command-Runner, weil der Vitest-Runner von Stryker 10 mit Vitest 5 die Mutanten nicht einschaltet (geprüft 2026-10-17: auch entfernte Prüfungen 'überlebten'). Reine Daten (data.ts, types.ts) sind ausgenommen.",
+  "_comment": "Mutation Testing der Spiellogik, Start über scripts/mutation.ts (npm run test:mutation bzw. test:mutation:alle). Command-Runner, weil der Vitest-Runner von Stryker 10 mit Vitest 5 die Mutanten nicht einschaltet (geprüft 2026-10-17: auch entfernte Prüfungen 'überlebten'). Reine Daten (data.ts, types.ts) sind ausgenommen. Der Befehl lässt Testdateien aus, die src/game nicht laden, und ruft Vitest direkt auf (ein Drittel schneller als npx, gemessen 2026-10-19). Mehr als 4 parallel bringt kaum etwas und führt zu Timeouts. --maxWorkers=2 und timeoutMS 10000: Ohne Begrenzung startet jeder Lauf einen Thread je Testdatei; bei 4 parallelen Läufen wurden am 2026-10-19 so 590 Mutanten fälschlich als Timeout (= erkannt) gezählt.",
   "testRunner": "command",
   "coverageAnalysis": "off",
   "mutate": [
@@ -24,6 +24,7 @@
   "tempDirName": ".stryker-tmp",
   "concurrency": 4,
   "commandRunner": {
-    "command": "npx vitest run --bail=1 --reporter=dot"
-  }
+    "command": "node_modules/.bin/vitest run --bail=1 --reporter=dot --pool=threads --maxWorkers=2 --exclude tests/versionspruefung.test.ts --exclude tests/update.test.ts --exclude tests/mutation-skript.test.ts"
+  },
+  "timeoutMS": 10000
 }

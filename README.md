@@ -44,7 +44,8 @@ npm install
 npm run dev      # Entwicklungsserver auf http://localhost:5173
 npm test               # Tests für Spiellogik, Balancing, Speichern/Import, Versionsprüfung
 npm run test:coverage  # dazu Zeilen-Coverage (Bericht in coverage/)
-npm run test:mutation  # Mutation Testing der Spiellogik mit Stryker (dauert, Bericht in reports/)
+npm run test:mutation  # Mutation Testing mit Stryker: validate, state, actions (inkrementell, Bericht in reports/)
+npm run test:mutation:alle  # dasselbe für die ganze Spiellogik (erster Lauf dauert Stunden)
 npm run test:browser   # Browsertest: präparierte Spielstände importieren (braucht Playwright, siehe CLAUDE.md)
 npm run build          # Produktions-Build nach dist/
 ```
