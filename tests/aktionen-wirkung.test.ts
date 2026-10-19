@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
 import { BREEDS, HEN_NAMES, PREVENTION_DAYS, SOUP_AGE } from '../src/game/data';
-import { eggValue, hourIndex, ICE_FREE_HOURS } from '../src/game/helpers';
+import { eggValue, hourIndex, ICE_FREE_HOURS, round2 } from '../src/game/helpers';
 import { createAnimal, newGame } from '../src/game/state';
 import type { Animal, Difficulty, GameState } from '../src/game/types';
 
@@ -1058,6 +1058,31 @@ describe('Kundenaufträge', () => {
     expect(A.fulfillOrder(s, 1)).toEqual({ ok: false, msg });
     expect(s.animals).toHaveLength(1);
     expect(s.orders).toHaveLength(1);
+  });
+});
+
+describe('Finanzkategorien', () => {
+  it('Gesundheitscheck zählt als Tierkauf, Eier und Bruteier als Eier, Tilgung als Kredit', () => {
+    const s = ausgeruestet();
+    s.offers = [angebot({})];
+    A.healthCheck(s, 1);
+    expect(fin(s, 'tierkauf')).toBe(-3);
+    s.eggs = { hybrid: 4 };
+    A.sellEggs(s);
+    s.hatchEggs = [{ breed: 'hybrid', fertile: true }];
+    A.sellHatchEggs(s);
+    expect(fin(s, 'eier')).toBe(round2(eggValue(hof(), { hybrid: 4 }) + 1.05));
+    s.debt = 50;
+    A.repayDebt(s);
+    expect(fin(s, 'kredit')).toBe(-50);
+  });
+
+  it('Bruteier: Meldung nennt, wie sie verkauft wurden', () => {
+    const s = hof();
+    s.hatchEggs = [{ breed: 'hybrid', fertile: true }];
+    expect(A.sellHatchEggs(s).msg).toBe('1 Eier als Bruteier für 1.05 € verkauft.');
+    s.hatchEggs = [{ breed: 'hybrid', fertile: true }];
+    expect(A.sellHatchEggs(s, true).msg).toContain('als Speiseeier');
   });
 });
 
