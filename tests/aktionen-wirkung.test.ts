@@ -91,6 +91,12 @@ describe('Lagerplatz', () => {
   it('anderes Material ist nicht begrenzt', () => {
     expect(A.storageProblem(hof(), 'mehlwuermer', 1000)).toBeNull();
   });
+
+  it('nennt den Futterbestand mit einer Nachkommastelle und Komma', () => {
+    const s = hof();
+    s.inventory.koerner = 55.46;
+    expect(A.storageProblem(s, 'koerner', 10)).toContain('(jetzt 55,5 kg)');
+  });
 });
 
 describe('Kaufen erlaubt?', () => {
@@ -151,6 +157,18 @@ describe('Ausrüstung kaufen', () => {
     const s = hof();
     A.buyItem(s, 'knoten');
     expect(s.money).toBe(940);
+  });
+
+  it('ein neuer Zaun warnt nicht vor Platzmangel, eine neue Tränke lässt das Futter in Ruhe', () => {
+    const s = ausgeruestet();
+    s.equip.feeder = 'silo';
+    tier(s);
+    s.feed = 5;
+    const hinweise = s.toasts.length;
+    A.buyItem(s, 'maschen');
+    A.buyItem(s, 'nippel');
+    expect(s.toasts.length).toBe(hinweise);
+    expect(s.feed).toBe(5);
   });
 
   it('beim Wechsel weg vom Elektronetz verschwindet das Weidezaungerät, anderes Zubehör bleibt', () => {
@@ -360,6 +378,10 @@ describe('Hühner reinlocken', () => {
     const s = hof();
     s.inventory.koerner = 5;
     expect(A.lureIn(s).ok).toBe(false);
+    const a = tier(s);
+    a.outside = true;
+    expect(A.lureIn(s).ok).toBe(false);
+    a.outside = false;
     s.equip.coop = 'kiste';
     expect(A.lureIn(s)).toEqual({ ok: false, msg: 'Alle Hühner sind schon im Stall.' });
     expect(s.inventory.koerner).toBe(5);
@@ -425,6 +447,10 @@ describe('Wasser und Futter', () => {
   });
 
   it('bei Frost wird auch eine volle Tränke aufgehackt und bleibt eine Weile eisfrei', () => {
+    const ohne = hof();
+    ohne.temperature = -5;
+    expect(A.refillWater(ohne).ok).toBe(false);
+    expect(ohne.iceFreeUntil).toBeUndefined();
     const s = hof();
     s.equip.drinker = 'eimer';
     s.temperature = -5;
@@ -962,6 +988,19 @@ describe('Kundenaufträge', () => {
     tier(s, { ageDays: 200 });
     tier(s, { ageDays: 5 });
     expect(A.orderAnimals(s, 'junghenne')).toEqual([passt, grenze]);
+  });
+
+  it('Junghennen behalten ihre Reihenfolge (nicht nach Alter sortiert)', () => {
+    const s = hof();
+    const jung = tier(s, { ageDays: 12 });
+    const alt = tier(s, { ageDays: 20 });
+    expect(A.orderAnimals(s, 'junghenne')).toEqual([jung, alt]);
+  });
+
+  it('unbekannter Auftrag', () => {
+    const s = hof();
+    s.orders = [auftrag({ id: 1 })];
+    expect(A.fulfillOrder(s, 99)).toEqual({ ok: false, msg: 'Auftrag nicht mehr verfügbar.' });
   });
 
   it('Suppenhühner: ab genau 240 Tagen, die ältesten zuerst', () => {
