@@ -5,6 +5,15 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Intern
+
+- Mutation Testing schneller: `npm run test:mutation` prüft nur noch `validate.ts`, `state.ts` und `actions.ts`, die
+  ganze Spiellogik läuft mit `npm run test:mutation:alle`. Beide Läufe sind inkrementell und prüfen nur geänderten
+  Code neu. Das Startskript `scripts/mutation.ts` erzwingt einen kompletten Neulauf, sobald sich Tests oder
+  Konfiguration ändern, weil Stryker mit dem Command-Runner sonst veraltete Ergebnisse übernehmen würde.
+- Der Stryker-Befehl ruft Vitest direkt auf und lässt Testdateien aus, die die Spiellogik nicht laden. Das spart pro
+  Mutant etwa ein Drittel der Zeit (Stichprobe `state.ts`: 194 statt 288 Sekunden).
+
 ## [0.4.1] – 2026-10-18
 
 Sicherheitskorrektur für den Import von Spielständen. Spielstände aus 0.4.0 und früher lassen sich weiterspielen.
