@@ -5,6 +5,10 @@ Erledigtes wird hier gestrichen und ins [CHANGELOG](CHANGELOG.md) übernommen.
 
 ## ToDo
 
+- [ ] `npm audit` meldet eine Lücke in `qs` (devDependency, DoS in `qs.stringify`,
+  [GHSA-q8mj-m7cp-5q26](https://github.com/advisories/GHSA-q8mj-m7cp-5q26)). Betrifft nur die Entwicklung, nicht das
+  ausgelieferte Spiel: aktualisieren, danach Vitest, Build und Browsertest.
+
 Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.2.0](CHANGELOG.md) umgesetzt.
 
 ## Ideen
