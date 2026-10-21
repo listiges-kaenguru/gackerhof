@@ -21,6 +21,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Finanzkategorien, Lager und Tiere (`tests/aktionen-wirkung.test.ts`). Mutation Score im Kernumfang von 52 % auf
   93,7 % (validate 99 %, state 98 %, actions 90 %); übrig sind vor allem Meldungstexte und gleichwertige Mutanten.
   Der alte Bericht vom 17./18.10. hatte viele Mutanten fälschlich als erkannt gezählt.
+- Hinweise für Mitwirkende (`CLAUDE.md`, README, CHANGELOG) allgemein formuliert, ohne lokale Pfade, Hoster-Namen und eigene Werkzeuge.; Release-Ablauf vollständig in `CLAUDE.md`.
 
 ## [0.4.1] – 2026-10-18
 
@@ -77,7 +78,7 @@ Mehr Langzeitspaß, weiterhin ein Prototyp. Im ersten Winter verdurstet die Herd
 - Die Bachpumpe friert nicht mehr ein und versorgt die Tränke auch bei Frost, wie die Wasserleitung.
 
 ### Intern
-- Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei ALL-INKL),
+- Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei einem eigenen Webhoster),
   Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nur noch in der Entwurfssammlung,
   `CLAUDE.md` und `CONTRIBUTING.md` ergänzt, `IDEEN.md` in ToDo und Ideen gegliedert.
 
