@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Browsertest: präparierte Spielstände über das echte Dateifeld importieren und prüfen, dass kein
 // eingeschleuster Code läuft und das Spiel nicht abstürzt. Jeder Fall läuft in einer frischen Browser-Seite.
-// Läuft in der Testumgebung (Playwright und Chromium aus dem Image, Pfad in $PW):
-//   ~/projects/testumgebung/pt node tests/browser.mjs
+// Braucht Playwright und Chromium (Pfad zur package.json in $PW), am besten in einem Container:
+//   node tests/browser.mjs
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-if (!process.env.PW) { console.error('$PW fehlt – in der Testumgebung ausführen: ~/projects/testumgebung/pt node tests/browser.mjs'); process.exit(2); }
+if (!process.env.PW) { console.error('$PW fehlt – zeigt auf die package.json eines installierten Playwright (siehe README)'); process.exit(2); }
 const { chromium } = createRequire(process.env.PW)('playwright');
 const { createServer } = await import(createRequire(join(ROOT, 'package.json')).resolve('vite'));
 

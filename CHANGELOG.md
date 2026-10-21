@@ -22,6 +22,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   93,7 % (validate 99 %, state 98 %, actions 90 %); übrig sind vor allem Meldungstexte und gleichwertige Mutanten.
   Der alte Bericht vom 17./18.10. hatte viele Mutanten fälschlich als erkannt gezählt.
 - Hinweise für Mitwirkende (`CLAUDE.md`, README, CHANGELOG) allgemein formuliert, ohne lokale Pfade, Hoster-Namen und eigene Werkzeuge.; Release-Ablauf vollständig in `CLAUDE.md`.
+- Testskripte nennen in Meldungen und Kommentaren keinen lokalen Pfad mehr, sondern verweisen auf einen Container mit den Testwerkzeugen und die README.
 
 ## [0.4.1] – 2026-10-18
 
