@@ -23,6 +23,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Der alte Bericht vom 17./18.10. hatte viele Mutanten fälschlich als erkannt gezählt.
 - Hinweise für Mitwirkende (`CLAUDE.md`, README, CHANGELOG) allgemein formuliert, ohne lokale Pfade, Hoster-Namen und eigene Werkzeuge.; Release-Ablauf vollständig in `CLAUDE.md`.
 - Testskripte nennen in Meldungen und Kommentaren keinen lokalen Pfad mehr, sondern verweisen auf einen Container mit den Testwerkzeugen und die README.
+- Hinweise für Mitwirkende beziehen sich nicht mehr auf andere Projekte; jedes Projekt ist für sich beschrieben.
 
 ## [0.4.1] – 2026-10-18
 
@@ -80,7 +81,7 @@ Mehr Langzeitspaß, weiterhin ein Prototyp. Im ersten Winter verdurstet die Herd
 
 ### Intern
 - Repository aufgeräumt: GitHub-Pages-Workflow entfernt (nicht genutzt, das Spiel liegt bei einem eigenen Webhoster),
-  Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nur noch in der Entwurfssammlung,
+  Spielkonzept nach `docs/KONZEPT.md` verschoben, Grafikstil-Entwürfe liegen nicht mehr im Repo,
   `CLAUDE.md` und `CONTRIBUTING.md` ergänzt, `IDEEN.md` in ToDo und Ideen gegliedert.
 
 ## [0.3.3] – 2026-10-16

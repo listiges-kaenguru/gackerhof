@@ -62,7 +62,7 @@ Aufbau:
 
 Gehostet wird das Spiel als statische Seite unter <https://gackerhof.schmaralde.de/> (Apache): nach `npm run build` den Inhalt von `dist/` hochladen,
 auch die versteckte Datei `.htaccess` (aus `public/`). Sie sorgt dafür, dass Browser neue Versionen sofort laden.
-Infoseite und Anleitung liegen im Projekt `../gackerhof-wiki` (<https://gackerhof-wiki.schmaralde.de/>).
+Infoseite und Anleitung: <https://gackerhof-wiki.schmaralde.de/>.
 
 Jede Version bekommt einen Tag `vX.Y.Z` und ein GitHub-Release mit dem fertigen Build als ZIP (Inhalt von `dist/`, dazu `LICENSE` und `LIESMICH.txt`).
 

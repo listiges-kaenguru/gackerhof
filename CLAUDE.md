@@ -1,7 +1,7 @@
 # Gackerhof – Hinweise für Claude
 
 Aufbauspiel rund um die Hühnerhaltung im Browser (TypeScript, Vite, PWA). Live unter
-<https://gackerhof.schmaralde.de/>, Infoseite und Anleitung im Projekt `../gackerhof-wiki`.
+<https://gackerhof.schmaralde.de/>, Infoseite und Anleitung: <https://gackerhof-wiki.schmaralde.de/>.
 
 ## Orientierung
 
@@ -34,15 +34,14 @@ Aufbauspiel rund um die Hühnerhaltung im Browser (TypeScript, Vite, PWA). Live 
 - Bewusste Testlücke: `src/ui/app.ts` und `scene.ts` haben keine Unit-Tests, nur den Browsertest.
 - Version in `package.json` erhöhen; das Spiel zeigt sie unter **Mehr** an.
 - Neue Entwicklungsdateien in `.gitattributes` als `export-ignore` eintragen (Release-ZIP nur mit Benötigtem).
-- **Wiki mitziehen:** Ändern sich Zahlen, Regeln oder Bedienung, die Seiten in `../gackerhof-wiki` anpassen
-  (dort `GAME_VERSION` in `scripts/nav.mjs`).
+- Ändern sich Zahlen, Regeln oder Bedienung, das im CHANGELOG deutlich nennen: Die Anleitung im Wiki gibt sie
+  wieder.
 
 ## Release
 
 Ablauf: Release-PR mit Versionssprung und CHANGELOG-Abschnitt → nach dem Merge annotierter Tag `vX.Y.Z` auf den
 Merge-Commit und GitHub-Release mit dem fertigen Build als ZIP `gackerhof-X.Y.Z.zip` (Ordner `gackerhof-X.Y.Z/` mit dem
-Inhalt von `dist/` inkl. `.htaccess`, dazu `LICENSE` und `LIESMICH.txt`). Danach `dist/` hochladen, live prüfen und das
-Wiki mitziehen.
+Inhalt von `dist/` inkl. `.htaccess`, dazu `LICENSE` und `LIESMICH.txt`). Danach `dist/` hochladen und live prüfen.
 
 - `LIESMICH.txt` liegt nicht im Repo: Vorlage aus der ZIP des Vorgänger-Releases holen
   (`gh release download vX.Y.Z -p '*.zip'`, Datei `gackerhof-X.Y.Z/LIESMICH.txt`) und die Versionsnummern ersetzen.
