@@ -323,8 +323,9 @@ Das Spiel ist in lockere **Kapitel** gegliedert. Jedes Kapitel hat 3–5 Ziele u
 1. **„Die ersten Eier“:** Gehege bauen, 3 Hühner kaufen, 10 Eier verkaufen
 2. **„Eigene Nachzucht“:** Hahn kaufen, erstes Küken schlüpfen lassen, ein Junghuhn aufziehen
 3. **„Der Hofladen“:** Hofladen bauen, 3 Sterne erreichen, 5 Aufträge erfüllen
-4. **„Rassezucht“:** 3 Rassen halten, an einer Geflügelschau teilnehmen
-5. **„Der große Hof“:** zweites Grundstück, 50 Tiere, vollständige Automatisierung
+4. **„Rassezucht“:** 3 Hühnerrassen halten (ohne Legehybriden), an einer Geflügelschau teilnehmen, ein Tier mit
+   „sehr gut“, 8 Album-Einträge
+5. **„Der große Hof“:** 25 Tiere, 4 Sterne, eine weitere Geflügelart, 1.000 verkaufte Eier, 10 erfüllte Aufträge
 
 Daneben gibt es **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt) oder „Eiermillionär“ (10.000 Eier).
 

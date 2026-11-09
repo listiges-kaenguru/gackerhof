@@ -35,11 +35,7 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
   [`docs/LANGZEIT.md`](docs/LANGZEIT.md)
 
 - **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt), „Eiermillionär“
-- **Kapitel 4 „Rassezucht“ und 5 „Der große Hof“**
-- **Kundenaufträge** („Bäckerei Krause braucht 30 Eier bis Freitag“)
 - **Abnutzung und Reparatur** von Ausrüstung
-- **Weitere Ereignisse:** Nachbar beschwert sich über den Hahn, verstecktes Nest suchen, ausgebüxtes Huhn einfangen
-- **Hühnermist als Dünger** im eigenen Gemüsebeet statt nur verkaufen
 
 ### Oberfläche & Präsentation
 
@@ -49,4 +45,3 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 
 ### Spätere Erweiterungen
 
-- **Weitere Geflügelarten:** Laufenten (Wasserbecken, fressen Schnecken), Gänse (Grasweide, Wachgans gegen Füchse), Wachteln

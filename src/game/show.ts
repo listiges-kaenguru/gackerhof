@@ -39,6 +39,7 @@ export function announceShow(s: GameState) {
 /** Darf das Tier ausgestellt werden? Liefert sonst den Grund. */
 export function showProblem(s: GameState, a: Animal): string | null {
   if (a.dead) return 'tot';
+  if (BREEDS[a.breed].species) return 'Auf der Geflügelschau sind nur Hühner zugelassen';
   if (!BREEDS[a.breed].showBreed) return 'Hybriden sind auf Rasseschauen nicht zugelassen';
   if (stage(s, a) !== 'erwachsen') return 'noch nicht ausgewachsen';
   if (a.conditions.length) return 'krank';

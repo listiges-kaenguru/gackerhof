@@ -1,14 +1,16 @@
 // Der Hof als lebendige SVG-Szene. Statische Teile werden nur bei Änderungen neu gezeichnet,
 // die Tiere bewegen sich in jedem Frame.
-import { BREEDS, CONDITIONS } from '../game/data';
+import { BREEDS, CONDITIONS, POND_BAD, SPECIES } from '../game/data';
 import {
-  autoWater, drinkerCap, feederCap, flock, frozen, has, headingIn, isDaytime, lightActive, nestCount, season, stage, worstCondition,
+  autoWater, drinkerCap, feederCap, flock, frozen, has, headingIn, isDaytime, lightActive, nestCount, season, speciesOf, stage, worstCondition,
 } from '../game/helpers';
+import { bedState } from '../game/beet';
+import { ESCAPE_REGION } from '../game/ereignisse';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
 import type { Animal, GameState } from '../game/types';
 import {
-  COOP_GEO, DEFS, INK, breedStyle, coopSvg, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg, trophySvg,
+  COOP_GEO, DEFS, INK, breedStyle, coopSvg, figure, drinkerSvg, feederSvg, fenceSvg, pineSvg, playerSvg, treeSvg, trophySvg,
 } from './art';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -21,6 +23,15 @@ const STATION = { x0: 18, x1: 80, y0: 240, y1: 256 };
 const GATE = { x: 236, y: 208 };
 /** Hier drängen sich ausgesperrte Hühner nachts vor der Klappe */
 const HUDDLE = { x0: 246, x1: 286, y0: 198, y1: 222 };
+/** Rechts neben dem Hof (Welt 720 breit): Ententeich, Gänseweide, Wachtelvoliere */
+const OTHER_REGION = {
+  ente: { x0: 494, x1: 546, y0: 228, y1: 252 },
+  gans: { x0: 576, x1: 634, y0: 226, y1: 252 },
+  wachtel: { x0: 662, x1: 704, y0: 234, y1: 246 },
+} as const;
+/** Ohne Unterkunft (z. B. geschlüpft, bevor es eine gibt): vor dem Stall */
+const NO_HOME = { x0: 125, x1: 225, y0: 220, y1: 254 };
+const OTHER_SPECIES = ['ente', 'gans', 'wachtel'] as const;
 
 /** Tageszeit der Szene (Himmel, Abdunklung, Stalllicht) */
 type Phase = 'nacht' | 'morgen' | 'tag' | 'abend';
@@ -93,13 +104,15 @@ export class Scene {
   /* ---------------- Ausschnitt & Wischen (Hochformat) ---------------- */
   private viewW = 480;
   private panX = 0;
+  /** Breite der Welt: 480, mit Enten, Gänsen oder Wachteln rechts daneben 720 */
+  private worldW = 480;
   private fitView() {
     const r = this.svg.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const aspect = r.width / r.height;
     // Im Hochformat so weit heranzoomen, dass der Hof gut 70 % der Höhe füllt. Mindestens 280 Einheiten
     // bleiben sichtbar (Klappe, Nest, Tor, Tränke, Futter, Schaukasten); der Rest ist per Wischen erreichbar.
-    const w = Math.round(Math.max(280, Math.min(480, (270 * aspect) / 0.7)));
+    const w = Math.round(Math.max(280, Math.min(this.worldW, (270 * aspect) / 0.7)));
     if (w !== this.viewW) {
       this.viewW = w;
       // Startausschnitt beginnt kurz vor der Stallklappe
@@ -111,7 +124,7 @@ export class Scene {
   }
   /** Ausschnitt so verschieben, dass ein Objekt der Szene sichtbar ist (z. B. für Tutorial-Pfeile) */
   reveal(el: Element) {
-    if (this.viewW >= 480 || !(el instanceof SVGGraphicsElement)) return;
+    if (this.viewW >= this.worldW || !(el instanceof SVGGraphicsElement)) return;
     const b = el.getBBox();
     const cx = b.x + b.width / 2;
     if (cx > this.panX + 24 && cx < this.panX + this.viewW - 24) return;
@@ -119,10 +132,10 @@ export class Scene {
     this.applyView();
   }
   private applyView() {
-    this.panX = Math.max(0, Math.min(480 - this.viewW, this.panX));
+    this.panX = Math.max(0, Math.min(this.worldW - this.viewW, this.panX));
     this.svg.setAttribute('viewBox', `${this.panX.toFixed(1)} 0 ${this.viewW} 270`);
-    this.svg.classList.toggle('pannable', this.viewW < 480);
-    this.svg.dataset.edge = this.panX <= 0.5 ? 'left' : this.panX >= 480 - this.viewW - 0.5 ? 'right' : 'mid';
+    this.svg.classList.toggle('pannable', this.viewW < this.worldW);
+    this.svg.dataset.edge = this.panX <= 0.5 ? 'left' : this.panX >= this.worldW - this.viewW - 0.5 ? 'right' : 'mid';
   }
   private setupPan() {
     let startX = 0, startPan = 0, dragging = false, down = false;
@@ -158,7 +171,15 @@ export class Scene {
       s.feedType, nestCount(s), phase, s.incubator.length, s.farmName,
       insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
       s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
+      s.hiddenNest ? [s.hiddenNest.x, s.hiddenNest.y, Math.min(4, s.hiddenNest.eggs)] : null, bedState(s),
+      OTHER_SPECIES.map(sp => [has(s, SPECIES[sp].house), SPECIES[sp].extra ? has(s, SPECIES[sp].extra!) : 0]), Math.round((s.pond ?? 100) / 25),
     ]);
+    const worldW = OTHER_SPECIES.some(sp => has(s, SPECIES[sp].house)) ? 720 : 480;
+    if (worldW !== this.worldW) {
+      this.worldW = worldW;
+      this.viewW = 0; // neu einpassen
+      this.fitView();
+    }
     if (sig !== this.sig) {
       this.sig = sig;
       this.yard = has(s, 'wechselweide') ? HALVES[s.pastureSide ?? 0] : YARD;
@@ -239,6 +260,27 @@ export class Scene {
     if (has(s, 'brutapparat')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(66 216)"><rect x="-14" y="-12" width="28" height="18" rx="4" fill="#eef2f4"/><rect x="-9" y="-8" width="18" height="9" rx="2" fill="#ffd28a"/>${s.incubator.length ? `<text x="17" y="2" class="svgtxt small">${s.incubator.length}🥚</text>` : ''}</g>`);
     extra.push(noticeBoard(s));
     if (s.trophies?.length) extra.push(trophySvg(408, 156, s.trophies.length));
+    extra.push(othersSvg(s));
+    // Gemüsebeet hinter dem Hofladen: leer, mit Keimlingen oder reif
+    if (has(s, 'beet')) {
+      const st = bedState(s);
+      const plants = st === 'leer' ? '' : Array.from({ length: 5 }, (_, i) => st === 'reif'
+        ? `<g transform="translate(${-26 + i * 13} -4)"><path d="M0 0 q-6 -10 -2 -14 M0 0 q6 -10 2 -14 M0 0 v-15" fill="none" stroke="#3f8f3a" stroke-width="2.4"/><circle cx="0" cy="1" r="3" fill="#ef8a2c" stroke="none"/></g>`
+        : `<path d="M${-26 + i * 13} -2 q-3 -5 0 -7 q3 2 0 7" fill="#5fae4a" stroke="none"/>`).join('');
+      extra.push(`<g class="clickable bed" data-act="open:hof" transform="translate(54 130) scale(.85)" aria-label="Gemüsebeet">
+        <rect x="-36" y="-6" width="72" height="12" rx="3" fill="#6b4a2f"/><rect x="-33" y="-4" width="66" height="7" rx="2" fill="#7d573a" stroke="none"/>${plants}</g>`);
+    }
+    // Verstecktes Nest: halb im Gras verborgen, zum Antippen
+    if (s.hiddenNest) {
+      const { x, y, eggs: n } = s.hiddenNest;
+      const shown = Math.min(3, n);
+      extra.push(`<g class="clickable hidden-nest" data-act="findNest" transform="translate(${num(x)} ${num(y)})" aria-label="Verstecktes Nest">
+        <circle r="14" fill="transparent" stroke="none"/>
+        <ellipse cx="0" cy="2" rx="9" ry="4" fill="#a87b45"/>
+        ${Array.from({ length: shown }, (_, i) => `<ellipse cx="${-4 + i * 4}" cy="-1" rx="2.6" ry="3.3" fill="#fbf3e4" stroke="#c9b48f" stroke-width=".6"/>`).join('')}
+        <path d="M-12 5 l3 -11 l2 11 M-5 6 l2 -13 l2 13 M4 6 l3 -12 l1 12 M10 5 l3 -9 l1 9" fill="none" stroke="${ground[1]}" stroke-width="2.2"/>
+      </g>`);
+    }
     if (snow) extra.push(`<g class="snow" fill="#fff" stroke="none">${Array.from({ length: 24 }, (_, i) => `<circle cx="${(i * 41) % 480}" cy="${(i * 67) % 160}" r="${1.5 + (i % 3)}" style="animation-delay:-${(i % 7) * 0.9}s"/>`).join('')}</g>`);
 
     this.world.innerHTML = `
@@ -277,7 +319,7 @@ export class Scene {
     el.dataset.animal = String(a.id);
     const body = document.createElementNS(NS, 'g');
     const rooster = kind === 'rooster' || kind === 'youngrooster';
-    const sym = kind === 'chick' ? 'chick' : rooster ? 'rooster' : 'hen';
+    const sym = figure(a.breed, kind === 'chick' ? 'chick' : rooster ? 'rooster' : 'hen');
     const style = breedStyle(a.breed, rooster, a.variant) + (kind === 'chick' ? ';--b:var(--cb)' : '');
     const fluffy = BREEDS[a.breed].fluffy && sym === 'hen';
     body.innerHTML = `<g class="bob" style="${style}">${fluffy ? '<use href="#sym-fluff"/>' : ''}<use href="#sym-${sym}"/></g>`;
@@ -359,7 +401,30 @@ export class Scene {
     let region: typeof YARD | null = null;
     let wantInside = false;
 
-    if (st === 'kueken') {
+    // Enten, Gänse und Wachteln: in ihrem Bereich rechts, nachts in der Unterkunft
+    const species = speciesOf(a.breed);
+    const escaped = s.escapee?.id === a.id;
+    if (escaped) sp.el.dataset.act = 'catch'; else delete sp.el.dataset.act;
+    if (species !== 'huhn' && st !== 'kueken') {
+      const home = has(s, SPECIES[species].house);
+      sp.inside = home && !isDaytime(s.hour);
+      region = home ? OTHER_REGION[species] : NO_HOME;
+      // frisch gekauft oder gerade erwachsen: gleich in den eigenen Bereich setzen
+      if (sp.x < region.x0 - 30 || sp.x > region.x1 + 30) {
+        const p = rndIn(region);
+        sp.x = sp.tx = p[0];
+        sp.y = sp.ty = p[1];
+      }
+    } else if (escaped) {
+      region = ESCAPE_REGION;
+      // schon draußen: die Figur steht gleich vor dem Zaun, auch in der Pause
+      const r = ESCAPE_REGION;
+      if (sp.inside || sp.x < r.x0 - 6 || sp.x > r.x1 + 6 || sp.y < r.y0 - 6 || sp.y > r.y1 + 6) {
+        sp.inside = false;
+        sp.x = sp.tx = s.escapee!.x;
+        sp.y = sp.ty = s.escapee!.y;
+      }
+    } else if (st === 'kueken') {
       const mother = a.motherId != null ? s.animals.find(m => m.id === a.motherId && !m.dead) : undefined;
       const msp = mother ? this.sprites.get(mother.id) : undefined;
       if (has(s, 'kuekenstation') && !mother) region = STATION;
@@ -487,6 +552,7 @@ function noticeBoard(s: GameState): string {
 
 function iconFor(s: GameState, a: Animal): string {
   if (a.dead) return '🕊️';
+  if (s.escapee?.id === a.id) return '❗';
   if (chickFreezing(s, a)) return '🥶';
   if (a.outside && !s.doorOpen && !isDaytime(s.hour)) return '🚪';
   const worst = worstCondition(a);
@@ -510,3 +576,39 @@ export function num(v: unknown): number {
 export function esc(t: string) {
   return t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
+
+/** Unterkünfte der anderen Arten rechts neben dem Hof (nur, was gekauft ist) */
+function othersSvg(s: GameState): string {
+  const out: string[] = [];
+  if (has(s, 'entenhaus')) {
+    if (has(s, 'becken')) {
+      const dirty = (s.pond ?? 100) < POND_BAD;
+      out.push(`<g class="clickable pond" data-act="open:hof" aria-label="Entenbecken">
+        <ellipse cx="516" cy="242" rx="30" ry="10" fill="${dirty ? '#8f8a55' : '#7cc4e8'}"/>
+        <path d="M498 241 q6 -3 12 0 M520 245 q6 -3 12 0" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/></g>`);
+    }
+    out.push(`<g class="clickable" data-act="open:hof" transform="translate(552 212)" aria-label="Entenhaus">
+      <path d="M-18 8 V-6 L0 -20 L18 -6 V8 Z" fill="#e7c48a"/><path d="M-22 -4 L0 -24 L22 -4" fill="none" stroke="#b5533c" stroke-width="5"/>
+      <path d="M-6 8 V-2 Q0 -8 6 -2 V8 Z" fill="${INK}"/></g>`);
+  }
+  if (has(s, 'gaensestall')) {
+    if (has(s, 'grasweide')) {
+      out.push(`<g class="clickable" data-act="open:hof" aria-label="Grasweide">
+        <rect x="570" y="222" width="70" height="34" rx="6" fill="#9fdc7a" stroke="none" opacity=".8"/>
+        <path d="M570 224 H640 M570 254 H640" fill="none" stroke="#c8a46a" stroke-width="2"/>
+        ${[570, 593, 616, 640].map(x => `<path d="M${x} 220 V258" stroke="#a07c4a" stroke-width="3"/>`).join('')}</g>`);
+    }
+    out.push(`<g class="clickable" data-act="open:hof" transform="translate(616 200)" aria-label="Gänsestall">
+      <rect x="-22" y="-14" width="44" height="26" rx="2" fill="#d9b27c"/><path d="M-26 -12 L0 -30 L26 -12 Z" fill="#9a5b3a"/>
+      <rect x="-7" y="-2" width="14" height="14" fill="${INK}"/></g>`);
+  }
+  if (has(s, 'voliere')) {
+    out.push(`<g class="clickable" data-act="open:hof" aria-label="Wachtelvoliere">
+      <rect x="654" y="210" width="58" height="42" rx="3" fill="#f4ead8" opacity=".35"/>
+      <path d="M654 210 H712 V252 H654 Z M654 206 H712" fill="none" stroke="#8a6a44" stroke-width="3"/>
+      ${[664, 674, 684, 694, 704].map(x => `<path d="M${x} 210 V252" stroke="#b9b2a6" stroke-width="1" opacity=".8"/>`).join('')}
+      ${[220, 230, 240].map(y => `<path d="M654 ${y} H712" stroke="#b9b2a6" stroke-width="1" opacity=".8"/>`).join('')}</g>`);
+  }
+  return out.join('');
+}
+

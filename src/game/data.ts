@@ -1,6 +1,6 @@
 // Spieldaten: Rassen, Grundstücke, Shop-Artikel, Verbrauchsmaterial, Krankheiten.
 // Alle Preise beziehen sich auf den Schwierigkeitsgrad „Mittel“.
-import type { BreedId, ConditionId, Difficulty, FinanceCat, PlotId, Season } from './types';
+import type { BreedId, ConditionId, Difficulty, FinanceCat, PlotId, Season, Species } from './types';
 
 /* ------------------------------------------------------------------ */
 /* Zeit                                                               */
@@ -120,8 +120,10 @@ export interface BreedDef {
   /** Farbvarianten; die erste ist die häufigste und gilt für alte Spielstände */
   variants: VariantDef[];
   fluffy?: boolean;
-  /** Rassetier für Geflügelschauen (Hybriden sind nicht zugelassen) */
+  /** Rassetier für Geflügelschauen (Hybriden und andere Arten sind nicht zugelassen) */
   showBreed: boolean;
+  /** Tierart, Standard Huhn */
+  species?: Exclude<Species, 'huhn'>;
   prices: { brutei: number; kueken: number; junghenne: number; legehenne: number; hahn: number };
 }
 export interface VariantDef {
@@ -204,7 +206,79 @@ export const BREEDS: Record<BreedId, BreedDef> = {
     fluffy: true,
     prices: { brutei: 3, kueken: 8, junghenne: 32, legehenne: 25, hahn: 20 },
   },
+  laufente: {
+    name: 'Laufente', desc: 'Läuft aufrecht wie eine Flasche, legt fleißig und frisst Schnecken.', species: 'ente',
+    layRate: 0.7, eggValue: 1.6, weightHen: 1.8, weightRooster: 2.2, life: [800, 1100], broody: 0, coldHardy: true,
+    variants: [
+      { id: 'weiss', name: 'weiß', colors: { body: '#fbfaf5', wing: '#e8e4d8', neck: '#fbfaf5' },
+        rooster: { body: '#fbfaf5', wing: '#e8e4d8', neck: '#fbfaf5', tail: '#e8e4d8' }, chick: '#fff2a8' },
+      { id: 'forelle', name: 'forellenfarbig', colors: { body: '#c9a57a', wing: '#9c7a52', neck: '#b89068' },
+        rooster: { body: '#b9b2a6', wing: '#7d6a55', neck: '#2f5a3a', tail: '#4a3f33' }, chick: '#e8cf8a' },
+      { id: 'schwarz', name: 'schwarz', colors: { body: '#2c2e2c', wing: '#1f2120', neck: '#2c2e2c' },
+        rooster: { body: '#2c2e2c', wing: '#1f2120', neck: '#1f3a2c', tail: '#1f2120' }, chick: '#4a4a44' },
+    ],
+    showBreed: false,
+    prices: { brutei: 2, kueken: 6, junghenne: 15, legehenne: 18, hahn: 15 },
+  },
+  gans: {
+    name: 'Pommerngans', desc: 'Groß, wachsam und laut: schlägt Alarm, wenn der Fuchs kommt. Grast viel.', species: 'gans',
+    layRate: 0.35, eggValue: 5, weightHen: 5.5, weightRooster: 6.5, life: [1500, 2000], broody: 0, coldHardy: true,
+    variants: [
+      { id: 'grau', name: 'grau', colors: { body: '#9a958c', wing: '#6f6a62', neck: '#8a857c' },
+        rooster: { body: '#9a958c', wing: '#6f6a62', neck: '#8a857c', tail: '#5a554e' }, chick: '#d8d06a' },
+      { id: 'weiss', name: 'weiß', colors: { body: '#fbfaf5', wing: '#e6e2d6', neck: '#fbfaf5' },
+        rooster: { body: '#fbfaf5', wing: '#e6e2d6', neck: '#fbfaf5', tail: '#e6e2d6' }, chick: '#fff2a8' },
+      { id: 'scheck', name: 'gescheckt', colors: { body: '#f4f2ec', wing: '#8a857c', neck: '#8a857c' },
+        rooster: { body: '#f4f2ec', wing: '#8a857c', neck: '#8a857c', tail: '#6a655e' }, chick: '#e6dc8a' },
+    ],
+    showBreed: false,
+    prices: { brutei: 5, kueken: 12, junghenne: 30, legehenne: 45, hahn: 40 },
+  },
+  wachtel: {
+    name: 'Legewachtel', desc: 'Klein und genügsam, legt fast jeden Tag ein winziges Ei. Lebt in der Voliere.', species: 'wachtel',
+    layRate: 0.85, eggValue: 0.3, weightHen: 0.2, weightRooster: 0.18, life: [250, 400], broody: 0, coldHardy: false,
+    variants: [
+      { id: 'wild', name: 'wildfarben', colors: { body: '#a07c55', wing: '#6e5236', neck: '#8a6a48' },
+        rooster: { body: '#a8794a', wing: '#6e5236', neck: '#7a4a2a', tail: '#5a4028' }, chick: '#d9b77a' },
+      { id: 'weiss', name: 'weiß', colors: { body: '#f6f2e8', wing: '#e0d8c6', neck: '#f6f2e8' },
+        rooster: { body: '#f6f2e8', wing: '#e0d8c6', neck: '#f6f2e8', tail: '#e0d8c6' }, chick: '#fff6c8' },
+    ],
+    showBreed: false,
+    prices: { brutei: 0.8, kueken: 2, junghenne: 5, legehenne: 6, hahn: 5 },
+  },
 };
+
+/** Weitere Geflügelarten: Unterkunft, Bezeichnungen, Brutdauer (Spieltage, im Verhältnis zu 7 bei Hühnern) */
+export interface SpeciesDef {
+  name: string;
+  plural: string;
+  female: string;
+  male: string;
+  young: string;
+  chick: string;
+  emoji: string;
+  breed: BreedId;
+  /** Unterkunft und (falls nötig) Zusatz, beide im Landhandel unter „Andere Geflügel“ */
+  house: string;
+  extra?: string;
+  brutDays: number;
+  /** für Meldungen: „einen Gänsestall mit Grasweide“, „Im Gänsestall“ */
+  needs: string;
+  inHouse: string;
+}
+export const SPECIES: Record<Exclude<Species, 'huhn'>, SpeciesDef> = {
+  ente: { name: 'Laufente', plural: 'Laufenten', female: 'Ente', male: 'Erpel', young: 'Jungente', chick: 'Entenküken', emoji: '🦆',
+    breed: 'laufente', house: 'entenhaus', extra: 'becken', brutDays: 9, needs: 'ein Entenhaus mit Wasserbecken', inHouse: 'Im Entenhaus' },
+  gans: { name: 'Gans', plural: 'Gänse', female: 'Gans', male: 'Ganter', young: 'Junggans', chick: 'Gössel', emoji: '🪿',
+    breed: 'gans', house: 'gaensestall', extra: 'grasweide', brutDays: 10, needs: 'einen Gänsestall mit Grasweide', inHouse: 'Im Gänsestall' },
+  wachtel: { name: 'Wachtel', plural: 'Wachteln', female: 'Wachtel', male: 'Wachtelhahn', young: 'Jungwachtel', chick: 'Wachtelküken', emoji: '🐦',
+    breed: 'wachtel', house: 'voliere', brutDays: 6, needs: 'eine Wachtelvoliere', inHouse: 'In der Wachtelvoliere' },
+};
+/** Sauberkeit des Entenbeckens: Abnahme pro Ente und Tag, darunter leiden die Enten */
+export const POND_DIRT = 6;
+export const POND_BAD = 30;
+/** Wachgans: so viel Fuchsschutz bringt mindestens eine erwachsene Gans */
+export const GOOSE_FOX = 0.1;
 
 export const HEN_NAMES = [
   'Berta', 'Hilde', 'Frieda', 'Gertrud', 'Erna', 'Lotte', 'Elfriede', 'Henni', 'Rosi', 'Paula', 'Greta', 'Martha',
@@ -222,7 +296,7 @@ export const PERSONALITIES = {
 /* ------------------------------------------------------------------ */
 /* Shop: Ausrüstung                                                   */
 /* ------------------------------------------------------------------ */
-export type ShopCat = 'gehege' | 'stall' | 'wasser' | 'futter' | 'fuchs' | 'greif' | 'ausbau' | 'verbrauch' | 'gimmick';
+export type ShopCat = 'gehege' | 'stall' | 'wasser' | 'futter' | 'fuchs' | 'greif' | 'ausbau' | 'arten' | 'verbrauch' | 'gimmick';
 export const SHOP_CATS: { id: ShopCat; name: string; emoji: string }[] = [
   { id: 'gehege', name: 'Zaun', emoji: '🚧' },
   { id: 'stall', name: 'Stall', emoji: '🏠' },
@@ -232,6 +306,7 @@ export const SHOP_CATS: { id: ShopCat; name: string; emoji: string }[] = [
   { id: 'greif', name: 'Greifvogelschutz', emoji: '🦅' },
   { id: 'verbrauch', name: 'Futter & Medizin', emoji: '💊' },
   { id: 'ausbau', name: 'Erweiterungen', emoji: '⚙️' },
+  { id: 'arten', name: 'Andere Geflügel', emoji: '🦆' },
   { id: 'gimmick', name: 'Gimmicks', emoji: '🎩' },
 ];
 
@@ -315,6 +390,14 @@ export const ITEMS: ItemDef[] = [
     desc: 'Teilt den Auslauf in zwei Hälften. Eine wird genutzt, die andere erholt sich: viel weniger Würmer.' },
   { id: 'stalllicht', cat: 'ausbau', name: 'Stalllicht mit Zeitschaltuhr', price: 35, power: 0.12,
     desc: 'Verlängert im Herbst und Winter den Tag im Stall: deutlich mehr Eier. Strom nur, wenn es läuft.' },
+  // Andere Geflügelarten
+  { id: 'entenhaus', cat: 'arten', name: 'Entenhaus', price: 160, cap: 6, desc: 'Für bis zu 6 Laufenten. Enten brauchen außerdem ein Wasserbecken.' },
+  { id: 'becken', cat: 'arten', name: 'Wasserbecken', price: 90, requires: 'entenhaus', desc: 'Zum Baden und Gründeln. Muss regelmäßig gereinigt werden.' },
+  { id: 'gaensestall', cat: 'arten', name: 'Gänsestall', price: 220, cap: 4, desc: 'Für bis zu 4 Gänse. Gänse brauchen außerdem eine Grasweide.' },
+  { id: 'grasweide', cat: 'arten', name: 'Grasweide', price: 80, requires: 'gaensestall', desc: 'Gänse grasen tagsüber und brauchen kaum Futter.' },
+  { id: 'voliere', cat: 'arten', name: 'Wachtelvoliere', price: 140, cap: 12, desc: 'Für bis zu 12 Wachteln. Sie bleiben immer in der Voliere.' },
+  { id: 'beet', cat: 'ausbau', name: 'Gemüsebeet', price: 40,
+    desc: 'Säen im Frühling und Sommer, mit Hühnermist düngen (doppelter Ertrag), Gemüse verkaufen oder verfüttern.' },
   { id: 'sandbad', cat: 'ausbau', name: 'Sandbad', price: 15, desc: 'Hühner pflegen ihr Gefieder: weniger Milben.' },
   { id: 'daemmung', cat: 'ausbau', name: 'Stalldämmung und Zugluftschutz', price: 60,
     desc: 'Dichtet Ritzen ab und dämmt den Stall: im Herbst und Winter viel weniger Atemwegsinfekte. Gartenhaus-Stall und Hühnermobil sind schon gedämmt.' },
@@ -461,6 +544,7 @@ export const FINANCE_CATS: Record<FinanceCat, { name: string; emoji: string }> =
   tierverkauf: { name: 'Tierverkauf und Schlachter', emoji: '🐔' },
   auftraege: { name: 'Aufträge', emoji: '📋' },
   mist: { name: 'Mist', emoji: '💩' },
+  gemuese: { name: 'Gemüse', emoji: '🥕' },
   besuche: { name: 'Hofbesuche', emoji: '👧' },
   schau: { name: 'Geflügelschau', emoji: '🏆' },
   geschenke: { name: 'Geschenke und Belohnungen', emoji: '🎁' },
@@ -504,7 +588,13 @@ export const CUSTOMERS = {
   eier: ['Bäckerei Krause', 'Café Sonnenschein', 'Kita Pusteblume', 'Hotel Seeblick', 'Frau Meier von nebenan'],
   junghenne: ['Familie Schulz', 'Herr Albrecht', 'Schulgarten der Grundschule', 'Familie Nowak'],
   suppenhuhn: ['Gasthaus Zur Linde', 'Oma Gerda', 'Restaurant Hirschen'],
+  braun: ['Bio-Laden Grünkern', 'Feinkost Wagner', 'Hofcafé Lindenblüte'],
+  bruteier: ['Züchterin Frau Berger', 'Kleintierzuchtverein Talheim', 'Herr Lindner (Hobbyzüchter)'],
+  hahn: ['Familie Hofmann', 'Herr Albrecht', 'Ponyhof Sonnenwiese'],
+  gross: ['Dorfgemeinschaft (Erntedankfest)', 'Hotel Seeblick (Hochzeit)', 'Bäckerei Krause (Ostergebäck)', 'Schulfest der Grundschule'],
 };
+/** Rassen, deren Eier als „braune Eier“ gelten (Sonderwunsch) */
+export const BROWN_EGG_BREEDS: BreedId[] = ['marans', 'sussex', 'brahma'];
 /** Ab diesem Alter (Spieltage) gilt eine Henne als Suppenhuhn */
 export const SOUP_AGE = 240;
 export const SELLERS = ['Händler Brandt', 'Frau Lindner', 'Geflügelhof Petersen', 'Herr Yılmaz', 'Familie Kowalski'];

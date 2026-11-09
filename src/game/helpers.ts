@@ -1,9 +1,9 @@
 // Abgeleitete Werte aus dem Spielstand (keine Seiteneffekte außer log/toast).
 import {
-  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, CONTACTS, DAYS_PER_SEASON, DIFFICULTIES, FEED_SUPPLIES, FINANCE_ONE_OFF, ITEM,
-  MAX_OVERCROWD, OUT_WINDOW, PLOTS, ROOST_HOUR, ROOST_WINDOW, SEASONS, STORAGE, VISIT_CLEAN, WALK_MINUTES,
+  AGE, BREEDS, BUTCHER_FEE, BUTCHER_PER_KG, CONTACTS, DAYS_PER_SEASON, DIFFICULTIES, FEED_SUPPLIES, FINANCE_ONE_OFF, GOOSE_FOX, ITEM,
+  MAX_OVERCROWD, OUT_WINDOW, PLOTS, ROOST_HOUR, ROOST_WINDOW, SEASONS, SPECIES, STORAGE, VISIT_CLEAN, WALK_MINUTES,
 } from './data';
-import type { Animal, BreedId, Condition, ConditionId, FeedId, FinanceCat, FinanceMonth, GameState, LogEntry, Season, Stage } from './types';
+import type { Animal, BreedId, Condition, ConditionId, FeedId, FinanceCat, FinanceMonth, GameState, LogEntry, Season, Species, Stage } from './types';
 
 export const diff = (s: GameState) => DIFFICULTIES[s.difficulty];
 export const plot = (s: GameState) => PLOTS[s.plot];
@@ -20,9 +20,26 @@ export const isSenior = (s: GameState, a: Animal) => age(s, a) >= AGE.senior;
 export const living = (s: GameState) => s.animals.filter(a => !a.dead);
 export const dead = (s: GameState) => s.animals.filter(a => a.dead);
 /** Tiere, die im Stall/Auslauf leben (Küken sitzen in der Kükenstation) */
-export const flock = (s: GameState) => living(s).filter(a => stage(s, a) !== 'kueken');
+/** Tierart einer Rasse oder eines Tiers (Standard: Huhn) */
+export const speciesOf = (breed: BreedId): Species => BREEDS[breed].species ?? 'huhn';
+/** Die Hühnerherde (ohne Küken): Stall, Auslauf, Legen, Raubtiere. Andere Arten leben in eigenen Unterkünften. */
+export const flock = (s: GameState) => living(s).filter(a => stage(s, a) !== 'kueken' && speciesOf(a.breed) === 'huhn');
+/** Enten, Gänse und Wachteln (ohne Küken), optional nur eine Art */
+export const othersOf = (s: GameState, sp?: Exclude<Species, 'huhn'>) =>
+  living(s).filter(a => stage(s, a) !== 'kueken' && speciesOf(a.breed) !== 'huhn' && (!sp || speciesOf(a.breed) === sp));
+/** Unterkunft (und Zusatz wie Becken oder Weide) für eine Art vorhanden? */
+export function housed(s: GameState, sp: Exclude<Species, 'huhn'>): boolean {
+  const d = SPECIES[sp];
+  return has(s, d.house) && (!d.extra || has(s, d.extra));
+}
+export const speciesCap = (s: GameState, sp: Exclude<Species, 'huhn'>) => (has(s, SPECIES[sp].house) ? ITEM[SPECIES[sp].house].cap ?? 0 : 0);
+/** Wachgans: eine erwachsene Gans schlägt Alarm */
+export const guardGoose = (s: GameState) => othersOf(s, 'gans').some(a => stage(s, a) === 'erwachsen');
+/** Laufenten fressen Schnecken (ab einer erwachsenen Ente) */
+export const duckSnails = (s: GameState) => othersOf(s, 'ente').some(a => stage(s, a) === 'erwachsen');
 export const chicks = (s: GameState) => living(s).filter(a => stage(s, a) === 'kueken');
-export const adultRoosters = (s: GameState) => living(s).filter(a => a.sex === 'hahn' && stage(s, a) === 'erwachsen');
+/** Erwachsene Hähne der Hühnerherde (Erpel, Ganter und Wachtelhähne zählen nicht) */
+export const adultRoosters = (s: GameState) => flock(s).filter(a => a.sex === 'hahn' && stage(s, a) === 'erwachsen');
 
 export const seasonOfDay = (day: number): Season => SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
 export const season = (s: GameState) => seasonOfDay(s.day);
@@ -44,6 +61,13 @@ export function daysText(d: number): string {
 }
 export function stageName(s: GameState, a: Animal): string {
   const st = stage(s, a);
+  const sp = speciesOf(a.breed);
+  if (sp !== 'huhn') {
+    const d = SPECIES[sp];
+    if (st === 'kueken') return d.chick;
+    if (st === 'junghuhn') return d.young;
+    return a.sex === 'hahn' ? d.male : d.female;
+  }
   if (st === 'kueken') return 'Küken';
   if (st === 'junghuhn') return a.sex === 'hahn' ? 'Junghahn' : 'Junghenne';
   if (isSenior(s, a)) return a.sex === 'hahn' ? 'alter Hahn' : 'alte Henne';
@@ -94,6 +118,7 @@ export function foxProtection(s: GameState): number {
   if (s.equip.fence === 'enetz' && has(s, 'geraet')) p = 0.85;
   // Zusatzschutz genau mit den Werten, die der Shop anzeigt
   for (const id of ['untergrab', 'licht']) if (has(s, id)) p += ITEM[id].fox ?? 0;
+  if (guardGoose(s)) p += GOOSE_FOX;
   return Math.min(0.97, p);
 }
 export function hawkProtection(s: GameState): number {
@@ -135,7 +160,8 @@ export const freezes = (s: GameState) =>
 export const frozen = (s: GameState) => freezes(s) && (s.iceFreeUntil ?? 0) <= hourIndex(s);
 export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
 /** Tiere im Auslauf (Küken und brütende Hennen bleiben drinnen) */
-export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);
+/** Tiere im Auslauf (ein Ausbüxer vor dem Zaun zählt nicht dazu) */
+export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside && a.id !== s.escapee?.id);
 /** Draußen bei geschlossener Klappe: ausgesperrt */
 export const lockedOut = (s: GameState) => (s.doorOpen ? [] : outsideAnimals(s));
 export const isDaytime = (h: number) => h >= 6 && h < 20;
@@ -195,6 +221,10 @@ export function starFactors(s: GameState): StarFactor[] {
       label: 'Letzter Hofbesuch', value: s.visitEffect.points > 0 ? 'begeistert' : 'enttäuscht', max: s.visitEffect.points > 0 ? s.visitEffect.points : 0,
       points: s.visitEffect.points,
       tip: `Wirkt noch bis Tag ${s.visitEffect.until}. Hofbesuche gibt es ab 4 Sternen, sie brauchen einen sauberen Stall und gesunde Tiere.`,
+    }] : []),
+    ...(s.orderEffect && s.orderEffect.until >= s.day ? [{
+      label: 'Verpasste Aufträge', value: 'Kundschaft verärgert', max: 0, points: s.orderEffect.points,
+      tip: `Wirkt noch bis Tag ${s.orderEffect.until}. Lehne Aufträge lieber ab, die du nicht schaffst, das kostet nichts.`,
     }] : []),
   ];
 }

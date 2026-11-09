@@ -20,8 +20,13 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Bedürfnisse (Hunger, Durst, Gesundheit, Wohlbefinden) und Krankheiten (Milben, Würmer, Atemwegsinfekt, Kokzidiose) mit Medikamenten und Wartezeiten
 - Fuchs, Habicht und Marder mit Vorwarnung, Ratten an offenen Futterstellen
 - Brüten mit Brutapparat oder Glucke; mit Hahn werden Eier zu Bruteiern
-- Verkauf von Eiern, Bruteiern, Mist, Tieren und Ausrüstung, dazu Schlachter, Hofladen und kostenpflichtige Entsorgung toter Tiere
+- Verkauf von Eiern, Bruteiern, Mist, Gemüse, Tieren und Ausrüstung, dazu Schlachter, Hofladen und kostenpflichtige Entsorgung toter Tiere
+- Kundenaufträge mit Wochentagen, Sonderwünschen (braune Eier, Bruteier, Hähne), Großaufträgen mit Teillieferung und Stammkunden
+- Gemüsebeet: säen, mit Hühnermist düngen, ernten, verkaufen oder verfüttern
+- Laufenten, Gänse und Wachteln in eigenen Unterkünften rechts neben dem Hof (Entenbecken, Grasweide, Voliere)
 - Zufallsereignisse (Dorffest, Lieferengpass, Stallpflicht, Geschenke von Opa Heinz), Kapitel mit Zielen, Tagebuch und Hof-Ruf
+- Ereignisse zum Mitmachen: verstecktes Nest suchen, ausgebüxtes Huhn einfangen, Ärger mit dem Nachbarn wegen des Hahns
+- Kredit in der Not; wer danach zu lange pleite bleibt, muss zurück ins Büro (Game Over mit Bilanz)
 - Wechselweide gegen Würmer, Stalllicht für mehr Eier im Winter
 - Hühner-Album zum Sammeln aller Rassen und Farben (Farben werden vererbt)
 - Geflügelschau jede Jahreszeit mit Bewertung, Preisgeld und Pokal

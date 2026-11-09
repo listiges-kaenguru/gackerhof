@@ -1,7 +1,7 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, CUSTOMERS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
-  SEASON_NAMES, SELLERS, SHED_SPOIL, SOUP_AGE, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
+  ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
+  SEASON_NAMES, SELLERS, SHED_SPOIL, SHOW_GRADES, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
   VISIT_MIN_STARS,
 } from './data';
 import { registerAlbum } from './album';
@@ -10,13 +10,17 @@ import {
   drinkerCap, eggUnitPrice, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection,
   herbsActive, ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
   maxInside, minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2,
-  season, shade, stage, stars, visitProblems, worstCondition,
+  season, shade, speciesOf, stage, stars, visitProblems, worstCondition, duckSnails, othersOf,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { dailyOthers, layOthers, otherDrinks, otherGrazes, otherWellbeingTarget, othersOffers } from './arten';
+import { dailyBed } from './beet';
+import { dailyEvents, eveningEscapee, hourlyEscape, layHidden } from './ereignisse';
+import { dailyOrders } from './orders';
 import { checkBroke } from './pleite';
 import { announceShow, ensureShow, runShow } from './show';
 import { chapterGoals, CHAPTERS, createAnimal, randomVariant, targetWeight } from './state';
-import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Order, Season } from './types';
+import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Season } from './types';
 
 /** Feinster Takt: eine Spielminute. Die Hühner bewegen sich minutengenau, alles andere läuft stündlich. */
 export function advanceMinute(s: GameState) {
@@ -42,14 +46,15 @@ export function advanceHour(s: GameState) {
   }
   moveFlock(s);
   hourly(s);
+  hourlyEscape(s);
   switch (s.hour) {
     case 6: morning(s); break;
-    case 8: layEggs(s); break;
+    case 8: layEggs(s); layOthers(s); break;
     case 10: hawkAlert(s); break;
     case 12: runShow(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
     case 19: if (s.day <= 5 && s.doorOpen && !has(s, 'autoklappe') && flock(s).length) log(s, '🌇 Es dämmert. Denk daran, abends die Hühnerklappe zu schließen!', 'warn', true); break;
-    case 21: roost(s); evening(s); break;
+    case 21: eveningEscapee(s); roost(s); evening(s); break;
     case 23: nightPredators(s); break;
   }
   if (s.hour === VISIT_HOUR) farmVisit(s);
@@ -94,13 +99,17 @@ function hourly(s: GameState) {
           s.inventory.kuekenstarter = round2(s.inventory.kuekenstarter - need);
           a.food = clamp(a.food + 14);
         }
+      } else if (otherGrazes(s, a)) {
+        if (a.food < 85) a.food = clamp(a.food + 12); // Gänse grasen auf ihrer Weide
       } else if (a.food < 85 && s.feed > 0 && s.equip.feeder) {
         const portion = 0.025 * (BREEDS[a.breed].weightHen / 2);
         s.feed = Math.max(0, s.feed - portion);
         a.food = clamp(a.food + 12);
       }
-      // Trinken
-      if (a.water < 85 && s.water > 0 && s.equip.drinker && !iced) {
+      // Trinken (Enten, Gänse und Wachteln in ihrer Unterkunft)
+      if (otherDrinks(s, a)) {
+        if (a.water < 85) a.water = clamp(a.water + 15);
+      } else if (a.water < 85 && s.water > 0 && s.equip.drinker && !iced) {
         s.water = Math.max(0, s.water - (st === 'kueken' ? 0.02 : 0.06) * (hot ? 1.3 : 1));
         a.water = clamp(a.water + 15);
       }
@@ -120,15 +129,21 @@ function hourly(s: GameState) {
 
     // Wohlbefinden strebt einem Zielwert entgegen
     let target = 80;
-    if (crowd > 1) target -= 25 * Math.min(2, crowd - 1 + 0.5);
-    if (s.cleanliness < 40) target -= 15;
-    if (!a.outside && !night && st !== 'kueken') target -= 15; // eingesperrt
-    if (night && a.outside) target -= 30; // ausgesperrt
-    if (freezing) target -= 30;
-    if (a.food < 40 || a.water < 40) target -= 20;
-    if (a.conditions.some(c => c.id === 'milben')) target -= 15;
-    if (sunny) target -= 10;
-    if (fights) target -= 15;
+    if (speciesOf(a.breed) !== 'huhn' && st !== 'kueken') {
+      // Enten, Gänse und Wachteln: eigene Unterkunft (Becken, Platz, Futter)
+      target = otherWellbeingTarget(s, a);
+      if (a.conditions.some(c => c.id === 'milben')) target -= 15;
+    } else {
+      if (crowd > 1) target -= 25 * Math.min(2, crowd - 1 + 0.5);
+      if (s.cleanliness < 40) target -= 15;
+      if (!a.outside && !night && st !== 'kueken') target -= 15; // eingesperrt
+      if (night && a.outside) target -= 30; // ausgesperrt
+      if (freezing) target -= 30;
+      if (a.food < 40 || a.water < 40) target -= 20;
+      if (a.conditions.some(c => c.id === 'milben')) target -= 15;
+      if (sunny) target -= 10;
+      if (fights) target -= 15;
+    }
     a.wellbeing = clamp(a.wellbeing + Math.sign(target - a.wellbeing) * Math.min(2, Math.abs(target - a.wellbeing)));
 
     if (a.health <= 0) {
@@ -171,6 +186,7 @@ export function moveFlock(s: GameState) {
   let inside = all.filter(a => !a.outside).length;
   const cap = maxInside(s);
   for (const a of all) {
+    if (a.id === s.escapee?.id) continue; // ausgebüxt: läuft vor dem Zaun herum
     if (a.broodingUntil > s.day || !s.equip.coop || !s.equip.fence) {
       if (a.outside) inside++;
       a.outside = false;
@@ -309,8 +325,11 @@ function newDay(s: GameState) {
 
   // Ereignisse
   randomEvents(s);
+  dailyEvents(s);
+  dailyBed(s);
+  dailyOthers(s);
   s.events = s.events.filter(e => e.until >= s.day);
-  orders(s);
+  dailyOrders(s);
   visitRequest(s);
   ensureShow(s);
   announceShow(s);
@@ -360,6 +379,7 @@ function diseases(s: GameState) {
   // Überbelegung: Krankheiten breiten sich deutlich schneller aus
   const crowdF = crowd > 1 ? 1 + (crowd - 1) * 5 : 1;
   const herbs = herbsActive(s);
+  const snails = duckSnails(s); // Laufenten fressen Schnecken, die Würmer übertragen
   const all = living(s);
 
   for (const a of all) {
@@ -372,7 +392,7 @@ function diseases(s: GameState) {
     }
     // Neue Krankheiten
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
-    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s);
+    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s) * (snails ? 0.6 : 1);
     // Ein gedämmter, zugfreier Stall hebt den Nachteil von Herbst, Winter, Kälte und zugiger Holzkiste auf
     const warm = insulated(s);
     let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? (warm ? 1 : 2) : 1) * (s.temperature < 3 && !warm ? 1.5 : 1)
@@ -522,6 +542,7 @@ function layEggs(s: GameState) {
     a.eggsLaid++;
     laid++;
     s.stats.eggsTotal++;
+    if (layHidden(s, a.id)) continue;
     if (a.withdrawalUntil >= s.day) {
       s.blockedEggs++;
     } else if (roosters) {
@@ -658,46 +679,6 @@ function randomEvents(s: GameState) {
     log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier: ${breedLabel(b, variant)}!`, 'good');
     s.celebrations.push({ emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier mitgebracht: ${breedLabel(b, variant)}. Mal sehen, was da schlüpft!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
   }
-}
-
-/* ================================================================== */
-/* Kundenaufträge                                                     */
-/* ================================================================== */
-function orders(s: GameState) {
-  s.orders ??= [];
-  // abgelaufene Aufträge
-  for (const o of s.orders.filter(x => x.dueDay < s.day)) {
-    log(s, `📋 Auftrag verpasst: ${o.customer} hat sich anderswo eingedeckt.`, 'warn', true);
-  }
-  s.orders = s.orders.filter(x => x.dueDay >= s.day);
-  const f = flock(s);
-  if (s.day < 4 || s.orders.length >= 3 || !f.length) return;
-  // Ein guter Ruf bringt mehr Kundschaft, und sie zahlt besser
-  const st = stars(s);
-  if (!chance(s, 0.15 + st * 0.05)) return;
-  const kinds: Order['kind'][] = ['eier', 'eier', 'eier', 'junghenne', 'suppenhuhn'];
-  if (f.some(a => stage(s, a) !== 'erwachsen')) kinds.push('junghenne');
-  if (f.some(a => a.sex === 'henne' && age(s, a) >= SOUP_AGE)) kinds.push('suppenhuhn', 'suppenhuhn');
-  const kind = pick(s, kinds);
-  const bonus = 1 + (st - 3) * 0.1;
-  const o = { id: s.nextId++, customer: pick(s, CUSTOMERS[kind]), kind, qty: 0, reward: 0, dueDay: 0 };
-  if (kind === 'eier') {
-    o.qty = intBetween(s, 1, 5) * 6;
-    o.reward = Math.round(o.qty * 0.5 * between(s, 1.5, 1.9) * bonus);
-    o.dueDay = s.day + intBetween(s, 3, 6);
-  } else if (kind === 'junghenne') {
-    o.qty = intBetween(s, 1, 3);
-    o.reward = Math.round(o.qty * between(s, 26, 34) * bonus);
-    o.dueDay = s.day + intBetween(s, 6, 12);
-  } else {
-    o.qty = intBetween(s, 1, 2);
-    o.reward = Math.round(o.qty * between(s, 13, 17) * bonus);
-    o.dueDay = s.day + intBetween(s, 4, 8);
-  }
-  s.orders.push(o);
-  const plural = o.qty > 1;
-  const what = { eier: `${o.qty} Eier`, junghenne: `${o.qty} Junghenne${plural ? 'n' : ''}`, suppenhuhn: `${o.qty} ${plural ? 'Suppenhühner' : 'Suppenhuhn'}` }[kind];
-  log(s, `📋 Neuer Auftrag: ${o.customer} möchte ${what} für ${o.reward} € (bis Tag ${o.dueDay}).`, 'good', true);
 }
 
 /* ================================================================== */
@@ -841,7 +822,7 @@ export function refreshOffers(s: GameState) {
   const offers: MarketOffer[] = [];
   const kinds: MarketOffer['kind'][] = ['brutei', 'kueken', 'junghenne', 'junghenne', 'legehenne', 'legehenne', 'hahn'];
   const n = intBetween(s, 7, 9);
-  const breeds = Object.keys(BREEDS) as BreedId[];
+  const breeds = (Object.keys(BREEDS) as BreedId[]).filter(b => speciesOf(b) === 'huhn');
   // Jede Woche fest dabei: Junghenne und Legehenne (Legehybride) sowie ein Hahn und Bruteier
   // in wechselnder Rasse. Der Rest ist Zufall.
   const fixed: [MarketOffer['kind'], BreedId | null][] = [
@@ -860,7 +841,7 @@ export function refreshOffers(s: GameState) {
     }
     offers.push(o);
   }
-  s.offers = offers;
+  s.offers = [...offers, ...othersOffers(s)];
 }
 
 /* ================================================================== */
@@ -873,7 +854,7 @@ const GOAL_TESTS: Record<string, (s: GameState) => boolean> = {
   futter: s => !!s.equip.feeder,
   huehner3: s => flock(s).length >= 3,
   eier10: s => s.stats.eggsSold >= 10,
-  hahn: s => living(s).some(a => a.sex === 'hahn' && stage(s, a) !== 'kueken'),
+  hahn: s => flock(s).some(a => a.sex === 'hahn'),
   schlupf: s => s.stats.hatched >= 1,
   aufzucht: s => s.stats.juniorsRaised >= 1,
   fuchs50: s => foxProtection(s) >= 0.5,
@@ -881,7 +862,18 @@ const GOAL_TESTS: Record<string, (s: GameState) => boolean> = {
   sterne3: s => stars(s) >= 3 && flock(s).length >= 3,
   eier150: s => s.stats.eggsSold >= 150,
   tiere10: s => living(s).length >= 10,
+  rassen3: s => new Set(flock(s).filter(a => BREEDS[a.breed].showBreed).map(a => a.breed)).size >= 3,
+  schau: s => (s.lastShow?.results.length ?? 0) > 0,
+  sehrgut: s => (s.lastShow?.results ?? []).some(r => r.points >= SHOW_VERY_GOOD),
+  album8: s => Object.keys(s.album ?? {}).length >= 8,
+  tiere25: s => living(s).length >= 25,
+  sterne4: s => stars(s) >= 4 && flock(s).length >= 3,
+  art: s => othersOf(s).length >= 1,
+  eier1000: s => s.stats.eggsSold >= 1000,
+  auftraege10: s => (s.stats.ordersDone ?? 0) >= 10,
 };
+/** „sehr gut“ auf der Geflügelschau */
+const SHOW_VERY_GOOD = SHOW_GRADES.find(g => g.name === 'sehr gut')!.min;
 
 export function checkGoals(s: GameState) {
   let changed = false;
@@ -909,7 +901,10 @@ export function checkGoals(s: GameState) {
         `„${ch.title}“: alle Ziele erreicht.`,
         `👴 Opa Heinz: „Donnerwetter, ich bin stolz auf dich! Hier, ${ch.reward} € für deinen Hof.“`,
         `💰 +${ch.reward} € wurden deinem Konto gutgeschrieben.`,
-        ...(next ? [`📖 Weiter geht's mit Kapitel ${s.chapter}: „${next.title}“`, ...next.goals.map(([, t]) => `⬜ ${t}`)] : ['🎉 Das waren alle Kapitel dieser Version!']),
+        ...(next ? [`📖 Weiter geht's mit Kapitel ${s.chapter}: „${next.title}“`, ...next.goals.map(([, t]) => `⬜ ${t}`)] : [
+          '🎉 Du hast den großen Hof geschafft! Das waren alle Kapitel.',
+          'Dein Hof läuft natürlich weiter: Sammle Pokale, füll das Album und mach deine Stammkunden glücklich.',
+        ]),
       ],
     });
   }

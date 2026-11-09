@@ -4,19 +4,24 @@ import {
   ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST,
   FINANCE_CATS, HATS, HEALTH_CHECK_COST, ITEM, type ItemDef, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN,
   PERSONALITIES, PLOTS, SEASON_NAMES, SHED_SPOIL, SHOP_CATS, type ShopCat, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SHOW_NOTICE,
-  SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
+  BROWN_EGG_BREEDS, POND_BAD, SHOW_TROPHY_PRIZE, SPECIES, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
 } from '../game/data';
 import {
   age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason,
   daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
   foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
-  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, storedEggCount, visitProblems, year,
+  othersOf, seasonOfDay, sexKnown, speciesCap, speciesOf, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
+import { cleanPond } from '../game/arten';
+import * as B from '../game/beet';
+import * as E from '../game/ereignisse';
+import { CHOICE_ACTS } from '../game/ereignisse';
+import { BIG_PARTIAL_SHARE, dueText, isRegular, orderWhat, REGULAR_AFTER, weekday } from '../game/orders';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
-import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer } from '../game/types';
+import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer, Order } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc, num } from './scene';
 import { tutorialStep } from './tutorial';
@@ -38,6 +43,8 @@ const GOAL_ACT: Record<string, string> = {
   zaun: 'open:shop:gehege', stall: 'open:shop:stall', traenke: 'open:shop:wasser', futter: 'open:shop:futter',
   huehner3: 'open:markt', eier10: 'open:markt:verkaufen', hahn: 'open:markt', schlupf: 'open:lager', aufzucht: 'open:tiere',
   fuchs50: 'open:shop:fuchs', hofladen: 'open:shop:ausbau', sterne3: 'open:hof', eier150: 'open:markt:verkaufen', tiere10: 'open:markt',
+  rassen3: 'open:markt', schau: 'open:markt:schau', sehrgut: 'open:markt:schau', album8: 'album',
+  tiere25: 'open:markt', sterne4: 'open:hof', art: 'open:shop:arten', eier1000: 'open:markt:verkaufen', auftraege10: 'open:markt:auftraege',
 };
 /** Tastenkürzel für Hof-Aktionen */
 const KEY_ACTS: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean', l: 'lure' };
@@ -95,8 +102,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const scene = new Scene($('.scene-host'));
 
   if (s.day === 1 && s.hour === 7 && !s.log.length) ui.modal = { kind: 'intro' };
-  // Ein Spielstand, der schon vorbei ist, zeigt gleich die Bilanz
+  // Ein Spielstand, der schon vorbei ist, zeigt gleich die Bilanz; offene Meldungen (z. B. eine Entscheidung) ebenso
   if (s.gameOver) ui.modal = { kind: 'gameover' };
+  else if (!ui.modal && s.celebrations.length) ui.modal = { kind: 'celebrate' };
 
   /* ================================================================ */
   /* Rendering                                                         */
@@ -113,7 +121,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <div class="hud-farm"><span class="farm-name">${esc(s.farmName)}</span><button class="stars" data-act="open:hof" title="Hof-Ruf: antippen für Details" aria-label="Hof-Ruf ${st} von 5 Sternen">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></button></div>
       <div class="hud-chips">
         <span class="chip money ${s.money < 20 ? 'low' : ''}" title="Geld">💰 ${euro(s.money)}</span>
-        <span class="chip" title="Datum">📅 Tag ${dayOfSeason(s)} · ${SEASON_NAMES[season(s)]}${year(s) > 1 ? ` · J${year(s)}` : ''}</span>
+        <span class="chip" title="Datum">📅 ${weekday(s.day).slice(0, 2)}, Tag ${dayOfSeason(s)} · ${SEASON_NAMES[season(s)]}${year(s) > 1 ? ` · J${year(s)}` : ''}</span>
         <span class="chip" title="Uhrzeit und Wetter">${phaseIcon} ${String(s.hour).padStart(2, '0')}:${String(Math.floor((s.minute ?? 0) / 10) * 10).padStart(2, '0')} · ${s.temperature} °C</span>
       </div>
       <div class="speed" role="group" aria-label="Spieltempo">
@@ -140,6 +148,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     // Nachts bei offener Klappe draußen: Der Stall ist voll
     const outNight = isNight(s.hour) && s.doorOpen ? outsideAnimals(s).length : 0;
     if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
+    const esc0 = s.escapee ? s.animals.find(a => a.id === s.escapee!.id && !a.dead) : undefined;
+    if (esc0) out.push({ icon: '🏃', text: `${esc0.name} ist ausgebüxt: antippen zum Einfangen`, act: 'catch', kind: 'bad' });
+    if (has(s, 'becken') && (s.pond ?? 100) < POND_BAD) out.push({ icon: '🦆', text: 'Entenbecken ist schmutzig: reinigen', act: 'cleanPond', kind: 'warn' });
+    if (B.bedState(s) === 'reif') out.push({ icon: '🥕', text: 'Gemüse ist reif: ernten', act: 'harvest', kind: 'good' });
+    if (s.hiddenNest) out.push({ icon: '🔍', text: 'Eine Henne legt in ein Versteck im Auslauf. Such es!', act: 'open:hof', kind: 'warn' });
     const ords = s.orders ?? [];
     if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
     if (s.visit && !s.visit.accepted) out.push({ icon: '📩', text: 'Anfrage: Hofbesuch', act: 'open:markt:auftraege', kind: 'good' });
@@ -334,6 +347,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             <button class="btn small" data-act="light">${s.lightOn === false ? 'Einschalten' : 'Ausschalten'}</button></div>` : ''}`
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
+      ${bedCard()}
+      ${othersCard()}
       <section class="card">
         <h3>💧 Wasser & 🌾 Futter</h3>
         ${s.equip.drinker ? `${meter(`${ITEM[s.equip.drinker].name}: ${s.water.toFixed(1)} l`, (s.water / drinkerCap(s)) * 100, '💧')}${frozen(s) ? '<p class="bad">🧊 Die Tränke ist eingefroren!</p>' : ''}` : '<p>Keine Tränke.</p>'}
@@ -461,7 +476,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (ui.marketTab === 'auftraege') return tabsHtml + panelOrders();
     if (ui.marketTab === 'schau') return tabsHtml + panelShow();
     if (ui.marketTab === 'kaufen') {
-      const kindName = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
+      const chickenKind = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
+      const kindLabel = (o: MarketOffer) => {
+        const sp = speciesOf(o.breed);
+        if (sp === 'huhn' || o.kind === 'brutei') return chickenKind[o.kind];
+        const d = SPECIES[sp];
+        return { kueken: d.chick, junghenne: d.young, legehenne: `${d.female} „ca. 1 Jahr“`, hahn: d.male }[o.kind];
+      };
       const kindIcon = (o: MarketOffer) => o.kind === 'brutei' ? '🥚'
         : portrait(o.breed, o.kind === 'hahn' ? 'rooster' : o.kind === 'kueken' ? 'chick' : 'hen', false, o.variant);
       const sellers = [...new Set(s.offers.map(o => o.seller))];
@@ -476,7 +497,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             : '';
           return `<div class="offer">
             <span class="offer-ico">${kindIcon(o)}</span>
-            <div class="offer-main"><b>${kindName[o.kind]}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
+            <div class="offer-main"><b>${kindLabel(o)}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
             <div class="offer-buy">
               <button class="btn primary" data-act="offer:${num(o.id)}:1" ${s.money < o.price ? 'disabled' : ''}>+1</button>
               ${o.qty > 1 ? `<button class="btn small" data-act="offer:${num(o.id)}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
@@ -487,13 +508,15 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const eggs = eggCount(s.eggs);
     const he = s.hatchEggs.length;
     const mist = s.inventory.mist ?? 0;
+    const veg = s.inventory.gemuese ?? 0;
     return tabsHtml + info + `
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
         ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
         ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * MANURE_PRICE)}</button></div>` : ''}
-        ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
+        ${veg ? `<div class="row between"><span>🥕 ${fmtAmount(veg)} kg Gemüse</span><button class="btn" data-act="sellVeg">Verkaufen ${euro(veg * B.vegPrice(s))}</button></div>` : ''}
+        ${!eggs && !he && !mist && !veg ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
       </section>
       <section class="card"><h3>🐔 Tiere verkaufen</h3>
         ${living(s).length ? living(s).map(a => `<div class="offer">
@@ -528,7 +551,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const cell = (v: number | undefined) => v ? `<td class="${v > 0 ? 'good' : 'bad'}">${v > 0 ? '+' : '−'}${euro(Math.abs(v))}</td>` : '<td class="muted">–</td>';
     const rows = (cats: FinanceCat[]) => cats.filter(c => cur[c] || prev?.[c])
       .map(c => `<tr><th>${FINANCE_CATS[c].emoji} ${FINANCE_CATS[c].name}</th>${cell(cur[c])}${prev ? cell(prev[c]) : ''}</tr>`).join('');
-    const income = rows(['eier', 'tierverkauf', 'auftraege', 'mist', 'besuche', 'schau', 'geschenke', 'kredit']);
+    const income = rows(['eier', 'tierverkauf', 'auftraege', 'mist', 'gemuese', 'besuche', 'schau', 'geschenke', 'kredit']);
     const costs = rows(['futter', 'einstreu', 'medizin', 'tierarzt', 'tierkauf', 'ausruestung', 'pacht', 'entsorgung', 'sonstiges']);
     const sum = (m: FinanceMonth) => Object.values(m).reduce((t, v) => t + (v ?? 0), 0);
     const cols = prev ? 3 : 2;
@@ -551,52 +574,110 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (bonus !== 1) parts.push(`inkl. ${Math.round((bonus - 1) * 100)} % Bonus (${diff(s).name})`);
     return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
   }
+  /** Enten, Gänse und Wachteln in der Hofübersicht */
+  function othersCard(): string {
+    const rows = (Object.keys(SPECIES) as (keyof typeof SPECIES)[]).filter(sp => has(s, SPECIES[sp].house)).map(sp => {
+      const d = SPECIES[sp];
+      const n = living(s).filter(a => speciesOf(a.breed) === sp).length;
+      const missing = d.extra && !has(s, d.extra) ? ` <span class="bad">Es fehlt: ${ITEM[d.extra].name}</span>` : '';
+      return `<p>${d.emoji} <b>${d.plural}</b>: ${num(n)} / ${num(speciesCap(s, sp))} Plätze${missing}</p>`;
+    });
+    if (!rows.length) return '';
+    const pond = has(s, 'becken') ? `${meter('Entenbecken', s.pond ?? 100, '💧')}
+        <div class="row"><button class="btn" data-act="cleanPond" ${(s.pond ?? 100) < 95 ? '' : 'disabled'}>🧽 Becken reinigen</button></div>` : '';
+    return `<section class="card">
+        <h3>🦆 Andere Geflügel</h3>
+        ${rows.join('')}
+        ${pond}
+        <p class="muted">Sie leben in ihren eigenen Unterkünften rechts neben dem Hof, trinken dort und fressen am Futterplatz mit. Gänse auf der Grasweide grasen tagsüber. Eier sammelst du zusammen mit den Hühnereiern ein.</p>
+      </section>`;
+  }
+
+  /** Gemüsebeet in der Hofübersicht */
+  function bedCard(): string {
+    if (!has(s, 'beet')) return '';
+    const st = B.bedState(s);
+    const se = season(s);
+    const canSow = se === 'fruehling' || se === 'sommer';
+    const left = s.bed ? Math.max(0, B.GROW_DAYS - (s.day - s.bed.sownDay)) : 0;
+    const status = st === 'leer'
+      ? (canSow ? `Leer. Saatgut kostet ${euro(B.SEED_COST)}.` : 'Leer. Gesät wird im Frühling und Sommer.')
+      : st === 'waechst'
+        ? `🌱 Wächst, reif in ${left} Tag${left === 1 ? '' : 'en'}${s.bed!.fertilized ? ' · gedüngt' : ''}.`
+        : `🥕 Reif! ${B.BASE_YIELD * (s.bed!.fertilized ? 2 : 1)} kg warten auf die Ernte.`;
+    return `<section class="card">
+        <h3>🥕 Gemüsebeet</h3>
+        <p>${status}</p>
+        <div class="row">
+          ${st === 'leer' ? `<button class="btn primary" data-act="sow" ${canSow ? '' : 'disabled'}>🌱 Säen</button>` : ''}
+          ${st === 'waechst' && !s.bed!.fertilized ? `<button class="btn" data-act="fertilize" ${(s.inventory.mist ?? 0) >= 1 ? '' : 'disabled'}>💩 Mit Mist düngen <small>(${s.inventory.mist ?? 0} Sack)</small></button>` : ''}
+          ${st === 'reif' ? '<button class="btn primary" data-act="harvest">🥕 Ernten</button>' : ''}
+        </div>
+        <p class="muted">Ein Sack Mist als Dünger verdoppelt den Ertrag. Frost zerstört, was im Beet steht. Gemüse lässt sich verkaufen (${euro(B.vegPrice(s))} je kg) oder an die Hühner verfüttern.</p>
+      </section>`;
+  }
+
   /** Was die Eier eines Auftrags auf dem Markt bringen würden */
-  function orderMarketValue(qty: number): number {
-    const pick = A.orderEggs(s, qty);
+  function orderMarketValue(o: Order, qty: number): number {
+    const pick = A.orderEggs(s, qty, o);
     const hatch: Record<string, number> = {};
-    for (const e of s.hatchEggs.slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
+    for (const e of s.hatchEggs.filter(x => !o.brown || BROWN_EGG_BREEDS.includes(x.breed)).slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
     return eggValue(s, pick.eggs) + eggValue(s, hatch);
   }
 
   function panelOrders(): string {
     const list = s.orders ?? [];
     if (!list.length) return visitCard() + `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
-      <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren). Sie zahlen deutlich mehr als der Markt.</p>`;
-    const eggsHave = storedEggCount(s);
+      <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren), dazu Sonderwünsche wie braune Eier, Bruteier oder einen Hahn. Sie zahlen deutlich mehr als der Markt. Wer ${REGULAR_AFTER}-mal zufrieden war, wird Stammkunde.</p>`;
     return visitCard() + list.map(o => {
-      const what = o.kind === 'eier' ? `🥚 ${o.qty} Eier` : o.kind === 'junghenne' ? `🐔 ${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}` : `🍲 ${o.qty} Suppenh${o.qty > 1 ? 'ühner' : 'uhn'} (Henne ab 2 Jahren)`;
+      const icon = { eier: o.big ? '📦' : '🥚', junghenne: '🐔', suppenhuhn: '🍲', hahn: '🐓', bruteier: '🐣' }[o.kind];
+      const extra = o.kind === 'suppenhuhn' ? ' (Henne ab 2 Jahren)' : o.brown ? ' (Marans, Sussex, Brahma)' : '';
+      const rest = o.qty - (o.delivered ?? 0);
       const left = o.dueDay - s.day;
-      let have: string, can: boolean;
+      let have: string, can: boolean, partial = 0;
       if (o.kind === 'eier') {
-        can = eggsHave >= o.qty;
-        const pick = A.orderEggs(s, o.qty);
+        const stock = A.orderEggStock(s, o);
+        can = stock >= rest;
+        partial = o.big && !can ? stock : 0;
+        const pick = A.orderEggs(s, rest, o);
         const delivers = [eggBreakdown(s, pick.eggs), pick.hatch ? `${pick.hatch} Brutei${pick.hatch > 1 ? 'er' : ''}` : ''].filter(Boolean).join(' · ');
-        have = `Im Lager: ${eggsHave} Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
+        have = `Im Lager: ${stock} passende Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
+      } else if (o.kind === 'bruteier') {
+        const n = A.hatchEggsOf(s, o.breed);
+        can = n >= o.qty;
+        have = `Im Lager: ${n} Bruteier ${o.breed ? BREEDS[o.breed].name : ''}`;
       } else {
         const animals = A.orderAnimals(s, o.kind);
         can = animals.length >= o.qty;
         have = can ? `Liefert: ${animals.slice(0, o.qty).map(a => esc(a.name)).join(', ')}` : `Passende Tiere: ${animals.length}`;
       }
-      const market = o.kind === 'eier' && eggsHave >= o.qty ? orderMarketValue(o.qty) : 0;
+      const market = o.kind === 'eier' && can ? orderMarketValue(o, rest) : 0;
+      const regular = isRegular(s, o.customer);
       return `<section class="card order">
-        <h3>${esc(o.customer)}</h3>
-        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
-        <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
-        ${confirmBtn(`order:${num(o.id)}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        <h3>${esc(o.customer)}${regular ? ' <span class="tag good">🤝 Stammkunde</span>' : ''}${o.big ? ' <span class="tag">Großauftrag</span>' : ''}</h3>
+        <p><b>${icon} ${esc(orderWhat(o))}</b>${extra} für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
+        ${o.big ? `<p class="muted">Geliefert: ${num(o.delivered ?? 0)} von ${num(o.qty)} · bezahlt ${euro(o.paid ?? 0)}. Teillieferungen bringen ${Math.round(BIG_PARTIAL_SHARE * 100)} % anteilig, den Rest gibt es bei vollständiger Lieferung.</p>` : ''}
+        <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `${dueText(s, o.dueDay)[0].toUpperCase()}${dueText(s, o.dueDay).slice(1)} (noch ${left} Tag${left === 1 ? '' : 'e'})`} · ${have}</p>
+        <div class="row">
+        ${confirmBtn(`order:${num(o.id)}`, 'Liefern', o.kind === 'eier' || o.kind === 'bruteier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        ${partial ? confirmBtn(`orderPart:${num(o.id)}`, `${num(partial)} liefern`, 'Teillieferung?', 'small') : ''}
+        ${confirmBtn(`orderNo:${num(o.id)}`, 'Ablehnen', 'Wirklich ablehnen?', 'small')}
+        </div>
       </section>`;
-    }).join('');
+    }).join('') + `<p class="muted small">Ablehnen kostet nichts. Ein verpasster Auftrag kostet 14 Tage lang etwas Hof-Ruf.</p>`;
   }
 
   /* ---------------- Tiere ---------------- */
   function panelAnimals(): string {
     const l = living(s);
-    const hens = l.filter(a => a.sex === 'henne' && sexKnown(s, a)).length;
-    const roosters = l.filter(a => a.sex === 'hahn' && sexKnown(s, a)).length;
+    const chickens = l.filter(a => speciesOf(a.breed) === 'huhn');
+    const hens = chickens.filter(a => a.sex === 'henne' && sexKnown(s, a)).length;
+    const roosters = chickens.filter(a => a.sex === 'hahn' && sexKnown(s, a)).length;
+    const others = othersOf(s).length;
     const ch = chicks(s).length;
     const sorted = [...dead(s), ...l.sort((a, b) => (b.conditions.length - a.conditions.length) || (a.health - b.health))];
     return `
-      <p class="infobar">🐔 ${hens} Hennen · 🐓 ${roosters} Hähne · 🐥 ${ch} Küken · 🏠 ${flock(s).length}/${coopCap(s)} im Stall</p>
+      <p class="infobar">🐔 ${hens} Hennen · 🐓 ${roosters} Hähne · 🐥 ${ch} Küken${others ? ` · 🦆 ${others} andere` : ''} · 🏠 ${flock(s).length}/${coopCap(s)} im Stall</p>
       <button class="btn album-btn" data-act="album">📒 Hühner-Album <b>${Object.keys(s.album ?? {}).length}/${albumTotal()}</b></button>
       ${roosters > Math.max(1, Math.ceil(hens / 8)) ? '<p class="warnbox">🐓 Zu viele Hähne! Empfohlen ist 1 Hahn pro 8–12 Hennen, sonst gibt es Rangkämpfe.</p>' : ''}
       ${sorted.length ? `<div class="animal-list">${sorted.map(a => animalRow(a)).join('')}</div>` : '<p class="muted">Noch keine Tiere. Auf dem Geflügelmarkt gibt es Junghennen, Hähne, Küken und Bruteier.</p><button class="btn primary" data-act="open:markt">Zum Markt</button>'}
@@ -745,11 +826,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       ${inc}
       <section class="card"><h3>📦 Vorräte</h3>
         <ul class="stock">${SUPPLIES.map(sp => `<li><span>${sp.emoji} ${sp.name}</span><b>${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</b></li>`).join('')}
-        <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li></ul>
+        <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li>
+        ${has(s, 'beet') || (s.inventory.gemuese ?? 0) > 0 ? `<li><span>🥕 Gemüse</span><b>${fmtAmount(s.inventory.gemuese ?? 0)} kg</b></li>` : ''}</ul>
         <p class="muted">📦 Lagerplatz: Futter ${fmtAmount(feedStock(s))} / ${storageCap(s).feed} kg · Stroh ${fmtAmount(s.inventory.einstreu ?? 0)} / ${storageCap(s).straw} Ballen. Futter verdirbt mit der Zeit${has(s, 'schuppen') ? ', im Lagerschuppen nur halb so schnell' : ''}.</p>
         ${herbsActive(s) ? `<p class="muted">🍃 Kräuter im Trinkwasser wirken bis Tag ${s.kraeuterUntil}.</p>` : ''}
         <div class="row">
           <button class="btn" data-act="treat" ${(s.inventory.mehlwuermer ?? 0) >= 1 && living(s).length ? '' : 'disabled'}>🪱 Mehlwürmer verstreuen</button>
+          ${(s.inventory.gemuese ?? 0) > 0 ? `<button class="btn" data-act="feedVeg">🥕 Gemüse verfüttern</button>` : ''}
           <button class="btn" data-act="herbs" ${(s.inventory.kraeuter ?? 0) >= 1 && s.equip.drinker ? '' : 'disabled'}>🍃 Kräuter ins Trinkwasser</button>
           <button class="btn primary" data-act="open:shop:verbrauch">Nachkaufen</button>
         </div>
@@ -830,8 +913,12 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <button class="btn primary big" data-act="modal-ok">Los geht's!</button>`;
     } else if (ui.modal.kind === 'celebrate') {
       const c = s.celebrations[0];
+      // Auswahl: nur bekannte Aktionen (der Spielstand wird beim Laden geprüft, hier zusätzlich abgesichert)
+      const choices = (c?.choices ?? []).filter(x => CHOICE_ACTS.includes(x.act));
       html = c ? `<div class="celebrate"><div class="burst">${c.emoji}</div><h2>${esc(c.title)}</h2>${c.lines.map(l => `<p>${esc(l)}</p>`).join('')}
-        <button class="btn primary big" data-act="modal-ok">${s.celebrations.length > 1 ? 'Weiter' : 'Super!'}</button></div>` : '';
+        ${choices.length
+          ? `<div class="choices">${choices.map(x => `<button class="btn big" data-act="${esc(x.act)}">${esc(x.label)}</button>`).join('')}</div>`
+          : `<button class="btn primary big" data-act="modal-ok">${s.celebrations.length > 1 ? 'Weiter' : 'Super!'}</button>`}</div>` : '';
     } else if (ui.modal.kind === 'report') {
       html = `<div class="opa">🌅</div><h2>Morgenbericht</h2>${(ui.modal.lines ?? []).map(l => `<p>${esc(l)}</p>`).join('')}<button class="btn primary big" data-act="modal-ok">Weiter</button>`;
     } else if (ui.modal.kind === 'gameover') {
@@ -1019,6 +1106,23 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         if (ui.modal?.kind === 'celebrate') s.celebrations.shift();
         ui.modal = s.celebrations.length ? { kind: 'celebrate' } : null;
         return renderModal();
+      case 'nachbar': {
+        const r = E.neighborChoice(s, a1 as E.NeighborOption);
+        if (r.ok && ui.modal?.kind === 'celebrate') {
+          s.celebrations.shift();
+          ui.modal = s.celebrations.length ? { kind: 'celebrate' } : null;
+          renderModal();
+        }
+        return result(r);
+      }
+      case 'findNest': return result(E.findNest(s));
+      case 'sow': return result(B.sow(s));
+      case 'cleanPond': return result(cleanPond(s));
+      case 'fertilize': return result(B.fertilize(s));
+      case 'harvest': return result(B.harvest(s));
+      case 'sellVeg': return result(B.sellVegetables(s));
+      case 'feedVeg': return result(B.feedVegetables(s));
+      case 'catch': return result(E.catchEscapee(s));
       case 'collect': return result(A.collectEggs(s));
       case 'water': return result(A.refillWater(s));
       case 'feed': return result(A.refillFeed(s, a1 as 'koerner' | 'legemehl' | undefined));
@@ -1042,6 +1146,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'sellHatch': return result(A.sellHatchEggs(s, a1 === 'food'));
       case 'sellManure': return result(A.sellManure(s));
       case 'order': return result(A.fulfillOrder(s, Number(a1)));
+      case 'orderPart': return result(A.deliverPartial(s, Number(a1)));
+      case 'orderNo': return result(A.declineOrder(s, Number(a1)));
       case 'animal': ui.animalId = Number(a1); return openPanel('tier');
       case 'dispose': { const r = A.disposeBody(s, Number(a1)); if (r.ok) ui.panel = 'tiere'; return result(r); }
       case 'sellAnimal': return result(leaveProfile(A.sellAnimal(s, Number(a1))));

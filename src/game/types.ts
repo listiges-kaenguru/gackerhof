@@ -3,7 +3,9 @@
 
 export type Difficulty = 'leicht' | 'mittel' | 'schwer';
 export type PlotId = 'wald' | 'obst' | 'bach';
-export type BreedId = 'hybrid' | 'sussex' | 'marans' | 'brahma' | 'seide';
+export type BreedId = 'hybrid' | 'sussex' | 'marans' | 'brahma' | 'seide' | 'laufente' | 'gans' | 'wachtel';
+/** Tierart; Hühner sind der Standard (ab 0.5.0 kommen Laufenten, Gänse und Wachteln dazu) */
+export type Species = 'huhn' | 'ente' | 'gans' | 'wachtel';
 export type Sex = 'henne' | 'hahn';
 export type Stage = 'kueken' | 'junghuhn' | 'erwachsen';
 export type Personality = 'mutig' | 'scheu' | 'gefraessig' | 'neugierig' | 'zaenkisch' | 'bruetig';
@@ -97,18 +99,29 @@ export interface GameEvent {
   until: number;
 }
 
+export type OrderKind = 'eier' | 'junghenne' | 'suppenhuhn' | 'hahn' | 'bruteier';
+
 export interface Order {
   id: number;
   customer: string;
-  kind: 'eier' | 'junghenne' | 'suppenhuhn';
+  kind: OrderKind;
   qty: number;
   reward: number;
   dueDay: number;
+  /** Sonderwunsch: nur braune Eier (ab 0.5.0) */
+  brown?: boolean;
+  /** Bruteier dieser Rasse */
+  breed?: BreedId;
+  /** Großauftrag: Teillieferungen möglich */
+  big?: boolean;
+  /** bei Großaufträgen: schon gelieferte Eier und dafür gezahltes Geld */
+  delivered?: number;
+  paid?: number;
 }
 
 /** Kategorien der Finanzübersicht (Mehr → Finanzen) */
 export type FinanceCat =
-  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
+  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'gemuese' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
   | 'futter' | 'einstreu' | 'medizin' | 'tierarzt' | 'tierkauf' | 'ausruestung' | 'pacht' | 'entsorgung' | 'sonstiges';
 
 /** Geldbewegungen eines Monats je Kategorie (Einnahmen positiv, Ausgaben negativ) */
@@ -126,6 +139,8 @@ export interface Celebration {
   emoji: string;
   title: string;
   lines: string[];
+  /** Auswahlknöpfe statt „OK“ (ab 0.5.0); act ist eine feste Aktion aus CHOICE_ACTS */
+  choices?: { act: string; label: string }[];
 }
 
 /** Eintrag im Hühner-Album */
@@ -232,6 +247,20 @@ export interface GameState {
   events: GameEvent[];
   /** Kundenaufträge (ab 0.2.0) */
   orders?: Order[];
+  /** Erfüllte Aufträge je Kunde; ab REGULAR_AFTER ist er Stammkunde (ab 0.5.0) */
+  customers?: Record<string, number>;
+  /** Sauberkeit des Entenbeckens 0..100 (ab 0.5.0) */
+  pond?: number;
+  /** Gemüsebeet: Saattag und ob gedüngt; null = leer (ab 0.5.0) */
+  bed?: { sownDay: number; fertilized: boolean } | null;
+  /** Henne legt in ein Versteck im Auslauf (Szenen-Koordinaten), ab 0.5.0 */
+  hiddenNest?: { henId: number; since: number; eggs: number; x: number; y: number } | null;
+  /** Ausgebüxtes Tier vor dem Zaun */
+  escapee?: { id: number; since: number; x: number; y: number } | null;
+  /** Nachbar und Hahn: offene Beschwerde, Warnung, Ruhe bis, Stall verdunkelt */
+  neighbor?: { pending: boolean; warned: boolean; quietUntil: number; darkened: boolean };
+  /** Wirkung verpasster Aufträge auf den Hof-Ruf */
+  orderEffect?: { until: number; points: number } | null;
 
   /** Weidezustand je Auslaufhälfte 0..100, 100 = frisch (ab 0.3.0). Ohne Wechselweide zählt nur [0]. */
   pasture?: [number, number];
@@ -259,6 +288,8 @@ export interface GameState {
     juniorsRaised: number;
     income: number;
     expenses: number;
+    /** erfüllte Kundenaufträge (ab 0.5.0) */
+    ordersDone?: number;
   };
   /** Finanzübersicht: laufender und letzter Monat, Ergebnis der letzten Monate (ohne Investitionen) */
   finance?: { cur: FinanceMonth; prev?: FinanceMonth; results: number[] };

@@ -5,6 +5,7 @@
 // ergänzt sie), sind optional – wenn vorhanden, werden sie genauso geprüft. Grenzen großzügig über dem, was das
 // Spiel selbst erzeugt (z. B. Namen 24 Zeichen, Tagebuch 300 Einträge).
 import { BREEDS, CONDITIONS, DIFFICULTIES, HATS, ITEM, PERSONALITIES, PLOTS, SUPPLY } from './data';
+import { CHOICE_ACTS } from './ereignisse';
 import type { GameState } from './types';
 
 type Obj = Record<string, unknown>;
@@ -51,8 +52,12 @@ function animal(v: unknown): boolean {
 const offer = (v: unknown) => obj(v) && int(v.id, 0) && oneOf(v.kind, ['brutei', 'kueken', 'junghenne', 'legehenne', 'hahn'])
   && breedOk(v) && num(v.price, 0) && int(v.qty, 0, MAX_LIST) && str(v.seller, 200)
   && optional(v, 'hiddenAge', x => num(x)) && optional(v, 'hiddenMites', bool) && optional(v, 'checked', bool);
-const order = (v: unknown) => obj(v) && int(v.id, 0) && str(v.customer, 200) && oneOf(v.kind, ['eier', 'junghenne', 'suppenhuhn'])
-  && int(v.qty, 0, MAX_LIST) && num(v.reward, 0) && num(v.dueDay);
+const order = (v: unknown) => obj(v) && int(v.id, 0) && str(v.customer, 200)
+  && oneOf(v.kind, ['eier', 'junghenne', 'suppenhuhn', 'hahn', 'bruteier'])
+  && int(v.qty, 0, MAX_LIST) && num(v.reward, 0) && num(v.dueDay)
+  && optional(v, 'brown', bool) && optional(v, 'big', bool)
+  && (v.kind === 'bruteier' ? key(v.breed, BREEDS) : v.breed === undefined)
+  && optional(v, 'delivered', x => int(x, 0, v.qty as number)) && optional(v, 'paid', x => num(x, 0));
 const showResult = (v: unknown) => obj(v) && int(v.animalId, 0) && str(v.name, 60) && breedOk(v) && num(v.points)
   && str(v.grade, 100) && num(v.prize) && bool(v.trophy);
 const trophy = (v: unknown) => obj(v) && num(v.day) && str(v.title, 200) && str(v.animal, 60) && breedOk(v);
@@ -82,7 +87,15 @@ export function isValidSave(v: unknown, saveVersion: number): v is GameState {
   const markt = num(s.temperature, -100, 100) && num(s.eggPrice, 0) && list(s.offers, offer, 100) && int(s.offersDay, -MAX_ZAHL)
     && optional(s, 'marketVersion', x => int(x, 0)) && num(s.foxAlertDay) && num(s.marderAlertDay) && num(s.hawkAlertDay)
     && list(s.events, x => obj(x) && oneOf(x.id, ['dorffest', 'futterteuer', 'stallpflicht']) && num(x.until), 20)
-    && optional(s, 'orders', x => list(x, order, 50));
+    && optional(s, 'orders', x => list(x, order, 50))
+    && optional(s, 'customers', x => record(x, y => int(y, 0)))
+    && optional(s, 'orderEffect', nullOr(x => obj(x) && num(x.until) && num(x.points, -5, 5)))
+    && optional(s, 'hiddenNest', nullOr(x => obj(x) && int(x.henId, 0) && num(x.since) && int(x.eggs, 0, MAX_LIST)
+      && num(x.x, 0, 480) && num(x.y, 0, 270)))
+    && optional(s, 'escapee', nullOr(x => obj(x) && int(x.id, 0) && num(x.since) && num(x.x, 0, 480) && num(x.y, 0, 270)))
+    && optional(s, 'pond', x => num(x, 0, 100))
+    && optional(s, 'bed', nullOr(x => obj(x) && num(x.sownDay) && bool(x.fertilized)))
+    && optional(s, 'neighbor', x => obj(x) && bool(x.pending) && bool(x.warned) && num(x.quietUntil) && bool(x.darkened));
   const spaeter = optional(s, 'pasture', x => list(x, y => num(y, 0, 100), 2) && (x as unknown[]).length === 2)
     && optional(s, 'pastureSide', x => oneOf(x, [0, 1])) && optional(s, 'pastureSwitchDay', x => num(x))
     && optional(s, 'lightOn', bool) && optional(s, 'tutorialOff', bool)
@@ -97,11 +110,13 @@ export function isValidSave(v: unknown, saveVersion: number): v is GameState {
     && optional(s, 'visit', nullOr(x => obj(x) && str(x.group, 200) && num(x.day) && num(x.fee, 0) && bool(x.accepted)))
     && optional(s, 'visitEffect', nullOr(x => obj(x) && num(x.until) && num(x.points)));
   const verlauf = obj(stats) && STATS.every(f => num(stats[f])) && list(stats.deathsRecent, x => num(x))
+    && optional(stats, 'ordersDone', x => int(x, 0))
     && num(s.pendingCosts) && int(s.chapter, 1, 100)
     && list(s.goals, x => obj(x) && str(x.id, 100) && str(x.text) && bool(x.done), 100)
     && list(s.log, logEntry) && optional(s, 'toasts', x => Array.isArray(x))
     && optional(s, 'banners', x => list(x, y => str(y), 100))
-    && optional(s, 'celebrations', x => list(x, y => obj(y) && str(y.emoji, 20) && str(y.title, 200) && list(y.lines, z => str(z), 50), 50))
+    && optional(s, 'celebrations', x => list(x, y => obj(y) && str(y.emoji, 20) && str(y.title, 200) && list(y.lines, z => str(z), 50)
+      && optional(y, 'choices', z => list(z, c => obj(c) && oneOf(c.act, CHOICE_ACTS) && str(c.label, 100), 5)), 50))
     && nullOr(x => list(x, y => str(y), 100))(s.report) && bool(s.gameOver)
     && optional(s, 'brokeSince', x => int(x)) && optional(s, 'brokeWarned', bool)
     && optional(s, 'gameOverReason', x => oneOf(x, ['pleite', 'leer']));

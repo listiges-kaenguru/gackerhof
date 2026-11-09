@@ -14,6 +14,57 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Zählung von vorn. Wie bisher ist ohne Tiere und Geld sofort Schluss.
 - Der Abschluss-Bildschirm zeigt eine Bilanz: Tage auf dem Hof, verkaufte Eier, geschlüpfte Küken, Pokale und das
   älteste Tier.
+- **Wochentage:** Tag 1 ist ein Montag. Die Kopfzeile zeigt den Wochentag, Aufträge nennen ihre Frist als „heute“,
+  „morgen“, „bis Freitag“ oder „bis Freitag nächster Woche“.
+- **Sonderwünsche bei Aufträgen** (30 % mehr Lohn): braune Eier (nur von Marans, Sussex und Brahma), Bruteier einer
+  bestimmten Rasse (braucht Henne und Hahn dieser Rasse, keine Hybriden) und Hähne (kein Küken). Sie kommen nur, wenn
+  der Hof sie liefern kann.
+- **Stammkunden:** Nach **3 erfüllten Aufträgen** wird ein Kunde Stammkunde. Er meldet sich öfter und zahlt **15 %
+  mehr**.
+- **Großaufträge** ab 3 Sternen, selten: 48–96 Eier mit 10–14 Tagen Frist. Teillieferungen bringen 80 % des Lohns
+  anteilig, den Rest gibt es bei vollständiger Lieferung.
+- **Aufträge ablehnen** kostet nichts.
+- **Verstecktes Nest:** Ab und zu legt eine Henne bis zu 5 Tage lang in ein Versteck im Auslauf statt ins Stallnest.
+  Das Nest liegt halb im Gras; Antippen bringt die Eier ins Lager. Wird es nicht gefunden, verderben die Eier.
+- **Ausgebüxtes Huhn:** Tagsüber kann ein Huhn aus dem Auslauf entwischen und läuft dann vor dem Stall herum (mit ❗).
+  Antippen fängt es ein, „Reinlocken“ hilft nicht. Ist es um 21 Uhr noch draußen, holt es meist (70 %) der Fuchs. Ein
+  Knotengitter lässt am häufigsten eins entwischen, ein Maschendrahtzaun am seltensten, ein Volierennetz senkt das
+  Risiko weiter. Im Winter büxt niemand aus.
+- **Nachbar und Hahn:** Mit erwachsenem Hahn beschwert sich ab und zu der Nachbar. Du entscheidest: Eierkarton
+  schenken (6 Eier, dann 30 Tage Ruhe), Stall verdunkeln (einmalig 20 €, danach viel seltener Beschwerden) oder
+  ignorieren (bei der nächsten Beschwerde 50 € Bußgeld).
+- **Gemüsebeet** (Erweiterungen, 40 €): Säen geht im Frühling und Sommer (Saatgut 3 €), nach **20 Tagen** ist das
+  Gemüse reif. Ein Sack Hühnermist als Dünger verdoppelt den Ertrag von 4 auf 8 kg. Frost zerstört, was im Beet steht.
+  Gemüse lässt sich verkaufen (**2,50 € je kg**, mit Hofladen 3,75 €, eigene Kategorie „Gemüse“ in den Finanzen) oder an
+  die Hühner verfüttern (1 kg je angefangene 5 Tiere: satter und zufriedener). Mist lässt sich weiter verkaufen.
+- **Weitere Geflügelarten:** Laufenten, Pommerngänse und Legewachteln, jeweils in eigener Unterkunft (Landhandel →
+  **Andere Geflügel**): Entenhaus (160 €, 6 Plätze) mit Wasserbecken (90 €), Gänsestall (220 €, 4 Plätze) mit
+  Grasweide (80 €), Wachtelvoliere (140 €, 12 Plätze). Der Geflügelmarkt bietet eine Art erst an, wenn ihre Unterkunft
+  steht (jede Woche Weibchen, Männchen und Bruteier). Mit Unterkunft wird die Szene nach rechts breiter.
+  - Alle trinken in ihrer Unterkunft und fressen am Futterplatz der Hühner mit. Gänse auf der Grasweide grasen tagsüber
+    und brauchen dann kein Futter.
+  - **Laufenten** legen fleißig (Eier 1,6-facher Preis). Das Becken verschmutzt mit 6 % je Ente und Tag; unter 30 %
+    sind die Enten unglücklich und legen nur halb so viel. Enten fressen Schnecken: weniger Würmer bei den Hühnern
+    und ein Viertel mehr Gemüse.
+  - **Gänse** legen fast nur im Frühling (Eier 5-facher Preis). Eine erwachsene Gans ist Wachgans: +10 % Fuchsschutz.
+  - **Wachteln** legen fast täglich ein kleines Ei (0,3-facher Preis) und bleiben immer in der Voliere.
+  - Mit Männchen derselben Art werden Eier zu Bruteiern. Brutdauer im Brutapparat: **Huhn 7, Ente 9, Gans 10,
+    Wachtel 6 Tage**.
+  - Erpel, Ganter und Wachtelhähne sind keine Hähne: Sie befruchten keine Hühnereier, schützen nicht vor dem Habicht
+    und zählen nicht für das Kapitelziel „Einen Hahn halten“.
+  - Steckbrief, Tierliste, Album und Markt nennen Ente/Erpel, Gans/Ganter, Wachtel/Wachtelhahn. Auf die Geflügelschau
+    und zu Hahn-, Junghennen- und Suppenhuhn-Aufträgen dürfen weiter nur Hühner.
+- **Kapitel 4 „Rassezucht“** (Belohnung 300 €): 3 Hühnerrassen gleichzeitig halten (ohne Legehybriden), an einer
+  Geflügelschau teilnehmen, ein Tier mit „sehr gut“ (ab 93 Punkten) bewerten lassen, 8 Einträge im Hühner-Album.
+- **Kapitel 5 „Der große Hof“** (Belohnung 500 €): 25 Tiere gleichzeitig, 4 Sterne Hof-Ruf, eine weitere Geflügelart,
+  1.000 Eier verkaufen, 10 Kundenaufträge erfüllen. Danach gibt es eine Abschlussmeldung, der Hof läuft weiter.
+- Wer Kapitel 3 schon geschafft hatte, bekommt beim Laden die Ziele von Kapitel 4.
+- Meldungen können Auswahlknöpfe haben. Offene Meldungen aus dem Spielstand erscheinen gleich beim Laden.
+
+### Geändert
+
+- **Verpasste Aufträge** kosten jetzt 14 Tage lang 0,3 Sterne Hof-Ruf (mehrere summieren sich bis −1 Stern), und der
+  Kunde verliert 2 Punkte auf dem Weg zum Stammkunden. Bereits Bezahltes aus Teillieferungen bleibt.
 
 ### Behoben
 
@@ -42,6 +93,24 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - Kredit und Pleite-Regeln in eigenem Modul `src/game/pleite.ts` mit Tests (`tests/pleite.test.ts`, Coverage 100 %,
   Mutation Score 82 %; übrig sind Meldungstexte). Neue optionale Felder im Spielstand: `brokeSince`, `brokeWarned`,
   `gameOverReason`.
+- Kundenaufträge in eigenem Modul `src/game/orders.ts` mit Tests (`tests/auftraege.test.ts`,
+  `tests/auftraege-formeln.test.ts` mit festgelegtem Zufall). Mutation Score 95 %. Neue optionale Felder:
+  `customers`, `orderEffect`, `stats.ordersDone`, bei Aufträgen `brown`, `breed`, `big`, `delivered`, `paid`.
+- Ereignisse in eigenem Modul `src/game/ereignisse.ts` mit Tests (`tests/ereignisse.test.ts`,
+  `tests/ereignisse-zufall.test.ts` mit festgelegtem Zufall). Coverage 99 %, Mutation Score 88 %. Neue optionale Felder:
+  `hiddenNest`, `escapee`, `neighbor`, bei Meldungen `choices` (nur feste Aktionen erlaubt). Der Browsertest tippt
+  Nest, Ausbüxer und Nachbar-Auswahl an.
+- Gemüsebeet in eigenem Modul `src/game/beet.ts` mit Tests (`tests/beet.test.ts`), Coverage 100 %, Mutation Score
+  92 % vor den Grenzwert-Tests. Neues optionales Feld `bed`.
+- Weitere Arten in `src/game/arten.ts` mit Tests (`tests/arten.test.ts`, `tests/arten-formeln.test.ts` mit festgelegtem
+  Zufall), Mutation Score 99,6 %. `flock()` meint jetzt nur die Hühner (ohne Küken), `othersOf()` die anderen Arten;
+  die Art ergibt sich aus der Rasse (`BREEDS[…].species`). Neues optionales Feld `pond`. `requires` bei Ausrüstung
+  gilt jetzt für jeden Besitz, nicht nur den Zaun.
+- Kapitelziele 4 und 5 mit Tests (`tests/kapitel.test.ts`). Der bestehende Test „Kapitel gibt es nicht“ nimmt jetzt 6
+  statt 4 als Beispiel.
+- Ein Ausbüxer steht in der Szene sofort vor dem Zaun, auch in der Pause.
+- Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
+  abhängt.
 
 ## [0.4.1] – 2026-10-18
 
