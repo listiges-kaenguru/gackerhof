@@ -13,6 +13,7 @@ import {
   season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { dailyBed } from './beet';
 import { dailyEvents, eveningEscapee, hourlyEscape, layHidden } from './ereignisse';
 import { dailyOrders } from './orders';
 import { checkBroke } from './pleite';
@@ -314,6 +315,7 @@ function newDay(s: GameState) {
   // Ereignisse
   randomEvents(s);
   dailyEvents(s);
+  dailyBed(s);
   s.events = s.events.filter(e => e.until >= s.day);
   dailyOrders(s);
   visitRequest(s);

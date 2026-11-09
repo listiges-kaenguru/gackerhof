@@ -33,6 +33,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - **Nachbar und Hahn:** Mit erwachsenem Hahn beschwert sich ab und zu der Nachbar. Du entscheidest: Eierkarton
   schenken (6 Eier, dann 30 Tage Ruhe), Stall verdunkeln (einmalig 20 €, danach viel seltener Beschwerden) oder
   ignorieren (bei der nächsten Beschwerde 50 € Bußgeld).
+- **Gemüsebeet** (Erweiterungen, 40 €): Säen geht im Frühling und Sommer (Saatgut 3 €), nach **20 Tagen** ist das
+  Gemüse reif. Ein Sack Hühnermist als Dünger verdoppelt den Ertrag von 4 auf 8 kg. Frost zerstört, was im Beet steht.
+  Gemüse lässt sich verkaufen (**2,50 € je kg**, mit Hofladen 3,75 €, eigene Kategorie „Gemüse“ in den Finanzen) oder an
+  die Hühner verfüttern (1 kg je angefangene 5 Tiere: satter und zufriedener). Mist lässt sich weiter verkaufen.
 - Meldungen können Auswahlknöpfe haben. Offene Meldungen aus dem Spielstand erscheinen gleich beim Laden.
 
 ### Geändert
@@ -74,6 +78,9 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   `tests/ereignisse-zufall.test.ts` mit festgelegtem Zufall). Coverage 99 %, Mutation Score 88 %. Neue optionale Felder:
   `hiddenNest`, `escapee`, `neighbor`, bei Meldungen `choices` (nur feste Aktionen erlaubt). Der Browsertest tippt
   Nest, Ausbüxer und Nachbar-Auswahl an.
+- Gemüsebeet in eigenem Modul `src/game/beet.ts` mit Tests (`tests/beet.test.ts`), Coverage 100 %, Mutation Score
+  92 % vor den Grenzwert-Tests. Neues optionales Feld `bed`.
+- Ein Ausbüxer steht in der Szene sofort vor dem Zaun, auch in der Pause.
 - Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
   abhängt.
 

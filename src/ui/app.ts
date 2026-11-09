@@ -13,6 +13,7 @@ import {
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
   seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
+import * as B from '../game/beet';
 import * as E from '../game/ereignisse';
 import { CHOICE_ACTS } from '../game/ereignisse';
 import { BIG_PARTIAL_SHARE, dueText, isRegular, orderWhat, REGULAR_AFTER, weekday } from '../game/orders';
@@ -146,6 +147,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
     const esc0 = s.escapee ? s.animals.find(a => a.id === s.escapee!.id && !a.dead) : undefined;
     if (esc0) out.push({ icon: '🏃', text: `${esc0.name} ist ausgebüxt: antippen zum Einfangen`, act: 'catch', kind: 'bad' });
+    if (B.bedState(s) === 'reif') out.push({ icon: '🥕', text: 'Gemüse ist reif: ernten', act: 'harvest', kind: 'good' });
     if (s.hiddenNest) out.push({ icon: '🔍', text: 'Eine Henne legt in ein Versteck im Auslauf. Such es!', act: 'open:hof', kind: 'warn' });
     const ords = s.orders ?? [];
     if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
@@ -341,6 +343,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             <button class="btn small" data-act="light">${s.lightOn === false ? 'Einschalten' : 'Ausschalten'}</button></div>` : ''}`
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
+      ${bedCard()}
       <section class="card">
         <h3>💧 Wasser & 🌾 Futter</h3>
         ${s.equip.drinker ? `${meter(`${ITEM[s.equip.drinker].name}: ${s.water.toFixed(1)} l`, (s.water / drinkerCap(s)) * 100, '💧')}${frozen(s) ? '<p class="bad">🧊 Die Tränke ist eingefroren!</p>' : ''}` : '<p>Keine Tränke.</p>'}
@@ -494,13 +497,15 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const eggs = eggCount(s.eggs);
     const he = s.hatchEggs.length;
     const mist = s.inventory.mist ?? 0;
+    const veg = s.inventory.gemuese ?? 0;
     return tabsHtml + info + `
       <section class="card"><h3>🥚 Eier</h3>
         <div class="row between"><span>${eggs} Speiseeier im Lager</span><button class="btn primary" data-act="sellEggs" ${eggs ? '' : 'disabled'}>Verkaufen ${euro(eggValue(s, s.eggs))}</button></div>
         ${eggs ? `<p class="muted">${eggBreakdown(s, s.eggs)}${eggPriceNote()}</p>` : ''}
         ${he ? `<div class="row between"><span>${he} Bruteier</span><span class="row"><button class="btn" data-act="sellHatch:brut">Als Bruteier ${euro(A.hatchEggValue(s))}</button><button class="btn small" data-act="sellHatch:food">Als Speiseeier ${euro(A.hatchEggFoodValue(s))}</button></span></div>` : ''}
         ${mist ? `<div class="row between"><span>💩 ${mist} Sack Mist</span><button class="btn" data-act="sellManure">Als Dünger ${euro(mist * MANURE_PRICE)}</button></div>` : ''}
-        ${!eggs && !he && !mist ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
+        ${veg ? `<div class="row between"><span>🥕 ${fmtAmount(veg)} kg Gemüse</span><button class="btn" data-act="sellVeg">Verkaufen ${euro(veg * B.vegPrice(s))}</button></div>` : ''}
+        ${!eggs && !he && !mist && !veg ? '<p class="muted">Nichts zu verkaufen. Eier zuerst im Nest einsammeln.</p>' : ''}
       </section>
       <section class="card"><h3>🐔 Tiere verkaufen</h3>
         ${living(s).length ? living(s).map(a => `<div class="offer">
@@ -535,7 +540,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     const cell = (v: number | undefined) => v ? `<td class="${v > 0 ? 'good' : 'bad'}">${v > 0 ? '+' : '−'}${euro(Math.abs(v))}</td>` : '<td class="muted">–</td>';
     const rows = (cats: FinanceCat[]) => cats.filter(c => cur[c] || prev?.[c])
       .map(c => `<tr><th>${FINANCE_CATS[c].emoji} ${FINANCE_CATS[c].name}</th>${cell(cur[c])}${prev ? cell(prev[c]) : ''}</tr>`).join('');
-    const income = rows(['eier', 'tierverkauf', 'auftraege', 'mist', 'besuche', 'schau', 'geschenke', 'kredit']);
+    const income = rows(['eier', 'tierverkauf', 'auftraege', 'mist', 'gemuese', 'besuche', 'schau', 'geschenke', 'kredit']);
     const costs = rows(['futter', 'einstreu', 'medizin', 'tierarzt', 'tierkauf', 'ausruestung', 'pacht', 'entsorgung', 'sonstiges']);
     const sum = (m: FinanceMonth) => Object.values(m).reduce((t, v) => t + (v ?? 0), 0);
     const cols = prev ? 3 : 2;
@@ -558,6 +563,30 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (bonus !== 1) parts.push(`inkl. ${Math.round((bonus - 1) * 100)} % Bonus (${diff(s).name})`);
     return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
   }
+  /** Gemüsebeet in der Hofübersicht */
+  function bedCard(): string {
+    if (!has(s, 'beet')) return '';
+    const st = B.bedState(s);
+    const se = season(s);
+    const canSow = se === 'fruehling' || se === 'sommer';
+    const left = s.bed ? Math.max(0, B.GROW_DAYS - (s.day - s.bed.sownDay)) : 0;
+    const status = st === 'leer'
+      ? (canSow ? `Leer. Saatgut kostet ${euro(B.SEED_COST)}.` : 'Leer. Gesät wird im Frühling und Sommer.')
+      : st === 'waechst'
+        ? `🌱 Wächst, reif in ${left} Tag${left === 1 ? '' : 'en'}${s.bed!.fertilized ? ' · gedüngt' : ''}.`
+        : `🥕 Reif! ${B.BASE_YIELD * (s.bed!.fertilized ? 2 : 1)} kg warten auf die Ernte.`;
+    return `<section class="card">
+        <h3>🥕 Gemüsebeet</h3>
+        <p>${status}</p>
+        <div class="row">
+          ${st === 'leer' ? `<button class="btn primary" data-act="sow" ${canSow ? '' : 'disabled'}>🌱 Säen</button>` : ''}
+          ${st === 'waechst' && !s.bed!.fertilized ? `<button class="btn" data-act="fertilize" ${(s.inventory.mist ?? 0) >= 1 ? '' : 'disabled'}>💩 Mit Mist düngen <small>(${s.inventory.mist ?? 0} Sack)</small></button>` : ''}
+          ${st === 'reif' ? '<button class="btn primary" data-act="harvest">🥕 Ernten</button>' : ''}
+        </div>
+        <p class="muted">Ein Sack Mist als Dünger verdoppelt den Ertrag. Frost zerstört, was im Beet steht. Gemüse lässt sich verkaufen (${euro(B.vegPrice(s))} je kg) oder an die Hühner verfüttern.</p>
+      </section>`;
+  }
+
   /** Was die Eier eines Auftrags auf dem Markt bringen würden */
   function orderMarketValue(o: Order, qty: number): number {
     const pick = A.orderEggs(s, qty, o);
@@ -765,11 +794,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       ${inc}
       <section class="card"><h3>📦 Vorräte</h3>
         <ul class="stock">${SUPPLIES.map(sp => `<li><span>${sp.emoji} ${sp.name}</span><b>${fmtAmount(s.inventory[sp.id] ?? 0)} ${sp.unit}</b></li>`).join('')}
-        <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li></ul>
+        <li><span>💩 Mist</span><b>${s.inventory.mist ?? 0} Sack</b></li>
+        ${has(s, 'beet') || (s.inventory.gemuese ?? 0) > 0 ? `<li><span>🥕 Gemüse</span><b>${fmtAmount(s.inventory.gemuese ?? 0)} kg</b></li>` : ''}</ul>
         <p class="muted">📦 Lagerplatz: Futter ${fmtAmount(feedStock(s))} / ${storageCap(s).feed} kg · Stroh ${fmtAmount(s.inventory.einstreu ?? 0)} / ${storageCap(s).straw} Ballen. Futter verdirbt mit der Zeit${has(s, 'schuppen') ? ', im Lagerschuppen nur halb so schnell' : ''}.</p>
         ${herbsActive(s) ? `<p class="muted">🍃 Kräuter im Trinkwasser wirken bis Tag ${s.kraeuterUntil}.</p>` : ''}
         <div class="row">
           <button class="btn" data-act="treat" ${(s.inventory.mehlwuermer ?? 0) >= 1 && living(s).length ? '' : 'disabled'}>🪱 Mehlwürmer verstreuen</button>
+          ${(s.inventory.gemuese ?? 0) > 0 ? `<button class="btn" data-act="feedVeg">🥕 Gemüse verfüttern</button>` : ''}
           <button class="btn" data-act="herbs" ${(s.inventory.kraeuter ?? 0) >= 1 && s.equip.drinker ? '' : 'disabled'}>🍃 Kräuter ins Trinkwasser</button>
           <button class="btn primary" data-act="open:shop:verbrauch">Nachkaufen</button>
         </div>
@@ -1053,6 +1084,11 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         return result(r);
       }
       case 'findNest': return result(E.findNest(s));
+      case 'sow': return result(B.sow(s));
+      case 'fertilize': return result(B.fertilize(s));
+      case 'harvest': return result(B.harvest(s));
+      case 'sellVeg': return result(B.sellVegetables(s));
+      case 'feedVeg': return result(B.feedVegetables(s));
       case 'catch': return result(E.catchEscapee(s));
       case 'collect': return result(A.collectEggs(s));
       case 'water': return result(A.refillWater(s));

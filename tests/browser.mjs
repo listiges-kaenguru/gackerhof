@@ -185,7 +185,44 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Gemüsebeet: ernten, säen, verfüttern und verkaufen über die Oberfläche
+{
+  const s = structuredClone(basis);
+  s.money = 500;
+  s.extras.push('beet');
+  s.day = 30; s.hour = 11; s.speed = 0;
+  s.bed = { sownDay: 5, fertilized: true };
+  const datei = join(dir, 'beet.json');
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage();
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(300);
+  check('Beet: in der Szene', (await seite.locator('g.bed').count()) === 1);
+  await seite.locator('[data-act="tab:hof"]').click();
+  await seite.locator('.panel [data-act="harvest"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Beet: Ernte (gedüngt 8 kg)', (await seite.getByText('8 kg Gemüse geerntet').count()) > 0);
+  await seite.locator('.panel [data-act="sow"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Beet: neu gesät', (await seite.getByText('reif in 20 Tagen').count()) > 0);
+  await seite.locator('[data-act="tab:lager"]').click();
+  await seite.locator('.panel [data-act="feedVeg"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Beet: Gemüse verfüttert', (await seite.getByText('Gemüse verfüttert').count()) > 0);
+  await seite.locator('[data-act="tab:markt"]').click();
+  await seite.locator('[data-act="mtab:verkaufen"]').click();
+  await seite.locator('.panel [data-act="sellVeg"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Beet: Gemüse verkauft', (await seite.getByText(/kg Gemüse für .* verkauft/).count()) > 0);
+  check('Beet: kein Absturz', absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3 + 18} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 24} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);
