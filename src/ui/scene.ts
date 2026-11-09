@@ -4,6 +4,7 @@ import { BREEDS, CONDITIONS } from '../game/data';
 import {
   autoWater, drinkerCap, feederCap, flock, frozen, has, headingIn, isDaytime, lightActive, nestCount, season, stage, worstCondition,
 } from '../game/helpers';
+import { ESCAPE_REGION } from '../game/ereignisse';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
 import type { Animal, GameState } from '../game/types';
@@ -158,6 +159,7 @@ export class Scene {
       s.feedType, nestCount(s), phase, s.incubator.length, s.farmName,
       insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
       s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
+      s.hiddenNest ? [s.hiddenNest.x, s.hiddenNest.y, Math.min(4, s.hiddenNest.eggs)] : null,
     ]);
     if (sig !== this.sig) {
       this.sig = sig;
@@ -239,6 +241,17 @@ export class Scene {
     if (has(s, 'brutapparat')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(66 216)"><rect x="-14" y="-12" width="28" height="18" rx="4" fill="#eef2f4"/><rect x="-9" y="-8" width="18" height="9" rx="2" fill="#ffd28a"/>${s.incubator.length ? `<text x="17" y="2" class="svgtxt small">${s.incubator.length}🥚</text>` : ''}</g>`);
     extra.push(noticeBoard(s));
     if (s.trophies?.length) extra.push(trophySvg(408, 156, s.trophies.length));
+    // Verstecktes Nest: halb im Gras verborgen, zum Antippen
+    if (s.hiddenNest) {
+      const { x, y, eggs: n } = s.hiddenNest;
+      const shown = Math.min(3, n);
+      extra.push(`<g class="clickable hidden-nest" data-act="findNest" transform="translate(${num(x)} ${num(y)})" aria-label="Verstecktes Nest">
+        <circle r="14" fill="transparent" stroke="none"/>
+        <ellipse cx="0" cy="2" rx="9" ry="4" fill="#a87b45"/>
+        ${Array.from({ length: shown }, (_, i) => `<ellipse cx="${-4 + i * 4}" cy="-1" rx="2.6" ry="3.3" fill="#fbf3e4" stroke="#c9b48f" stroke-width=".6"/>`).join('')}
+        <path d="M-12 5 l3 -11 l2 11 M-5 6 l2 -13 l2 13 M4 6 l3 -12 l1 12 M10 5 l3 -9 l1 9" fill="none" stroke="${ground[1]}" stroke-width="2.2"/>
+      </g>`);
+    }
     if (snow) extra.push(`<g class="snow" fill="#fff" stroke="none">${Array.from({ length: 24 }, (_, i) => `<circle cx="${(i * 41) % 480}" cy="${(i * 67) % 160}" r="${1.5 + (i % 3)}" style="animation-delay:-${(i % 7) * 0.9}s"/>`).join('')}</g>`);
 
     this.world.innerHTML = `
@@ -359,7 +372,11 @@ export class Scene {
     let region: typeof YARD | null = null;
     let wantInside = false;
 
-    if (st === 'kueken') {
+    const escaped = s.escapee?.id === a.id;
+    if (escaped) sp.el.dataset.act = 'catch'; else delete sp.el.dataset.act;
+    if (escaped) {
+      region = ESCAPE_REGION;
+    } else if (st === 'kueken') {
       const mother = a.motherId != null ? s.animals.find(m => m.id === a.motherId && !m.dead) : undefined;
       const msp = mother ? this.sprites.get(mother.id) : undefined;
       if (has(s, 'kuekenstation') && !mother) region = STATION;
@@ -487,6 +504,7 @@ function noticeBoard(s: GameState): string {
 
 function iconFor(s: GameState, a: Animal): string {
   if (a.dead) return '🕊️';
+  if (s.escapee?.id === a.id) return '❗';
   if (chickFreezing(s, a)) return '🥶';
   if (a.outside && !s.doorOpen && !isDaytime(s.hour)) return '🚪';
   const worst = worstCondition(a);

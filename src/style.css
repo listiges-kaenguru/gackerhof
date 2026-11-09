@@ -403,6 +403,7 @@ label.btn input { display: none; }
 @keyframes wobble { 50% { transform: rotate(-12deg) scale(1.1); } }
 .celebrate { text-align: center; }
 .celebrate p { text-align: left; }
+.celebrate .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .burst {
   font-size: 4rem; line-height: 1.2; display: inline-block; animation: burst 1.6s ease-in-out infinite;
   filter: drop-shadow(0 0 12px #ffcf3f);

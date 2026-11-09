@@ -135,7 +135,8 @@ export const freezes = (s: GameState) =>
 export const frozen = (s: GameState) => freezes(s) && (s.iceFreeUntil ?? 0) <= hourIndex(s);
 export const shade = (s: GameState) => plot(s).shade || has(s, 'unterstand');
 /** Tiere im Auslauf (Küken und brütende Hennen bleiben drinnen) */
-export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside);
+/** Tiere im Auslauf (ein Ausbüxer vor dem Zaun zählt nicht dazu) */
+export const outsideAnimals = (s: GameState) => flock(s).filter(a => a.outside && a.id !== s.escapee?.id);
 /** Draußen bei geschlossener Klappe: ausgesperrt */
 export const lockedOut = (s: GameState) => (s.doorOpen ? [] : outsideAnimals(s));
 export const isDaytime = (h: number) => h >= 6 && h < 20;

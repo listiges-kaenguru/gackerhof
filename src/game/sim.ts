@@ -13,6 +13,7 @@ import {
   season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { dailyEvents, eveningEscapee, hourlyEscape, layHidden } from './ereignisse';
 import { dailyOrders } from './orders';
 import { checkBroke } from './pleite';
 import { announceShow, ensureShow, runShow } from './show';
@@ -43,6 +44,7 @@ export function advanceHour(s: GameState) {
   }
   moveFlock(s);
   hourly(s);
+  hourlyEscape(s);
   switch (s.hour) {
     case 6: morning(s); break;
     case 8: layEggs(s); break;
@@ -50,7 +52,7 @@ export function advanceHour(s: GameState) {
     case 12: runShow(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
     case 19: if (s.day <= 5 && s.doorOpen && !has(s, 'autoklappe') && flock(s).length) log(s, '🌇 Es dämmert. Denk daran, abends die Hühnerklappe zu schließen!', 'warn', true); break;
-    case 21: roost(s); evening(s); break;
+    case 21: eveningEscapee(s); roost(s); evening(s); break;
     case 23: nightPredators(s); break;
   }
   if (s.hour === VISIT_HOUR) farmVisit(s);
@@ -172,6 +174,7 @@ export function moveFlock(s: GameState) {
   let inside = all.filter(a => !a.outside).length;
   const cap = maxInside(s);
   for (const a of all) {
+    if (a.id === s.escapee?.id) continue; // ausgebüxt: läuft vor dem Zaun herum
     if (a.broodingUntil > s.day || !s.equip.coop || !s.equip.fence) {
       if (a.outside) inside++;
       a.outside = false;
@@ -310,6 +313,7 @@ function newDay(s: GameState) {
 
   // Ereignisse
   randomEvents(s);
+  dailyEvents(s);
   s.events = s.events.filter(e => e.until >= s.day);
   dailyOrders(s);
   visitRequest(s);
@@ -523,6 +527,7 @@ function layEggs(s: GameState) {
     a.eggsLaid++;
     laid++;
     s.stats.eggsTotal++;
+    if (layHidden(s, a.id)) continue;
     if (a.withdrawalUntil >= s.day) {
       s.blockedEggs++;
     } else if (roosters) {

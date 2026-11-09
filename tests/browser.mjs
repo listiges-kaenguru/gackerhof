@@ -142,7 +142,50 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Ereignisse: Nachbar-Auswahl, verstecktes Nest und Ausbüxer per Antippen in der Szene
+{
+  const s = structuredClone(basis);
+  const [h1, h2] = s.animals;
+  s.hour = 11; s.minute = 0; s.speed = 0;
+  s.eggs = { hybrid: 8 };
+  s.hiddenNest = { henId: h1.id, since: s.day, eggs: 3, x: 400, y: 230 };
+  h2.outside = true;
+  s.escapee = { id: h2.id, since: s.day, x: 170, y: 246 };
+  s.neighbor = { pending: true, warned: false, quietUntil: 0, darkened: false };
+  s.celebrations = [{ emoji: '🐓', title: 'Der Nachbar beschwert sich', lines: ['Test'], choices: [
+    { act: 'nachbar:eier', label: 'Eierkarton schenken' }, { act: 'nachbar:verdunkeln', label: 'Verdunkeln' }, { act: 'nachbar:ignorieren', label: 'Ignorieren' },
+  ] }];
+  const datei = join(dir, 'ereignisse.json');
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage();
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(400);
+  // Meldung mit Auswahl erscheint gleich beim Laden
+  const wahl = seite.locator('[data-act="nachbar:eier"]');
+  check('Ereignisse: Nachbar zeigt Auswahlknöpfe', await wahl.waitFor({ timeout: 4000 }).then(() => true, () => false));
+  await wahl.click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(300);
+  check('Ereignisse: Auswahl schließt die Meldung', !(await seite.locator('[data-act="nachbar:eier"]').isVisible()));
+  check('Ereignisse: Eierkarton abgezogen', (await seite.getByText('Eierkarton verschenkt').count()) > 0);
+  const nest = seite.locator('.hidden-nest');
+  check('Ereignisse: Versteck in der Szene', (await nest.count()) === 1);
+  await nest.dispatchEvent('click').catch(() => {});
+  await seite.waitForTimeout(300);
+  check('Ereignisse: Antippen findet das Versteck', (await seite.locator('.hidden-nest').count()) === 0);
+  const ausreisser = seite.locator('[data-act="catch"]').first();
+  check('Ereignisse: Ausbüxer zum Einfangen markiert', (await seite.locator('[data-act="catch"]').count()) > 0);
+  await ausreisser.dispatchEvent('click').catch(() => {});
+  await seite.waitForTimeout(300);
+  check('Ereignisse: Einfangen klappt', (await seite.getByText('wieder im Auslauf').count()) > 0);
+  check('Ereignisse: kein Absturz', absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3 + 10} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 18} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);

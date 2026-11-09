@@ -24,6 +24,16 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - **Großaufträge** ab 3 Sternen, selten: 48–96 Eier mit 10–14 Tagen Frist. Teillieferungen bringen 80 % des Lohns
   anteilig, den Rest gibt es bei vollständiger Lieferung.
 - **Aufträge ablehnen** kostet nichts.
+- **Verstecktes Nest:** Ab und zu legt eine Henne bis zu 5 Tage lang in ein Versteck im Auslauf statt ins Stallnest.
+  Das Nest liegt halb im Gras; Antippen bringt die Eier ins Lager. Wird es nicht gefunden, verderben die Eier.
+- **Ausgebüxtes Huhn:** Tagsüber kann ein Huhn aus dem Auslauf entwischen und läuft dann vor dem Stall herum (mit ❗).
+  Antippen fängt es ein, „Reinlocken“ hilft nicht. Ist es um 21 Uhr noch draußen, holt es meist (70 %) der Fuchs. Ein
+  Knotengitter lässt am häufigsten eins entwischen, ein Maschendrahtzaun am seltensten, ein Volierennetz senkt das
+  Risiko weiter. Im Winter büxt niemand aus.
+- **Nachbar und Hahn:** Mit erwachsenem Hahn beschwert sich ab und zu der Nachbar. Du entscheidest: Eierkarton
+  schenken (6 Eier, dann 30 Tage Ruhe), Stall verdunkeln (einmalig 20 €, danach viel seltener Beschwerden) oder
+  ignorieren (bei der nächsten Beschwerde 50 € Bußgeld).
+- Meldungen können Auswahlknöpfe haben. Offene Meldungen aus dem Spielstand erscheinen gleich beim Laden.
 
 ### Geändert
 
@@ -60,6 +70,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - Kundenaufträge in eigenem Modul `src/game/orders.ts` mit Tests (`tests/auftraege.test.ts`,
   `tests/auftraege-formeln.test.ts` mit festgelegtem Zufall). Mutation Score 95 %. Neue optionale Felder:
   `customers`, `orderEffect`, `stats.ordersDone`, bei Aufträgen `brown`, `breed`, `big`, `delivered`, `paid`.
+- Ereignisse in eigenem Modul `src/game/ereignisse.ts` mit Tests (`tests/ereignisse.test.ts`,
+  `tests/ereignisse-zufall.test.ts` mit festgelegtem Zufall). Coverage 99 %, Mutation Score 88 %. Neue optionale Felder:
+  `hiddenNest`, `escapee`, `neighbor`, bei Meldungen `choices` (nur feste Aktionen erlaubt). Der Browsertest tippt
+  Nest, Ausbüxer und Nachbar-Auswahl an.
 - Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
   abhängt.
 
