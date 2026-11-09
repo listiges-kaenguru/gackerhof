@@ -52,6 +52,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
     Wachtel 6 Tage**.
   - Steckbrief, Tierliste, Album und Markt nennen Ente/Erpel, Gans/Ganter, Wachtel/Wachtelhahn. Auf die Geflügelschau
     und zu Hahn-, Junghennen- und Suppenhuhn-Aufträgen dürfen weiter nur Hühner.
+- **Kapitel 4 „Rassezucht“** (Belohnung 300 €): 3 Hühnerrassen gleichzeitig halten (ohne Legehybriden), an einer
+  Geflügelschau teilnehmen, ein Tier mit „sehr gut“ (ab 93 Punkten) bewerten lassen, 8 Einträge im Hühner-Album.
+- **Kapitel 5 „Der große Hof“** (Belohnung 500 €): 25 Tiere gleichzeitig, 4 Sterne Hof-Ruf, eine weitere Geflügelart,
+  1.000 Eier verkaufen, 10 Kundenaufträge erfüllen. Danach gibt es eine Abschlussmeldung, der Hof läuft weiter.
+- Wer Kapitel 3 schon geschafft hatte, bekommt beim Laden die Ziele von Kapitel 4.
 - Meldungen können Auswahlknöpfe haben. Offene Meldungen aus dem Spielstand erscheinen gleich beim Laden.
 
 ### Geändert
@@ -99,6 +104,8 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Zufall), Mutation Score 99,6 %. `flock()` meint jetzt nur die Hühner (ohne Küken), `othersOf()` die anderen Arten;
   die Art ergibt sich aus der Rasse (`BREEDS[…].species`). Neues optionales Feld `pond`. `requires` bei Ausrüstung
   gilt jetzt für jeden Besitz, nicht nur den Zaun.
+- Kapitelziele 4 und 5 mit Tests (`tests/kapitel.test.ts`). Der bestehende Test „Kapitel gibt es nicht“ nimmt jetzt 6
+  statt 4 als Beispiel.
 - Ein Ausbüxer steht in der Szene sofort vor dem Zaun, auch in der Pause.
 - Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
   abhängt.

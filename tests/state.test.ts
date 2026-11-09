@@ -53,7 +53,7 @@ describe('Kapitelziele', () => {
     }
   });
 
-  it.each([0, 4, -1, 1.5])('Kapitel %s gibt es nicht: keine Ziele', (ch) => {
+  it.each([0, 6, -1, 1.5])('Kapitel %s gibt es nicht: keine Ziele', (ch) => {
     expect(chapterGoals(ch)).toEqual([]);
   });
 });
