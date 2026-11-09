@@ -181,3 +181,62 @@ mitziehen (Preise, Krankheiten, Tipps).
   enges Budget durchaus passend.
 - **Spielstände:** Neue Werte im Spielstand (Immunität, Hofladen-Stufe, Abos) brauchen eine Migration. Siehe auch
   `docs/APPS.md`, Abschnitt 3, Punkt 3.
+
+## 7. Nachmessung 0.5.0 und Änderungen in 0.5.1
+
+> Stand: November 2026, Spielversion 0.5.0 bzw. 0.5.1.
+
+### So wurde gemessen
+
+- Ein Spieljahr (120 Tage) auf „Mittel“, Streuobstwiese, 10 Zufallsstartwerte, Durchschnitt des laufenden
+  Monatsergebnisses (ohne Ausrüstung, Kredite und Geschenke).
+- Basis: 12 Legehybriden im Gartenhaus-Stall mit Hofladen, Maschendraht, Untergrabschutz, Volierennetz,
+  automatischer Klappe, Sandbad, Dämmung, Wechselweide und Lagerschuppen.
+- Der „Spieler“ versorgt täglich, verkauft Eier (Überschuss über den Hofladen hinaus), mistet aus, behandelt jede
+  Krankheit (Atemwegsinfekt beim Tierarzt), liefert Aufträge oder lehnt sie ab, sucht Nester, fängt Ausbüxer und
+  verschenkt dem Nachbarn Eier. Mit Beet: säen, mit einem Sack Mist düngen, ernten, verkaufen; der übrige Mist wird
+  verkauft. Mit Enten: Becken reinigen unter 40 %.
+
+### Ergebnis 0.5.0
+
+| Hof | Ø Monat | Abstand zur Basis | Auffällig |
+|---|---|---|---|
+| Basis | −24 € | – | wie in Abschnitt 1 |
+| + Gemüsebeet | −6 € | +18 € | Gemüse rund 30 € im Monat, dafür etwas weniger Mistverkauf |
+| + 6 Laufenten | −57 € (3 Seeds) | −37 € | Tierarzt fast doppelt so teuer |
+| + 4 Gänse | −27 € (3 Seeds) | −7 € | höhere Medizinkosten |
+| + 12 Wachteln | −81 € (3 Seeds) | −61 € | in einem Lauf Atemwegsinfekt-Welle mit 18 toten Tieren |
+| Aufträge ignoriert | −23 € (3 Seeds) | – | Hof-Ruf im Schnitt 2,1 statt 3,0 Sterne |
+
+Ursachen:
+
+1. Enten, Gänse und Wachteln steckten sich bei den Hühnern an und erhöhten den Ansteckungsdruck für alle, obwohl sie
+   in eigenen Unterkünften leben. Jeder Atemwegsinfekt kostet 25 € Tierarzt, auch für eine Wachtel.
+2. Aufträge kommen ungefragt. Wer sie nicht bearbeitet, verlor mit −0,3 Sternen je verpasstem Auftrag (bis −1)
+   dauerhaft fast einen Stern, und der Hofladen verkaufte täglich 3 Eier weniger.
+
+### Änderungen in 0.5.1
+
+- **Getrennte Ansteckung:** Tiere in eigener Unterkunft stecken sich nur untereinander an. Für sie gelten die
+  Stallfaktoren der Hühner nicht; Milben und Würmer treten halb so oft auf. Gänse und Wachteln bekommen dort halb so
+  oft Atemwegsinfekte.
+- **Eierpreise:** Gänseeier 6-facher statt 5-facher, Wachteleier 0,4-facher statt 0,3-facher Eierpreis.
+- **Verpasste Aufträge:** −0,2 statt −0,3 Sterne je Auftrag, höchstens −0,5 statt −1.
+
+### Ergebnis 0.5.1
+
+| Hof | Ø Monat | Abstand zur Basis |
+|---|---|---|
+| Basis | −24 € | – |
+| + Gemüsebeet | −6 € | +18 € |
+| + 6 Laufenten | +3 € | +27 € |
+| + 4 Gänse | −25 € | ±0 € |
+| + 12 Wachteln | −38 € | −14 € |
+| Aufträge ignoriert | −48 € | Hof-Ruf 2,9 statt 3,0 Sterne |
+
+- Laufenten lohnen sich jetzt, Gänse tragen sich (ihr Nutzen als Wachgans ist in der Messung nicht enthalten, weil der
+  Testhof ohnehin gut geschützt ist). Wachteln bleiben ein kleiner Verlust von etwa 1 € je Tier und Monat:
+  Behandlungen kosten je Tier so viel wie bei einem Huhn. Sie sind eher Sammel- und Kapitelziel als Einnahmequelle.
+- Der Grundbefund aus Abschnitt 1 bleibt: Auch ein gut geführter Hühnerhof liegt im Schnitt leicht im Minus. Das
+  Gemüsebeet und Laufenten sind jetzt die einfachsten Wege ins Plus.
+- Die Streuung ist groß (einzelne Monate ±100 €). Unterschiede unter etwa 10 € sind nicht belastbar.

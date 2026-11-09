@@ -222,7 +222,7 @@ export const BREEDS: Record<BreedId, BreedDef> = {
   },
   gans: {
     name: 'Pommerngans', desc: 'Groß, wachsam und laut: schlägt Alarm, wenn der Fuchs kommt. Grast viel.', species: 'gans',
-    layRate: 0.35, eggValue: 5, weightHen: 5.5, weightRooster: 6.5, life: [1500, 2000], broody: 0, coldHardy: true,
+    layRate: 0.35, eggValue: 6, weightHen: 5.5, weightRooster: 6.5, life: [1500, 2000], broody: 0, coldHardy: true,
     variants: [
       { id: 'grau', name: 'grau', colors: { body: '#9a958c', wing: '#6f6a62', neck: '#8a857c' },
         rooster: { body: '#9a958c', wing: '#6f6a62', neck: '#8a857c', tail: '#5a554e' }, chick: '#d8d06a' },
@@ -236,7 +236,7 @@ export const BREEDS: Record<BreedId, BreedDef> = {
   },
   wachtel: {
     name: 'Legewachtel', desc: 'Klein und genügsam, legt fast jeden Tag ein winziges Ei. Lebt in der Voliere.', species: 'wachtel',
-    layRate: 0.85, eggValue: 0.3, weightHen: 0.2, weightRooster: 0.18, life: [250, 400], broody: 0, coldHardy: false,
+    layRate: 0.85, eggValue: 0.4, weightHen: 0.2, weightRooster: 0.18, life: [250, 400], broody: 0, coldHardy: false,
     variants: [
       { id: 'wild', name: 'wildfarben', colors: { body: '#a07c55', wing: '#6e5236', neck: '#8a6a48' },
         rooster: { body: '#a8794a', wing: '#6e5236', neck: '#7a4a2a', tail: '#5a4028' }, chick: '#d9b77a' },

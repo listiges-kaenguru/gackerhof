@@ -404,3 +404,32 @@ describe('Getrennte Ansteckung (0.5.1)', () => {
     expect(zaehle(true)).toBeLessThan(ohne * 0.1);
   });
 });
+
+describe('Gänse und Wachteln robuster (0.5.1)', () => {
+  it('Eierpreise: Gans 6-fach, Wachtel 0,4-fach, Ente unverändert 1,6-fach', () => {
+    expect([BREEDS.gans.eggValue, BREEDS.wachtel.eggValue, BREEDS.laufente.eggValue]).toEqual([6, 0.4, 1.6]);
+  });
+
+  it('in eigener Unterkunft bekommen Gänse und Wachteln deutlich seltener Atemwegsinfekte als Enten', () => {
+    const zaehle = (breed: BreedId, haus: string[]) => {
+      let n = 0;
+      for (let seed = 1; seed <= 8; seed++) {
+        const s = hof();
+        s.seed = seed;
+        s.day = 95; // Winter
+        kaufe(s, ...haus);
+        const tiere = Array.from({ length: 6 }, () => tier(s, breed));
+        for (let h = 0; h < 20 * 24; h++) {
+          advanceHour(s);
+          for (const a of tiere) { n += a.conditions.filter(c => c.id === 'schnupfen').length; a.conditions = []; Object.assign(a, { food: 100, water: 100, health: 100 }); }
+          s.pond = 100;
+        }
+      }
+      return n;
+    };
+    const enten = zaehle('laufente', ['entenhaus', 'becken']);
+    expect(enten).toBeGreaterThan(10);
+    expect(zaehle('gans', ['gaensestall', 'grasweide'])).toBeLessThan(enten * 0.7);
+    expect(zaehle('wachtel', ['voliere'])).toBeLessThan(enten * 0.7);
+  });
+});

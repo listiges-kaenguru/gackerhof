@@ -403,6 +403,8 @@ function diseases(s: GameState) {
       // eigene Unterkunft, eigener Boden: Milben und Würmer halb so oft, unabhängig von Stall und Hühnerweide
       pMilben = 0.01 * (se === 'sommer' ? 2 : 1);
       pWurm = 0.005 * wet * (snails ? 0.6 : 1);
+      // Gänse und Wachteln sind robust: halb so oft Atemwegsinfekte
+      if (speciesOf(a.breed) !== 'ente') pSchnupfen *= 0.5;
     }
     if (st === 'kueken') {
       pMilben = 0;
