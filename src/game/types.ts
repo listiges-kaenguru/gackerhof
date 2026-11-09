@@ -119,7 +119,7 @@ export interface Order {
 
 /** Kategorien der Finanzübersicht (Mehr → Finanzen) */
 export type FinanceCat =
-  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
+  | 'eier' | 'tierverkauf' | 'auftraege' | 'mist' | 'gemuese' | 'besuche' | 'schau' | 'geschenke' | 'kredit'
   | 'futter' | 'einstreu' | 'medizin' | 'tierarzt' | 'tierkauf' | 'ausruestung' | 'pacht' | 'entsorgung' | 'sonstiges';
 
 /** Geldbewegungen eines Monats je Kategorie (Einnahmen positiv, Ausgaben negativ) */
@@ -247,6 +247,8 @@ export interface GameState {
   orders?: Order[];
   /** Erfüllte Aufträge je Kunde; ab REGULAR_AFTER ist er Stammkunde (ab 0.5.0) */
   customers?: Record<string, number>;
+  /** Gemüsebeet: Saattag und ob gedüngt; null = leer (ab 0.5.0) */
+  bed?: { sownDay: number; fertilized: boolean } | null;
   /** Henne legt in ein Versteck im Auslauf (Szenen-Koordinaten), ab 0.5.0 */
   hiddenNest?: { henId: number; since: number; eggs: number; x: number; y: number } | null;
   /** Ausgebüxtes Tier vor dem Zaun */

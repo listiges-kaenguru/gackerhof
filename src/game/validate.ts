@@ -93,6 +93,7 @@ export function isValidSave(v: unknown, saveVersion: number): v is GameState {
     && optional(s, 'hiddenNest', nullOr(x => obj(x) && int(x.henId, 0) && num(x.since) && int(x.eggs, 0, MAX_LIST)
       && num(x.x, 0, 480) && num(x.y, 0, 270)))
     && optional(s, 'escapee', nullOr(x => obj(x) && int(x.id, 0) && num(x.since) && num(x.x, 0, 480) && num(x.y, 0, 270)))
+    && optional(s, 'bed', nullOr(x => obj(x) && num(x.sownDay) && bool(x.fertilized)))
     && optional(s, 'neighbor', x => obj(x) && bool(x.pending) && bool(x.warned) && num(x.quietUntil) && bool(x.darkened));
   const spaeter = optional(s, 'pasture', x => list(x, y => num(y, 0, 100), 2) && (x as unknown[]).length === 2)
     && optional(s, 'pastureSide', x => oneOf(x, [0, 1])) && optional(s, 'pastureSwitchDay', x => num(x))

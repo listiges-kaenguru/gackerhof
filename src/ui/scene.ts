@@ -4,6 +4,7 @@ import { BREEDS, CONDITIONS } from '../game/data';
 import {
   autoWater, drinkerCap, feederCap, flock, frozen, has, headingIn, isDaytime, lightActive, nestCount, season, stage, worstCondition,
 } from '../game/helpers';
+import { bedState } from '../game/beet';
 import { ESCAPE_REGION } from '../game/ereignisse';
 import { chickFreezing } from '../game/sim';
 import { CHAPTERS } from '../game/state';
@@ -159,7 +160,7 @@ export class Scene {
       s.feedType, nestCount(s), phase, s.incubator.length, s.farmName,
       insideCount(s), s.chapter, s.goals.map(g => g.done).join(),
       s.pastureSide, (s.pasture ?? []).map(p => Math.round(p / 10)), lightActive(s), (s.trophies ?? []).length,
-      s.hiddenNest ? [s.hiddenNest.x, s.hiddenNest.y, Math.min(4, s.hiddenNest.eggs)] : null,
+      s.hiddenNest ? [s.hiddenNest.x, s.hiddenNest.y, Math.min(4, s.hiddenNest.eggs)] : null, bedState(s),
     ]);
     if (sig !== this.sig) {
       this.sig = sig;
@@ -241,6 +242,15 @@ export class Scene {
     if (has(s, 'brutapparat')) extra.push(`<g data-act="open:lager" class="clickable" transform="translate(66 216)"><rect x="-14" y="-12" width="28" height="18" rx="4" fill="#eef2f4"/><rect x="-9" y="-8" width="18" height="9" rx="2" fill="#ffd28a"/>${s.incubator.length ? `<text x="17" y="2" class="svgtxt small">${s.incubator.length}🥚</text>` : ''}</g>`);
     extra.push(noticeBoard(s));
     if (s.trophies?.length) extra.push(trophySvg(408, 156, s.trophies.length));
+    // Gemüsebeet hinter dem Hofladen: leer, mit Keimlingen oder reif
+    if (has(s, 'beet')) {
+      const st = bedState(s);
+      const plants = st === 'leer' ? '' : Array.from({ length: 5 }, (_, i) => st === 'reif'
+        ? `<g transform="translate(${-26 + i * 13} -4)"><path d="M0 0 q-6 -10 -2 -14 M0 0 q6 -10 2 -14 M0 0 v-15" fill="none" stroke="#3f8f3a" stroke-width="2.4"/><circle cx="0" cy="1" r="3" fill="#ef8a2c" stroke="none"/></g>`
+        : `<path d="M${-26 + i * 13} -2 q-3 -5 0 -7 q3 2 0 7" fill="#5fae4a" stroke="none"/>`).join('');
+      extra.push(`<g class="clickable bed" data-act="open:hof" transform="translate(54 130) scale(.85)" aria-label="Gemüsebeet">
+        <rect x="-36" y="-6" width="72" height="12" rx="3" fill="#6b4a2f"/><rect x="-33" y="-4" width="66" height="7" rx="2" fill="#7d573a" stroke="none"/>${plants}</g>`);
+    }
     // Verstecktes Nest: halb im Gras verborgen, zum Antippen
     if (s.hiddenNest) {
       const { x, y, eggs: n } = s.hiddenNest;
@@ -376,6 +386,13 @@ export class Scene {
     if (escaped) sp.el.dataset.act = 'catch'; else delete sp.el.dataset.act;
     if (escaped) {
       region = ESCAPE_REGION;
+      // schon draußen: die Figur steht gleich vor dem Zaun, auch in der Pause
+      const r = ESCAPE_REGION;
+      if (sp.inside || sp.x < r.x0 - 6 || sp.x > r.x1 + 6 || sp.y < r.y0 - 6 || sp.y > r.y1 + 6) {
+        sp.inside = false;
+        sp.x = sp.tx = s.escapee!.x;
+        sp.y = sp.ty = s.escapee!.y;
+      }
     } else if (st === 'kueken') {
       const mother = a.motherId != null ? s.animals.find(m => m.id === a.motherId && !m.dead) : undefined;
       const msp = mother ? this.sprites.get(mother.id) : undefined;
