@@ -854,7 +854,7 @@ const GOAL_TESTS: Record<string, (s: GameState) => boolean> = {
   futter: s => !!s.equip.feeder,
   huehner3: s => flock(s).length >= 3,
   eier10: s => s.stats.eggsSold >= 10,
-  hahn: s => living(s).some(a => a.sex === 'hahn' && stage(s, a) !== 'kueken'),
+  hahn: s => flock(s).some(a => a.sex === 'hahn'),
   schlupf: s => s.stats.hatched >= 1,
   aufzucht: s => s.stats.juniorsRaised >= 1,
   fuchs50: s => foxProtection(s) >= 0.5,

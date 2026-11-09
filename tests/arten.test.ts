@@ -5,11 +5,11 @@ import {
 } from '../src/game/arten';
 import { harvest, sow } from '../src/game/beet';
 import { BREEDS, GOOSE_FOX, POND_BAD, POND_DIRT, SPECIES } from '../src/game/data';
-import { flock, foxProtection, living, stageName } from '../src/game/helpers';
+import { adultRoosters, flock, foxProtection, hawkProtection, living, stageName } from '../src/game/helpers';
 import { possibleKinds } from '../src/game/orders';
 import { showProblem } from '../src/game/show';
-import { advanceHour, refreshOffers } from '../src/game/sim';
-import { createAnimal, importSave, newGame } from '../src/game/state';
+import { advanceHour, checkGoals, refreshOffers } from '../src/game/sim';
+import { chapterGoals, createAnimal, importSave, newGame } from '../src/game/state';
 import type { BreedId, GameState, Sex } from '../src/game/types';
 
 function hof(): GameState {
@@ -328,5 +328,39 @@ describe('Spielstand', () => {
     const o = JSON.parse(JSON.stringify(hof()));
     o.pond = 101;
     expect(importSave(JSON.stringify(o))).toBeNull();
+  });
+});
+
+describe('Männchen anderer Arten sind keine Hähne', () => {
+  it('ein Erpel befruchtet keine Hühnereier und schützt nicht vor dem Habicht', () => {
+    const s = hof();
+    kaufe(s, 'entenhaus', 'becken');
+    tier(s, 'laufente', 'hahn');
+    for (let i = 0; i < 4; i++) tier(s, 'hybrid');
+    expect(adultRoosters(s)).toEqual([]);
+    const ohne = hawkProtection(s);
+    s.hour = 7;
+    for (let i = 0; i < 24 * 5; i++) {
+      advanceHour(s);
+      for (const a of living(s)) { a.food = a.water = 100; }
+    }
+    expect(s.nestHatchEggs.filter(e => e.breed === 'hybrid')).toEqual([]);
+    expect(s.hatchEggs.filter(e => e.breed === 'hybrid')).toEqual([]);
+    tier(s, 'hybrid', 'hahn');
+    expect(hawkProtection(s)).toBeCloseTo(ohne + 0.15);
+  });
+
+  it('Kapitel 2 „Einen Hahn halten“: Erpel, Ganter und Wachtelhahn zählen nicht', () => {
+    const s = hof();
+    s.chapter = 2;
+    s.goals = chapterGoals(2);
+    tier(s, 'laufente', 'hahn');
+    tier(s, 'gans', 'hahn');
+    tier(s, 'wachtel', 'hahn');
+    checkGoals(s);
+    expect(s.goals.find(g => g.id === 'hahn')?.done).toBe(false);
+    tier(s, 'sussex', 'hahn', 15);
+    checkGoals(s);
+    expect(s.goals.find(g => g.id === 'hahn')?.done).toBe(true);
   });
 });

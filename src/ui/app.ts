@@ -11,7 +11,7 @@ import {
   daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
   foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
-  seasonOfDay, sexKnown, speciesCap, speciesOf, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
+  othersOf, seasonOfDay, sexKnown, speciesCap, speciesOf, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
 import { cleanPond } from '../game/arten';
 import * as B from '../game/beet';
@@ -670,12 +670,14 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   /* ---------------- Tiere ---------------- */
   function panelAnimals(): string {
     const l = living(s);
-    const hens = l.filter(a => a.sex === 'henne' && sexKnown(s, a)).length;
-    const roosters = l.filter(a => a.sex === 'hahn' && sexKnown(s, a)).length;
+    const chickens = l.filter(a => speciesOf(a.breed) === 'huhn');
+    const hens = chickens.filter(a => a.sex === 'henne' && sexKnown(s, a)).length;
+    const roosters = chickens.filter(a => a.sex === 'hahn' && sexKnown(s, a)).length;
+    const others = othersOf(s).length;
     const ch = chicks(s).length;
     const sorted = [...dead(s), ...l.sort((a, b) => (b.conditions.length - a.conditions.length) || (a.health - b.health))];
     return `
-      <p class="infobar">🐔 ${hens} Hennen · 🐓 ${roosters} Hähne · 🐥 ${ch} Küken · 🏠 ${flock(s).length}/${coopCap(s)} im Stall</p>
+      <p class="infobar">🐔 ${hens} Hennen · 🐓 ${roosters} Hähne · 🐥 ${ch} Küken${others ? ` · 🦆 ${others} andere` : ''} · 🏠 ${flock(s).length}/${coopCap(s)} im Stall</p>
       <button class="btn album-btn" data-act="album">📒 Hühner-Album <b>${Object.keys(s.album ?? {}).length}/${albumTotal()}</b></button>
       ${roosters > Math.max(1, Math.ceil(hens / 8)) ? '<p class="warnbox">🐓 Zu viele Hähne! Empfohlen ist 1 Hahn pro 8–12 Hennen, sonst gibt es Rangkämpfe.</p>' : ''}
       ${sorted.length ? `<div class="animal-list">${sorted.map(a => animalRow(a)).join('')}</div>` : '<p class="muted">Noch keine Tiere. Auf dem Geflügelmarkt gibt es Junghennen, Hähne, Küken und Bruteier.</p><button class="btn primary" data-act="open:markt">Zum Markt</button>'}

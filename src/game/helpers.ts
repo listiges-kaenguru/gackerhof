@@ -38,7 +38,8 @@ export const guardGoose = (s: GameState) => othersOf(s, 'gans').some(a => stage(
 /** Laufenten fressen Schnecken (ab einer erwachsenen Ente) */
 export const duckSnails = (s: GameState) => othersOf(s, 'ente').some(a => stage(s, a) === 'erwachsen');
 export const chicks = (s: GameState) => living(s).filter(a => stage(s, a) === 'kueken');
-export const adultRoosters = (s: GameState) => living(s).filter(a => a.sex === 'hahn' && stage(s, a) === 'erwachsen');
+/** Erwachsene Hähne der Hühnerherde (Erpel, Ganter und Wachtelhähne zählen nicht) */
+export const adultRoosters = (s: GameState) => flock(s).filter(a => a.sex === 'hahn' && stage(s, a) === 'erwachsen');
 
 export const seasonOfDay = (day: number): Season => SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
 export const season = (s: GameState) => seasonOfDay(s.day);

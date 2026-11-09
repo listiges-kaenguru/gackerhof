@@ -50,6 +50,8 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   - **Wachteln** legen fast täglich ein kleines Ei (0,3-facher Preis) und bleiben immer in der Voliere.
   - Mit Männchen derselben Art werden Eier zu Bruteiern. Brutdauer im Brutapparat: **Huhn 7, Ente 9, Gans 10,
     Wachtel 6 Tage**.
+  - Erpel, Ganter und Wachtelhähne sind keine Hähne: Sie befruchten keine Hühnereier, schützen nicht vor dem Habicht
+    und zählen nicht für das Kapitelziel „Einen Hahn halten“.
   - Steckbrief, Tierliste, Album und Markt nennen Ente/Erpel, Gans/Ganter, Wachtel/Wachtelhahn. Auf die Geflügelschau
     und zu Hahn-, Junghennen- und Suppenhuhn-Aufträgen dürfen weiter nur Hühner.
 - **Kapitel 4 „Rassezucht“** (Belohnung 300 €): 3 Hühnerrassen gleichzeitig halten (ohne Legehybriden), an einer
