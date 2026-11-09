@@ -5,6 +5,12 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+## [0.5.0] – 2026-11-09
+
+Mehr Spiel für den späteren Hof, weiterhin ein Prototyp: Kapitel 4 und 5, Laufenten, Gänse und Wachteln,
+ein Gemüsebeet für den Hühnermist, mehr Abwechslung bei Kundenaufträgen, Ereignisse zum Mitmachen und ein Game Over,
+wenn der Hof dauerhaft pleite bleibt. Spielstände aus 0.4.1 und früher lassen sich weiterspielen.
+
 ### Hinzugefügt
 
 - **Game Over „Zurück ins Büro“:** Wer nach dem Kredit dauerhaft pleite bleibt, muss den Hof aufgeben. Ist das Konto
