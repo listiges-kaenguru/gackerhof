@@ -201,11 +201,11 @@ describe('Verpasste Aufträge im Detail', () => {
 
   it('eine noch am selben Tag laufende Strafe wird aufgestockt', () => {
     const s = hof();
-    s.orderEffect = { until: 10, points: -0.3 };
+    s.orderEffect = { until: 10, points: -0.2 };
     s.orders = [auftrag({ dueDay: 9 })];
     ctl.chance = false;
     dailyOrders(s);
-    expect(s.orderEffect).toEqual({ until: 24, points: -0.6 });
+    expect(s.orderEffect).toEqual({ until: 24, points: -0.4 });
   });
 
   it('die Strafe läuft am Tag nach ihrem Ende aus, nicht früher', () => {

@@ -13,7 +13,7 @@ import {
   season, shade, speciesOf, stage, stars, visitProblems, worstCondition, duckSnails, othersOf,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
-import { dailyOthers, layOthers, otherDrinks, otherGrazes, otherWellbeingTarget, othersOffers } from './arten';
+import { dailyOthers, diseaseGroup, layOthers, otherDrinks, otherGrazes, otherWellbeingTarget, othersOffers } from './arten';
 import { dailyBed } from './beet';
 import { dailyEvents, eveningEscapee, hourlyEscape, layHidden } from './ereignisse';
 import { dailyOrders } from './orders';
@@ -384,6 +384,8 @@ function diseases(s: GameState) {
 
   for (const a of all) {
     const st = stage(s, a);
+    // Enten, Gänse und Wachteln in eigener Unterkunft: Stallfaktoren der Hühner gelten nicht
+    const ownHouse = diseaseGroup(s, a) !== 'huhn';
     // Fortschreiten bestehender Krankheiten
     for (const c of a.conditions) {
       let g = CONDITIONS[c.id].growth * d.disease;
@@ -394,9 +396,14 @@ function diseases(s: GameState) {
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
     let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s) * (snails ? 0.6 : 1);
     // Ein gedämmter, zugfreier Stall hebt den Nachteil von Herbst, Winter, Kälte und zugiger Holzkiste auf
-    const warm = insulated(s);
+    const warm = insulated(s) || ownHouse;
     let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? (warm ? 1 : 2) : 1) * (s.temperature < 3 && !warm ? 1.5 : 1)
-      * (s.equip.coop === 'kiste' && !warm ? 1.6 : 1) * (herbs ? 0.4 : 1) * crowdF;
+      * (s.equip.coop === 'kiste' && !warm ? 1.6 : 1) * (herbs ? 0.4 : 1) * (ownHouse ? 1 : crowdF);
+    if (ownHouse) {
+      // eigene Unterkunft, eigener Boden: Milben und Würmer halb so oft, unabhängig von Stall und Hühnerweide
+      pMilben = 0.01 * (se === 'sommer' ? 2 : 1);
+      pWurm = 0.005 * wet * (snails ? 0.6 : 1);
+    }
     if (st === 'kueken') {
       pMilben = 0;
       pWurm = 0;
@@ -411,7 +418,8 @@ function diseases(s: GameState) {
   for (const a of all) {
     for (const c of [...a.conditions]) {
       const def = CONDITIONS[c.id];
-      const others = all.filter(b => b !== a && (c.id === 'kokzidiose') === (stage(s, b) === 'kueken'));
+      const group = diseaseGroup(s, a);
+      const others = all.filter(b => b !== a && (c.id === 'kokzidiose') === (stage(s, b) === 'kueken') && diseaseGroup(s, b) === group);
       const contact = contactFactor(others.length);
       const resist = c.id === 'schnupfen' && herbs ? 0.4 : 1;
       for (const b of others) {
