@@ -4,19 +4,20 @@ import {
   ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST,
   FINANCE_CATS, HATS, HEALTH_CHECK_COST, ITEM, type ItemDef, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN,
   PERSONALITIES, PLOTS, SEASON_NAMES, SHED_SPOIL, SHOP_CATS, type ShopCat, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SHOW_NOTICE,
-  SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
+  BROWN_EGG_BREEDS, SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
 } from '../game/data';
 import {
   age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason,
   daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
   foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
-  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, storedEggCount, visitProblems, year,
+  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
+import { BIG_PARTIAL_SHARE, dueText, isRegular, orderWhat, REGULAR_AFTER, weekday } from '../game/orders';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
 import { CHAPTERS, clearSave, exportSave, importSave, save } from '../game/state';
-import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer } from '../game/types';
+import type { Animal, BreedId, ConditionId, Difficulty, FinanceCat, FinanceMonth, GameState, MarketOffer, Order } from '../game/types';
 import { portrait } from './art';
 import { Scene, esc, num } from './scene';
 import { tutorialStep } from './tutorial';
@@ -113,7 +114,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       <div class="hud-farm"><span class="farm-name">${esc(s.farmName)}</span><button class="stars" data-act="open:hof" title="Hof-Ruf: antippen für Details" aria-label="Hof-Ruf ${st} von 5 Sternen">${'★'.repeat(st)}<span class="off">${'★'.repeat(5 - st)}</span></button></div>
       <div class="hud-chips">
         <span class="chip money ${s.money < 20 ? 'low' : ''}" title="Geld">💰 ${euro(s.money)}</span>
-        <span class="chip" title="Datum">📅 Tag ${dayOfSeason(s)} · ${SEASON_NAMES[season(s)]}${year(s) > 1 ? ` · J${year(s)}` : ''}</span>
+        <span class="chip" title="Datum">📅 ${weekday(s.day).slice(0, 2)}, Tag ${dayOfSeason(s)} · ${SEASON_NAMES[season(s)]}${year(s) > 1 ? ` · J${year(s)}` : ''}</span>
         <span class="chip" title="Uhrzeit und Wetter">${phaseIcon} ${String(s.hour).padStart(2, '0')}:${String(Math.floor((s.minute ?? 0) / 10) * 10).padStart(2, '0')} · ${s.temperature} °C</span>
       </div>
       <div class="speed" role="group" aria-label="Spieltempo">
@@ -552,40 +553,53 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
   }
   /** Was die Eier eines Auftrags auf dem Markt bringen würden */
-  function orderMarketValue(qty: number): number {
-    const pick = A.orderEggs(s, qty);
+  function orderMarketValue(o: Order, qty: number): number {
+    const pick = A.orderEggs(s, qty, o);
     const hatch: Record<string, number> = {};
-    for (const e of s.hatchEggs.slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
+    for (const e of s.hatchEggs.filter(x => !o.brown || BROWN_EGG_BREEDS.includes(x.breed)).slice(0, pick.hatch)) hatch[e.breed] = (hatch[e.breed] ?? 0) + 1;
     return eggValue(s, pick.eggs) + eggValue(s, hatch);
   }
 
   function panelOrders(): string {
     const list = s.orders ?? [];
     if (!list.length) return visitCard() + `<p class="muted">Gerade keine Aufträge. Kundschaft meldet sich von selbst, je besser dein Hof-Ruf, desto öfter.</p>
-      <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren). Sie zahlen deutlich mehr als der Markt.</p>`;
-    const eggsHave = storedEggCount(s);
+      <p class="muted">Es gibt Aufträge für Eier, Junghennen und Suppenhühner (ältere Hennen ab 2 Jahren), dazu Sonderwünsche wie braune Eier, Bruteier oder einen Hahn. Sie zahlen deutlich mehr als der Markt. Wer ${REGULAR_AFTER}-mal zufrieden war, wird Stammkunde.</p>`;
     return visitCard() + list.map(o => {
-      const what = o.kind === 'eier' ? `🥚 ${o.qty} Eier` : o.kind === 'junghenne' ? `🐔 ${o.qty} Junghenne${o.qty > 1 ? 'n' : ''}` : `🍲 ${o.qty} Suppenh${o.qty > 1 ? 'ühner' : 'uhn'} (Henne ab 2 Jahren)`;
+      const icon = { eier: o.big ? '📦' : '🥚', junghenne: '🐔', suppenhuhn: '🍲', hahn: '🐓', bruteier: '🐣' }[o.kind];
+      const extra = o.kind === 'suppenhuhn' ? ' (Henne ab 2 Jahren)' : o.brown ? ' (Marans, Sussex, Brahma)' : '';
+      const rest = o.qty - (o.delivered ?? 0);
       const left = o.dueDay - s.day;
-      let have: string, can: boolean;
+      let have: string, can: boolean, partial = 0;
       if (o.kind === 'eier') {
-        can = eggsHave >= o.qty;
-        const pick = A.orderEggs(s, o.qty);
+        const stock = A.orderEggStock(s, o);
+        can = stock >= rest;
+        partial = o.big && !can ? stock : 0;
+        const pick = A.orderEggs(s, rest, o);
         const delivers = [eggBreakdown(s, pick.eggs), pick.hatch ? `${pick.hatch} Brutei${pick.hatch > 1 ? 'er' : ''}` : ''].filter(Boolean).join(' · ');
-        have = `Im Lager: ${eggsHave} Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
+        have = `Im Lager: ${stock} passende Eier${can ? `<br>Liefert: ${delivers}` : ''}`;
+      } else if (o.kind === 'bruteier') {
+        const n = A.hatchEggsOf(s, o.breed);
+        can = n >= o.qty;
+        have = `Im Lager: ${n} Bruteier ${o.breed ? BREEDS[o.breed].name : ''}`;
       } else {
         const animals = A.orderAnimals(s, o.kind);
         can = animals.length >= o.qty;
         have = can ? `Liefert: ${animals.slice(0, o.qty).map(a => esc(a.name)).join(', ')}` : `Passende Tiere: ${animals.length}`;
       }
-      const market = o.kind === 'eier' && eggsHave >= o.qty ? orderMarketValue(o.qty) : 0;
+      const market = o.kind === 'eier' && can ? orderMarketValue(o, rest) : 0;
+      const regular = isRegular(s, o.customer);
       return `<section class="card order">
-        <h3>${esc(o.customer)}</h3>
-        <p><b>${what}</b> für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
-        <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `Noch ${left} Tag${left === 1 ? '' : 'e'}`} · ${have}</p>
-        ${confirmBtn(`order:${num(o.id)}`, 'Liefern', o.kind === 'eier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        <h3>${esc(o.customer)}${regular ? ' <span class="tag good">🤝 Stammkunde</span>' : ''}${o.big ? ' <span class="tag">Großauftrag</span>' : ''}</h3>
+        <p><b>${icon} ${esc(orderWhat(o))}</b>${extra} für <b class="good">${euro(o.reward)}</b>${market ? ` <small class="muted">(dieselben Eier auf dem Markt: ${euro(market)})</small>` : ''}</p>
+        ${o.big ? `<p class="muted">Geliefert: ${num(o.delivered ?? 0)} von ${num(o.qty)} · bezahlt ${euro(o.paid ?? 0)}. Teillieferungen bringen ${Math.round(BIG_PARTIAL_SHARE * 100)} % anteilig, den Rest gibt es bei vollständiger Lieferung.</p>` : ''}
+        <p class="${left <= 1 ? 'bad' : 'muted'}">⏳ ${left <= 0 ? 'Nur noch heute!' : `${dueText(s, o.dueDay)[0].toUpperCase()}${dueText(s, o.dueDay).slice(1)} (noch ${left} Tag${left === 1 ? '' : 'e'})`} · ${have}</p>
+        <div class="row">
+        ${confirmBtn(`order:${num(o.id)}`, 'Liefern', o.kind === 'eier' || o.kind === 'bruteier' ? 'Wirklich liefern?' : 'Tiere wirklich abgeben?', can ? 'primary' : '')}
+        ${partial ? confirmBtn(`orderPart:${num(o.id)}`, `${num(partial)} liefern`, 'Teillieferung?', 'small') : ''}
+        ${confirmBtn(`orderNo:${num(o.id)}`, 'Ablehnen', 'Wirklich ablehnen?', 'small')}
+        </div>
       </section>`;
-    }).join('');
+    }).join('') + `<p class="muted small">Ablehnen kostet nichts. Ein verpasster Auftrag kostet 14 Tage lang etwas Hof-Ruf.</p>`;
   }
 
   /* ---------------- Tiere ---------------- */
@@ -1042,6 +1056,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       case 'sellHatch': return result(A.sellHatchEggs(s, a1 === 'food'));
       case 'sellManure': return result(A.sellManure(s));
       case 'order': return result(A.fulfillOrder(s, Number(a1)));
+      case 'orderPart': return result(A.deliverPartial(s, Number(a1)));
+      case 'orderNo': return result(A.declineOrder(s, Number(a1)));
       case 'animal': ui.animalId = Number(a1); return openPanel('tier');
       case 'dispose': { const r = A.disposeBody(s, Number(a1)); if (r.ok) ui.panel = 'tiere'; return result(r); }
       case 'sellAnimal': return result(leaveProfile(A.sellAnimal(s, Number(a1))));

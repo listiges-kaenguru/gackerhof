@@ -411,6 +411,8 @@ describe('Frost', () => {
   it('wer morgens das Eis aufhackt, bringt die Hühner durch eine Frostwoche', () => {
     const s = starter();
     s.money = 1000;
+    // Gegen Marder und Habicht geschützt: Geprüft wird nur der Frost, nicht der Zufall bei Raubtieren
+    for (const id of ['mardergitter', 'netz']) expect(A.buyItem(s, id).ok).toBe(true);
     for (let i = 0; i < 3; i++) s.animals.push(createAnimal(s, 'hybrid', { sex: 'henne', ageDays: 60 }));
     frost(s, 7 * 24, careTaker);
     expect(living(s).length).toBe(3);

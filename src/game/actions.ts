@@ -1,18 +1,19 @@
 // Alles, was der Spieler tun kann. Jede Aktion liefert ein Ergebnis mit Meldung zurück.
 import {
-  BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, FEED_SUPPLIES, HEALTH_CHECK_COST, ITEM, MANURE_PRICE,
+  BREEDS, BROWN_EGG_BREEDS, CONDITIONS, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST, FEED_SUPPLIES, HEALTH_CHECK_COST, ITEM, MANURE_PRICE,
   PREVENTION_DAYS, SOUP_AGE, SUPPLY, VISIT_HOUR,
 } from './data';
 import {
   addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggUnitPrice, eggValue,
   eventActive, feederCap, feedStock, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log,
-  maxInside, outsideAnimals, round2, stage, storageCap, storedEggCount,
+  maxInside, outsideAnimals, round2, stage, storageCap,
 } from './helpers';
 import { registerAlbum } from './album';
+import { BIG_PARTIAL_SHARE, isRegular, REGULAR_BONUS } from './orders';
 import { chance, intBetween } from './rng';
 import { moveFlock } from './sim';
 import { createAnimal } from './state';
-import type { Animal, BreedId, ConditionId, Difficulty, FeedId, FinanceCat, GameState } from './types';
+import type { Animal, BreedId, ConditionId, Difficulty, FeedId, FinanceCat, GameState, Order } from './types';
 
 export interface Result { ok: boolean; msg: string }
 const ok = (msg: string): Result => ({ ok: true, msg });
@@ -481,50 +482,121 @@ export function setUnderHen(s: GameState, henId: number): Result {
 
 /* ---------------- Kundenaufträge ---------------- */
 /** Welche Tiere würden für einen Auftrag geliefert? (gesund, ohne Wartezeit, brütet nicht) */
-export function orderAnimals(s: GameState, kind: 'junghenne' | 'suppenhuhn'): Animal[] {
-  return living(s).filter(a => a.sex === 'henne' && !a.broodEggs.length && a.withdrawalUntil < s.day &&
-    !a.conditions.some(c => c.severity > 30) &&
-    (kind === 'junghenne' ? stage(s, a) === 'junghuhn' : age(s, a) >= SOUP_AGE))
+export function orderAnimals(s: GameState, kind: 'junghenne' | 'suppenhuhn' | 'hahn'): Animal[] {
+  const fit = living(s).filter(a => !a.broodEggs.length && a.withdrawalUntil < s.day && !a.conditions.some(c => c.severity > 30));
+  if (kind === 'hahn') return fit.filter(a => a.sex === 'hahn' && stage(s, a) !== 'kueken').sort((x, y) => age(s, x) - age(s, y));
+  return fit.filter(a => a.sex === 'henne' && (kind === 'junghenne' ? stage(s, a) === 'junghuhn' : age(s, a) >= SOUP_AGE))
     .sort((x, y) => (kind === 'suppenhuhn' ? age(s, y) - age(s, x) : 0));
 }
 
+/** Eier, die ein Auftrag annimmt: braune nur von braunlegenden Rassen */
+const eggFits = (o: { brown?: boolean } | undefined, breed: string) => !o?.brown || BROWN_EGG_BREEDS.includes(breed as BreedId);
+
+/** Eier im Lager, die zu einem Auftrag passen */
+export function orderEggStock(s: GameState, o?: { brown?: boolean }): number {
+  return Object.entries(s.eggs).reduce((t, [k, n]) => t + (eggFits(o, k) ? n : 0), 0)
+    + s.hatchEggs.filter(e => eggFits(o, e.breed)).length;
+}
+
 /** Welche Eier ein Eier-Auftrag nimmt: zuerst die günstigsten Speiseeier, Bruteier erst zuletzt */
-export function orderEggs(s: GameState, qty: number): { eggs: Record<string, number>; hatch: number } {
+export function orderEggs(s: GameState, qty: number, o?: { brown?: boolean }): { eggs: Record<string, number>; hatch: number } {
   const eggs: Record<string, number> = {};
   let need = qty;
-  const cheapest = (Object.keys(s.eggs) as BreedId[]).sort((a, b) => eggUnitPrice(s, a) - eggUnitPrice(s, b));
+  const cheapest = (Object.keys(s.eggs) as BreedId[]).filter(k => eggFits(o, k)).sort((a, b) => eggUnitPrice(s, a) - eggUnitPrice(s, b));
   for (const k of cheapest) {
     const n = Math.min(need, s.eggs[k] ?? 0);
     if (n > 0) eggs[k] = n;
     need -= n;
   }
-  return { eggs, hatch: Math.min(need, s.hatchEggs.length) };
+  return { eggs, hatch: Math.min(need, s.hatchEggs.filter(e => eggFits(o, e.breed)).length) };
+}
+
+/** Eier aus dem Lager nehmen (Speiseeier, dann passende Bruteier) */
+function takeEggs(s: GameState, qty: number, o?: { brown?: boolean }) {
+  const pick = orderEggs(s, qty, o);
+  for (const [k, n] of Object.entries(pick.eggs)) s.eggs[k] -= n;
+  for (let n = pick.hatch, i = 0; n > 0 && i < s.hatchEggs.length;) {
+    if (eggFits(o, s.hatchEggs[i].breed)) { s.hatchEggs.splice(i, 1); n--; } else i++;
+  }
+  s.stats.eggsSold += qty;
+}
+
+/** Bruteier einer Rasse im Lager */
+export const hatchEggsOf = (s: GameState, breed: BreedId | undefined) => s.hatchEggs.filter(e => e.breed === breed).length;
+
+function orderDone(s: GameState, o: Order, pay: number) {
+  addMoney(s, pay, 'auftraege');
+  s.orders = (s.orders ?? []).filter(x => x !== o);
+  s.stats.ordersDone = (s.stats.ordersDone ?? 0) + 1;
+  const c = (s.customers ??= {});
+  const before = isRegular(s, o.customer);
+  c[o.customer] = (c[o.customer] ?? 0) + 1;
+  log(s, `📋 Auftrag erledigt: ${o.customer} zahlt ${pay} €.`, 'good');
+  if (!before && isRegular(s, o.customer)) {
+    log(s, `🤝 ${o.customer} ist jetzt Stammkunde: bestellt öfter und zahlt ${Math.round((REGULAR_BONUS - 1) * 100)} % mehr.`, 'good', true);
+  }
 }
 
 export function fulfillOrder(s: GameState, orderId: number): Result {
   const o = (s.orders ?? []).find(x => x.id === orderId);
   if (!o) return fail('Auftrag nicht mehr verfügbar.');
+  const rest = o.qty - (o.delivered ?? 0);
   if (o.kind === 'eier') {
-    const have = storedEggCount(s);
-    if (have < o.qty) return fail(`Dafür brauchst du ${o.qty} Eier im Lager, du hast ${have}.`);
-    const pick = orderEggs(s, o.qty);
-    for (const [k, n] of Object.entries(pick.eggs)) s.eggs[k] -= n;
-    if (pick.hatch > 0) s.hatchEggs.splice(0, pick.hatch);
-    s.stats.eggsSold += o.qty;
+    const have = orderEggStock(s, o);
+    if (have < rest) {
+      return fail(o.brown
+        ? `Dafür brauchst du ${rest} braune Eier (Marans, Sussex, Brahma), du hast ${have}.`
+        : `Dafür brauchst du ${rest} Eier im Lager, du hast ${have}.`);
+    }
+    takeEggs(s, rest, o);
+  } else if (o.kind === 'bruteier') {
+    const have = hatchEggsOf(s, o.breed);
+    if (have < o.qty) return fail(`Dafür brauchst du ${o.qty} Bruteier ${o.breed ? BREEDS[o.breed].name : ''}, du hast ${have}.`);
+    for (let n = o.qty, i = 0; n > 0;) {
+      if (s.hatchEggs[i].breed === o.breed) { s.hatchEggs.splice(i, 1); n--; } else i++;
+    }
   } else {
     const list = orderAnimals(s, o.kind).slice(0, o.qty);
     if (list.length < o.qty) {
-      return fail(o.kind === 'junghenne'
-        ? `Dafür brauchst du ${o.qty} gesunde Junghennen, du hast ${list.length}.`
-        : `Dafür brauchst du ${o.qty} gesunde Hennen ab 2 Jahren, du hast ${list.length}.`);
+      return fail({
+        junghenne: `Dafür brauchst du ${o.qty} gesunde Junghennen, du hast ${list.length}.`,
+        suppenhuhn: `Dafür brauchst du ${o.qty} gesunde Hennen ab 2 Jahren, du hast ${list.length}.`,
+        hahn: `Dafür brauchst du ${o.qty} gesunde${o.qty > 1 ? ' Hähne' : 'n Hahn'} (kein Küken), du hast ${list.length}.`,
+      }[o.kind]);
     }
     const ids = new Set(list.map(a => a.id));
     s.animals = s.animals.filter(a => !ids.has(a.id));
   }
-  addMoney(s, o.reward, 'auftraege');
+  const pay = round2(o.reward - (o.paid ?? 0));
+  orderDone(s, o, pay);
+  return ok(`Geliefert! ${o.customer} zahlt ${pay} €. Danke!`);
+}
+
+/** Großauftrag: so viele Eier liefern, wie da sind. Bezahlt wird anteilig, der Rest bei vollständiger Lieferung. */
+export function deliverPartial(s: GameState, orderId: number): Result {
+  const o = (s.orders ?? []).find(x => x.id === orderId);
+  if (!o) return fail('Auftrag nicht mehr verfügbar.');
+  if (!o.big) return fail('Diesen Auftrag kannst du nur ganz liefern.');
+  const rest = o.qty - (o.delivered ?? 0);
+  const n = Math.min(rest, orderEggStock(s, o));
+  if (n <= 0) return fail('Keine Eier im Lager.');
+  if (n === rest) return fulfillOrder(s, orderId);
+  takeEggs(s, n, o);
+  o.delivered = (o.delivered ?? 0) + n;
+  const pay = round2(o.reward * BIG_PARTIAL_SHARE / o.qty * n);
+  o.paid = round2((o.paid ?? 0) + pay);
+  addMoney(s, pay, 'auftraege');
+  log(s, `📋 Teillieferung an ${o.customer}: ${n} Eier für ${pay.toFixed(2)} €.`, 'good');
+  return ok(`${n} Eier geliefert, ${rest - n} fehlen noch. ${o.customer} zahlt ${pay.toFixed(2)} €.`);
+}
+
+/** Auftrag ablehnen: kostet nichts, schon Bezahltes bleibt */
+export function declineOrder(s: GameState, orderId: number): Result {
+  const o = (s.orders ?? []).find(x => x.id === orderId);
+  if (!o) return fail('Auftrag nicht mehr verfügbar.');
   s.orders = (s.orders ?? []).filter(x => x !== o);
-  log(s, `📋 Auftrag erledigt: ${o.customer} zahlt ${o.reward} €.`, 'good');
-  return ok(`Geliefert! ${o.customer} zahlt ${o.reward} €. Danke!`);
+  log(s, `📋 Auftrag von ${o.customer} abgelehnt.`, 'info');
+  return ok(`Auftrag von ${o.customer} abgelehnt.`);
 }
 
 /* ---------------- Sonstiges ---------------- */

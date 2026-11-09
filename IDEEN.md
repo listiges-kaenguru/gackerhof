@@ -36,7 +36,6 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 
 - **Erfolge** wie „Fuchsfrei“ (100 Tage ohne Verlust), „Hühnerflüsterer“ (ein Huhn wird 8 Jahre alt), „Eiermillionär“
 - **Kapitel 4 „Rassezucht“ und 5 „Der große Hof“**
-- **Kundenaufträge** („Bäckerei Krause braucht 30 Eier bis Freitag“)
 - **Abnutzung und Reparatur** von Ausrüstung
 - **Weitere Ereignisse:** Nachbar beschwert sich über den Hahn, verstecktes Nest suchen, ausgebüxtes Huhn einfangen
 - **Hühnermist als Dünger** im eigenen Gemüsebeet statt nur verkaufen

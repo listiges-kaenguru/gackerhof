@@ -1,7 +1,7 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
-  ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, CUSTOMERS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
-  SEASON_NAMES, SELLERS, SHED_SPOIL, SOUP_AGE, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
+  ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
+  SEASON_NAMES, SELLERS, SHED_SPOIL, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
   VISIT_MIN_STARS,
 } from './data';
 import { registerAlbum } from './album';
@@ -13,10 +13,11 @@ import {
   season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { dailyOrders } from './orders';
 import { checkBroke } from './pleite';
 import { announceShow, ensureShow, runShow } from './show';
 import { chapterGoals, CHAPTERS, createAnimal, randomVariant, targetWeight } from './state';
-import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Order, Season } from './types';
+import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Season } from './types';
 
 /** Feinster Takt: eine Spielminute. Die Hühner bewegen sich minutengenau, alles andere läuft stündlich. */
 export function advanceMinute(s: GameState) {
@@ -310,7 +311,7 @@ function newDay(s: GameState) {
   // Ereignisse
   randomEvents(s);
   s.events = s.events.filter(e => e.until >= s.day);
-  orders(s);
+  dailyOrders(s);
   visitRequest(s);
   ensureShow(s);
   announceShow(s);
@@ -658,46 +659,6 @@ function randomEvents(s: GameState) {
     log(s, `👴 Opa Heinz schaut vorbei und schenkt dir 4 Bruteier: ${breedLabel(b, variant)}!`, 'good');
     s.celebrations.push({ emoji: '🎁', title: 'Geschenk von Opa Heinz', lines: [`„Ich hab dir 4 Bruteier mitgebracht: ${breedLabel(b, variant)}. Mal sehen, was da schlüpft!“`, 'Du findest sie im Lager. Ausbrüten kannst du sie im Brutapparat oder unter einer brütigen Henne.'] });
   }
-}
-
-/* ================================================================== */
-/* Kundenaufträge                                                     */
-/* ================================================================== */
-function orders(s: GameState) {
-  s.orders ??= [];
-  // abgelaufene Aufträge
-  for (const o of s.orders.filter(x => x.dueDay < s.day)) {
-    log(s, `📋 Auftrag verpasst: ${o.customer} hat sich anderswo eingedeckt.`, 'warn', true);
-  }
-  s.orders = s.orders.filter(x => x.dueDay >= s.day);
-  const f = flock(s);
-  if (s.day < 4 || s.orders.length >= 3 || !f.length) return;
-  // Ein guter Ruf bringt mehr Kundschaft, und sie zahlt besser
-  const st = stars(s);
-  if (!chance(s, 0.15 + st * 0.05)) return;
-  const kinds: Order['kind'][] = ['eier', 'eier', 'eier', 'junghenne', 'suppenhuhn'];
-  if (f.some(a => stage(s, a) !== 'erwachsen')) kinds.push('junghenne');
-  if (f.some(a => a.sex === 'henne' && age(s, a) >= SOUP_AGE)) kinds.push('suppenhuhn', 'suppenhuhn');
-  const kind = pick(s, kinds);
-  const bonus = 1 + (st - 3) * 0.1;
-  const o = { id: s.nextId++, customer: pick(s, CUSTOMERS[kind]), kind, qty: 0, reward: 0, dueDay: 0 };
-  if (kind === 'eier') {
-    o.qty = intBetween(s, 1, 5) * 6;
-    o.reward = Math.round(o.qty * 0.5 * between(s, 1.5, 1.9) * bonus);
-    o.dueDay = s.day + intBetween(s, 3, 6);
-  } else if (kind === 'junghenne') {
-    o.qty = intBetween(s, 1, 3);
-    o.reward = Math.round(o.qty * between(s, 26, 34) * bonus);
-    o.dueDay = s.day + intBetween(s, 6, 12);
-  } else {
-    o.qty = intBetween(s, 1, 2);
-    o.reward = Math.round(o.qty * between(s, 13, 17) * bonus);
-    o.dueDay = s.day + intBetween(s, 4, 8);
-  }
-  s.orders.push(o);
-  const plural = o.qty > 1;
-  const what = { eier: `${o.qty} Eier`, junghenne: `${o.qty} Junghenne${plural ? 'n' : ''}`, suppenhuhn: `${o.qty} ${plural ? 'Suppenhühner' : 'Suppenhuhn'}` }[kind];
-  log(s, `📋 Neuer Auftrag: ${o.customer} möchte ${what} für ${o.reward} € (bis Tag ${o.dueDay}).`, 'good', true);
 }
 
 /* ================================================================== */
