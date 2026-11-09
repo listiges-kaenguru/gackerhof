@@ -38,6 +38,32 @@ export const DEFS = `
   <circle cx="-6" cy="-7" r="1" style="fill:${INK};stroke:none"/>
   <path d="M-2 6 V9 M2 6 V9" style="fill:none;stroke:#e39a2b"/>
 </g>
+<g id="sym-duck">
+  <path d="M-5 17 Q -13 2 -7 -12 Q 0 -19 6 -12 Q 12 4 6 17 Z" style="fill:var(--b)"/>
+  <path d="M1 -2 Q 9 4 5 13 Q -1 7 1 -2 Z" style="fill:var(--bd)"/>
+  <circle cx="-2" cy="-19" r="6" style="fill:var(--n, var(--b))"/>
+  <path d="M-7 -21 Q -16 -21 -16 -18 Q -12 -16 -7 -17.5 Z" style="fill:#f2b33d"/>
+  <circle cx="-4" cy="-20.5" r="1.4" style="fill:${INK};stroke:none"/>
+  <path d="M-3 17 V20 M3 17 V20 M-7 20 H-1 M-1 20 H5" style="fill:none;stroke:#f2a33d"/>
+</g>
+<g id="sym-goose">
+  <path d="M16 -4 Q 28 -8 26 4 Z" style="fill:var(--t, var(--bd))"/>
+  <ellipse cx="5" cy="2" rx="19" ry="11" style="fill:var(--b)"/>
+  <path d="M-1 0 Q 11 -6 19 2 Q 9 9 -1 4 Z" style="fill:var(--bd)"/>
+  <path d="M-15 -4 Q -19 -17 -16 -29 L -9 -29 Q -11 -17 -6 -4 Z" style="fill:var(--n, var(--b))"/>
+  <circle cx="-13" cy="-30" r="5.5" style="fill:var(--n, var(--b))"/>
+  <path d="M-18 -31.5 L-26 -29 L-18 -27 Z" style="fill:#f08a2b"/>
+  <circle cx="-14" cy="-31.5" r="1.3" style="fill:${INK};stroke:none"/>
+  <path d="M1 13 V19 M9 13 V19 M-3 19 H3 M5 19 H11" style="fill:none;stroke:#f08a2b"/>
+</g>
+<g id="sym-quail">
+  <ellipse cx="0" cy="5" rx="10" ry="7.5" style="fill:var(--b)"/>
+  <path d="M-2 3 Q 5 -1 9 4 Q 4 9 -2 6 Z" style="fill:var(--bd)"/>
+  <circle cx="-8" cy="-2" r="4.8" style="fill:var(--n, var(--b))"/>
+  <path d="M-12.5 -2.5 L-15.5 -1.3 L-12.5 -0.3 Z" style="fill:#6b5a44"/>
+  <circle cx="-9" cy="-3" r="1.1" style="fill:${INK};stroke:none"/>
+  <path d="M-2 12 V15 M3 12 V15" style="fill:none;stroke:#e39a2b"/>
+</g>
 <g id="sym-fluff">
   <circle cx="-4" cy="-8" r="6" style="fill:var(--b)"/><circle cx="6" cy="-8" r="6" style="fill:var(--b)"/>
   <circle cx="-14" cy="-22" r="5" style="fill:var(--b)"/>
@@ -52,6 +78,13 @@ export function breedStyle(breed: BreedId, rooster: boolean, variant?: string): 
 }
 
 /** Einzelnes Tier für Porträts (Steckbrief, Listen, Album) */
+/** Figur einer Art: Hühner unterscheiden Henne und Hahn, die anderen Arten haben eine Figur */
+export function figure(breed: BreedId, kind: 'hen' | 'rooster' | 'chick'): string {
+  const sp = BREEDS[breed].species;
+  if (kind === 'chick' || !sp) return kind;
+  return { ente: 'duck', gans: 'goose', wachtel: 'quail' }[sp];
+}
+
 export function portrait(breed: BreedId, kind: 'hen' | 'rooster' | 'chick', dead = false, variant?: string): string {
   const style = breedStyle(breed, kind === 'rooster', variant);
   const chickStyle = kind === 'chick' ? `--b:var(--cb)` : '';
@@ -59,7 +92,7 @@ export function portrait(breed: BreedId, kind: 'hen' | 'rooster' | 'chick', dead
   const vb = kind === 'chick' ? '-16 -16 32 30' : '-32 -36 70 60';
   return `<svg class="portrait${dead ? ' dead' : ''}" viewBox="${vb}" aria-hidden="true">
     <g style="${style};${chickStyle}" stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-      ${fluffy ? `<use href="#sym-fluff"/>` : ''}<use href="#sym-${kind}"/>
+      ${fluffy ? `<use href="#sym-fluff"/>` : ''}<use href="#sym-${figure(breed, kind)}"/>
     </g></svg>`;
 }
 

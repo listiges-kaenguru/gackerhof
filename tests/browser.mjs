@@ -18,7 +18,7 @@ const PORT = Number(process.env.TEST_PORT || 5190);
 const server = await createServer({ root: ROOT, logLevel: 'error', server: { port: PORT, strictPort: true, host: '127.0.0.1' } });
 await server.listen();
 const { newGame, createAnimal } = await server.ssrLoadModule('/src/game/state.ts');
-const { advanceHour } = await server.ssrLoadModule('/src/game/sim.ts');
+const { advanceHour, refreshOffers } = await server.ssrLoadModule('/src/game/sim.ts');
 const A = await server.ssrLoadModule('/src/game/actions.ts');
 
 // Ausgangslage: ein laufender Hof mit Stall und drei Hühnern (fester Seed, wie in tests/sim.test.ts)
@@ -222,7 +222,43 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Weitere Geflügelarten: breitere Welt, Becken reinigen, Bezeichnungen und Markt
+{
+  const s = structuredClone(basis);
+  s.money = 3000;
+  for (const id of ['entenhaus', 'becken', 'gaensestall', 'grasweide', 'voliere']) A.buyItem(s, id);
+  for (const [b, sex] of [['laufente', 'henne'], ['laufente', 'hahn'], ['gans', 'henne'], ['wachtel', 'henne']]) s.animals.push(createAnimal(s, b, { sex, ageDays: 200 }));
+  s.pond = 20;
+  s.hour = 11; s.speed = 0;
+  refreshOffers(s);
+  const datei = join(dir, 'arten.json');
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage({ viewport: { width: 1366, height: 800 } });
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(400);
+  const vb = await seite.locator('svg.scene').getAttribute('viewBox');
+  check('Arten: Welt 720 breit, ganz sichtbar', vb?.split(' ')[2] === '720', vb);
+  check('Arten: Becken, Gänsestall und Voliere in der Szene', (await seite.locator('[aria-label="Entenbecken"],[aria-label="Gänsestall"],[aria-label="Wachtelvoliere"]').count()) === 3);
+  await seite.locator('[data-act="cleanPond"]').first().click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Arten: Becken gereinigt', (await seite.getByText('Becken gereinigt').count()) > 0);
+  await seite.locator('[data-act="tab:tiere"]').click();
+  await seite.waitForTimeout(200);
+  const tiere = await seite.locator('.panel').innerText();
+  check('Arten: Erpel, Gans und Wachtel in der Tierliste', ['Erpel', 'Gans', 'Wachtel'].every(x => tiere.includes(x)));
+  await seite.locator('[data-act="tab:markt"]').click();
+  await seite.locator('[data-act="mtab:kaufen"]').click().catch(() => {});
+  await seite.waitForTimeout(200);
+  check('Arten: Markt bietet Enten an', (await seite.locator('.panel').getByText('Ente „ca. 1 Jahr“').count()) > 0);
+  check('Arten: kein Absturz', absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3 + 24} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 30} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);

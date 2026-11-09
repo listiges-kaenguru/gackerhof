@@ -4,15 +4,16 @@ import {
   ALBUM_BREED_BONUS, ALBUM_FULL_BONUS, BREEDS, CONDITIONS, DAYS_PER_SEASON, DIFFICULTIES, DIFFICULTY_ORDER, DISPOSAL_COST,
   FINANCE_CATS, HATS, HEALTH_CHECK_COST, ITEM, type ItemDef, ITEMS, MANURE_PRICE, MS_PER_MINUTE, PASTURE_WARN,
   PERSONALITIES, PLOTS, SEASON_NAMES, SHED_SPOIL, SHOP_CATS, type ShopCat, SHOW_FEE, SHOW_GRADES, SHOW_MAX, SHOW_NOTICE,
-  BROWN_EGG_BREEDS, SHOW_TROPHY_PRIZE, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
+  BROWN_EGG_BREEDS, POND_BAD, SHOW_TROPHY_PRIZE, SPECIES, SUPPLIES, SUPPLY, VISIT_GOOD, VISIT_HOUR,
 } from '../game/data';
 import {
   age, ageText, albumKey, albumTotal, animalValue, breedLabel, butcherValue, chicks, coopCap, crowding, dayOfSeason,
   daysText, dead, diff, drinkerCap, eggBreakdown, eggCount, eggValue, euro, eventActive, feederCap, feedStock, flock,
   foxProtection, frozen, grainStock, has, hawkProtection, herbsActive, immune, isDaytime, isNight, lightActive, living,
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
-  seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
+  seasonOfDay, sexKnown, speciesCap, speciesOf, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
+import { cleanPond } from '../game/arten';
 import * as B from '../game/beet';
 import * as E from '../game/ereignisse';
 import { CHOICE_ACTS } from '../game/ereignisse';
@@ -147,6 +148,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
     const esc0 = s.escapee ? s.animals.find(a => a.id === s.escapee!.id && !a.dead) : undefined;
     if (esc0) out.push({ icon: '🏃', text: `${esc0.name} ist ausgebüxt: antippen zum Einfangen`, act: 'catch', kind: 'bad' });
+    if (has(s, 'becken') && (s.pond ?? 100) < POND_BAD) out.push({ icon: '🦆', text: 'Entenbecken ist schmutzig: reinigen', act: 'cleanPond', kind: 'warn' });
     if (B.bedState(s) === 'reif') out.push({ icon: '🥕', text: 'Gemüse ist reif: ernten', act: 'harvest', kind: 'good' });
     if (s.hiddenNest) out.push({ icon: '🔍', text: 'Eine Henne legt in ein Versteck im Auslauf. Such es!', act: 'open:hof', kind: 'warn' });
     const ords = s.orders ?? [];
@@ -344,6 +346,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         : `<p>Noch kein Stall.</p><button class="btn primary" data-act="open:shop:stall">Zum Shop</button>`}
       </section>
       ${bedCard()}
+      ${othersCard()}
       <section class="card">
         <h3>💧 Wasser & 🌾 Futter</h3>
         ${s.equip.drinker ? `${meter(`${ITEM[s.equip.drinker].name}: ${s.water.toFixed(1)} l`, (s.water / drinkerCap(s)) * 100, '💧')}${frozen(s) ? '<p class="bad">🧊 Die Tränke ist eingefroren!</p>' : ''}` : '<p>Keine Tränke.</p>'}
@@ -471,7 +474,13 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (ui.marketTab === 'auftraege') return tabsHtml + panelOrders();
     if (ui.marketTab === 'schau') return tabsHtml + panelShow();
     if (ui.marketTab === 'kaufen') {
-      const kindName = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
+      const chickenKind = { brutei: 'Bruteier', kueken: 'Küken (unsortiert)', junghenne: 'Junghenne', legehenne: 'Legehenne „ca. 1–2 Jahre“', hahn: 'Hahn' };
+      const kindLabel = (o: MarketOffer) => {
+        const sp = speciesOf(o.breed);
+        if (sp === 'huhn' || o.kind === 'brutei') return chickenKind[o.kind];
+        const d = SPECIES[sp];
+        return { kueken: d.chick, junghenne: d.young, legehenne: `${d.female} „ca. 1 Jahr“`, hahn: d.male }[o.kind];
+      };
       const kindIcon = (o: MarketOffer) => o.kind === 'brutei' ? '🥚'
         : portrait(o.breed, o.kind === 'hahn' ? 'rooster' : o.kind === 'kueken' ? 'chick' : 'hen', false, o.variant);
       const sellers = [...new Set(s.offers.map(o => o.seller))];
@@ -486,7 +495,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
             : '';
           return `<div class="offer">
             <span class="offer-ico">${kindIcon(o)}</span>
-            <div class="offer-main"><b>${kindName[o.kind]}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
+            <div class="offer-main"><b>${kindLabel(o)}</b> · ${breedLabel(o.breed, o.variant)}${s.album?.[albumKey(o.breed, o.variant)] ? '' : ' <span class="tag new">📒 neu</span>'}<br><small>${o.qty} verfügbar · ${euro(o.price)} pro Stück</small> ${check}</div>
             <div class="offer-buy">
               <button class="btn primary" data-act="offer:${num(o.id)}:1" ${s.money < o.price ? 'disabled' : ''}>+1</button>
               ${o.qty > 1 ? `<button class="btn small" data-act="offer:${num(o.id)}:${o.qty}" ${s.money < o.price * o.qty ? 'disabled' : ''}>Alle ${euro(o.price * o.qty)}</button>` : ''}
@@ -563,6 +572,25 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     if (bonus !== 1) parts.push(`inkl. ${Math.round((bonus - 1) * 100)} % Bonus (${diff(s).name})`);
     return parts.length ? `<br>Tagespreis ${euro(s.eggPrice)}: ${parts.join(', ')}.` : '';
   }
+  /** Enten, Gänse und Wachteln in der Hofübersicht */
+  function othersCard(): string {
+    const rows = (Object.keys(SPECIES) as (keyof typeof SPECIES)[]).filter(sp => has(s, SPECIES[sp].house)).map(sp => {
+      const d = SPECIES[sp];
+      const n = living(s).filter(a => speciesOf(a.breed) === sp).length;
+      const missing = d.extra && !has(s, d.extra) ? ` <span class="bad">Es fehlt: ${ITEM[d.extra].name}</span>` : '';
+      return `<p>${d.emoji} <b>${d.plural}</b>: ${num(n)} / ${num(speciesCap(s, sp))} Plätze${missing}</p>`;
+    });
+    if (!rows.length) return '';
+    const pond = has(s, 'becken') ? `${meter('Entenbecken', s.pond ?? 100, '💧')}
+        <div class="row"><button class="btn" data-act="cleanPond" ${(s.pond ?? 100) < 95 ? '' : 'disabled'}>🧽 Becken reinigen</button></div>` : '';
+    return `<section class="card">
+        <h3>🦆 Andere Geflügel</h3>
+        ${rows.join('')}
+        ${pond}
+        <p class="muted">Sie leben in ihren eigenen Unterkünften rechts neben dem Hof, trinken dort und fressen am Futterplatz mit. Gänse auf der Grasweide grasen tagsüber. Eier sammelst du zusammen mit den Hühnereiern ein.</p>
+      </section>`;
+  }
+
   /** Gemüsebeet in der Hofübersicht */
   function bedCard(): string {
     if (!has(s, 'beet')) return '';
@@ -1085,6 +1113,7 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
       }
       case 'findNest': return result(E.findNest(s));
       case 'sow': return result(B.sow(s));
+      case 'cleanPond': return result(cleanPond(s));
       case 'fertilize': return result(B.fertilize(s));
       case 'harvest': return result(B.harvest(s));
       case 'sellVeg': return result(B.sellVegetables(s));

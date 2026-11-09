@@ -3,7 +3,9 @@
 
 export type Difficulty = 'leicht' | 'mittel' | 'schwer';
 export type PlotId = 'wald' | 'obst' | 'bach';
-export type BreedId = 'hybrid' | 'sussex' | 'marans' | 'brahma' | 'seide';
+export type BreedId = 'hybrid' | 'sussex' | 'marans' | 'brahma' | 'seide' | 'laufente' | 'gans' | 'wachtel';
+/** Tierart; Hühner sind der Standard (ab 0.5.0 kommen Laufenten, Gänse und Wachteln dazu) */
+export type Species = 'huhn' | 'ente' | 'gans' | 'wachtel';
 export type Sex = 'henne' | 'hahn';
 export type Stage = 'kueken' | 'junghuhn' | 'erwachsen';
 export type Personality = 'mutig' | 'scheu' | 'gefraessig' | 'neugierig' | 'zaenkisch' | 'bruetig';
@@ -247,6 +249,8 @@ export interface GameState {
   orders?: Order[];
   /** Erfüllte Aufträge je Kunde; ab REGULAR_AFTER ist er Stammkunde (ab 0.5.0) */
   customers?: Record<string, number>;
+  /** Sauberkeit des Entenbeckens 0..100 (ab 0.5.0) */
+  pond?: number;
   /** Gemüsebeet: Saattag und ob gedüngt; null = leer (ab 0.5.0) */
   bed?: { sownDay: number; fertilized: boolean } | null;
   /** Henne legt in ein Versteck im Auslauf (Szenen-Koordinaten), ab 0.5.0 */

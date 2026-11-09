@@ -1,5 +1,5 @@
 // Gemüsebeet: säen im Frühling und Sommer, mit Hühnermist düngen, ernten, verkaufen oder an die Hühner verfüttern.
-import { addMoney, flock, has, log, round2, season } from './helpers';
+import { addMoney, duckSnails, flock, has, log, round2, season } from './helpers';
 import type { GameState } from './types';
 
 interface Result { ok: boolean; msg: string }
@@ -52,7 +52,8 @@ export function harvest(s: GameState): Result {
     const left = GROW_DAYS - (s.day - s.bed!.sownDay);
     return fail(`Noch nicht reif: noch ${left} Tag${left === 1 ? '' : 'e'}.`);
   }
-  const kg = BASE_YIELD * (s.bed!.fertilized ? 2 : 1);
+  // Laufenten fressen die Schnecken: ein Viertel mehr
+  const kg = BASE_YIELD * (s.bed!.fertilized ? 2 : 1) * (duckSnails(s) ? 1.25 : 1);
   s.inventory.gemuese = round2((s.inventory.gemuese ?? 0) + kg);
   s.bed = null;
   log(s, `🥕 ${kg} kg Gemüse geerntet.`, 'good');

@@ -6,9 +6,10 @@ import {
 import {
   addMoney, age, animalValue, butcherValue, coopCap, defaultFeed, diff, drinkerCap, eggCount, eggUnitPrice, eggValue,
   eventActive, feederCap, feedStock, flock, frozen, has, hourIndex, ICE_FREE_HOURS, insulated, isDaytime, living, log,
-  maxInside, outsideAnimals, round2, stage, storageCap,
+  maxInside, outsideAnimals, round2, speciesOf, stage, storageCap,
 } from './helpers';
 import { registerAlbum } from './album';
+import { brutDays, buyProblem } from './arten';
 import { BIG_PARTIAL_SHARE, isRegular, REGULAR_BONUS } from './orders';
 import { chance, intBetween } from './rng';
 import { moveFlock } from './sim';
@@ -59,7 +60,7 @@ export function canBuy(s: GameState, id: string): string | null {
   if (!it.slot && it.stack == null && (s.extras.includes(id) || s.cosmetics.includes(id))) return 'Bereits vorhanden';
   if (it.stack != null && s.runExtensions >= it.stack) return 'Maximal ausgebaut';
   if (id === 'auslauf' && !s.equip.fence) return 'Braucht zuerst einen Zaun';
-  if (it.requires && s.equip.fence !== it.requires) return `Braucht ${ITEM[it.requires].name}`;
+  if (it.requires && !has(s, it.requires)) return `Braucht ${ITEM[it.requires].name}`;
   if (it.plot && it.plot !== s.plot) return 'Nur auf dem Grundstück am Bach möglich';
   if (id === 'autofutter' && !s.equip.feeder) return 'Braucht zuerst eine Futterstelle';
   if (id === 'wechselweide' && !s.equip.fence) return 'Braucht zuerst einen Zaun';
@@ -100,6 +101,7 @@ export function buyItem(s: GameState, id: string): Result {
     s.runExtensions++;
   } else {
     s.extras.push(id);
+    if (id === 'becken') s.pond = 100; // frisch befüllt
     if (id === 'flatterband') s.flatterbandSince = s.day;
   }
   log(s, `🛒 Gekauft: ${it.name} für ${price} €${tradeIn ? ` (alte Ausrüstung für ${tradeIn} € in Zahlung gegeben)` : ''}`, 'info');
@@ -376,7 +378,10 @@ export function rename(s: GameState, id: number, name: string): Result {
 export function buyOffer(s: GameState, offerId: number, qty = 1): Result {
   const o = s.offers.find(x => x.id === offerId);
   if (!o || o.qty < qty) return fail('Angebot nicht mehr verfügbar.');
-  if (o.kind !== 'brutei' && o.kind !== 'kueken' && !s.equip.coop) return fail('Erst einen Stall kaufen, dann Tiere!');
+  const other = speciesOf(o.breed) !== 'huhn';
+  const problem = o.kind !== 'brutei' ? buyProblem(s, o.breed, qty) : null;
+  if (problem) return fail(problem);
+  if (!other && o.kind !== 'brutei' && o.kind !== 'kueken' && !s.equip.coop) return fail('Erst einen Stall kaufen, dann Tiere!');
   if (o.kind === 'kueken' && !s.equip.coop && !has(s, 'kuekenstation')) return fail('Küken brauchen eine Kükenstation oder einen Stall.');
   const price = round2(o.price * qty);
   if (!pay(s, price, 'tierkauf')) return fail('Nicht genug Geld.');
@@ -403,7 +408,7 @@ export function buyOffer(s: GameState, offerId: number, qty = 1): Result {
   let msg = o.kind === 'brutei'
     ? `${qty} Brutei${qty > 1 ? 'er' : ''} (${BREEDS[o.breed].name}) ins Lager gelegt.`
     : `Willkommen auf dem Hof: ${names.join(', ')}!`;
-  if (o.kind !== 'brutei' && o.kind !== 'kueken' && flock(s).length > coopCap(s)) msg += ' ⚠️ Der Stall ist jetzt überbelegt.';
+  if (!other && o.kind !== 'brutei' && o.kind !== 'kueken' && flock(s).length > coopCap(s)) msg += ' ⚠️ Der Stall ist jetzt überbelegt.';
   if (o.kind === 'kueken' && !has(s, 'kuekenstation')) msg += ' ⚠️ Küken brauchen eine Kükenstation mit Wärmelampe!';
   if (o.kind === 'kueken' && (s.inventory.kuekenstarter ?? 0) < 1) msg += ' Kükenstarter-Futter nicht vergessen!';
   log(s, `🐣 Markt: ${msg}`, 'info');
@@ -464,8 +469,10 @@ export function incubate(s: GameState, n: number): Result {
   const k = Math.min(n, free, s.hatchEggs.length);
   if (k <= 0) return fail(free <= 0 ? 'Der Brutapparat ist voll.' : 'Keine Bruteier im Lager.');
   const eggs = s.hatchEggs.splice(0, k);
-  for (const e of eggs) s.incubator.push({ ...e, hatchDay: s.day + 7, candled: false });
-  return ok(`${k} Brutei${k > 1 ? 'er' : ''} in den Brutapparat gelegt. Schlupf in 7 Tagen.`);
+  for (const e of eggs) s.incubator.push({ ...e, hatchDay: s.day + brutDays(e.breed), candled: false });
+  const days = [...new Set(eggs.map(e => brutDays(e.breed)))].sort((a, b) => a - b);
+  const when = days.length === 1 ? `in ${days[0]} Tagen` : `je nach Art in ${days[0]} bis ${days[days.length - 1]} Tagen`;
+  return ok(`${k} Brutei${k > 1 ? 'er' : ''} in den Brutapparat gelegt. Schlupf ${when}.`);
 }
 
 export function setUnderHen(s: GameState, henId: number): Result {
@@ -483,7 +490,7 @@ export function setUnderHen(s: GameState, henId: number): Result {
 /* ---------------- Kundenaufträge ---------------- */
 /** Welche Tiere würden für einen Auftrag geliefert? (gesund, ohne Wartezeit, brütet nicht) */
 export function orderAnimals(s: GameState, kind: 'junghenne' | 'suppenhuhn' | 'hahn'): Animal[] {
-  const fit = living(s).filter(a => !a.broodEggs.length && a.withdrawalUntil < s.day && !a.conditions.some(c => c.severity > 30));
+  const fit = living(s).filter(a => speciesOf(a.breed) === 'huhn' && !a.broodEggs.length && a.withdrawalUntil < s.day && !a.conditions.some(c => c.severity > 30));
   if (kind === 'hahn') return fit.filter(a => a.sex === 'hahn' && stage(s, a) !== 'kueken').sort((x, y) => age(s, x) - age(s, y));
   return fit.filter(a => a.sex === 'henne' && (kind === 'junghenne' ? stage(s, a) === 'junghuhn' : age(s, a) >= SOUP_AGE))
     .sort((x, y) => (kind === 'suppenhuhn' ? age(s, y) - age(s, x) : 0));

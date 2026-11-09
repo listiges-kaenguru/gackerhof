@@ -10,9 +10,10 @@ import {
   drinkerCap, eggUnitPrice, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection,
   herbsActive, ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
   maxInside, minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2,
-  season, shade, stage, stars, visitProblems, worstCondition,
+  season, shade, speciesOf, stage, stars, visitProblems, worstCondition, duckSnails,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { dailyOthers, layOthers, otherDrinks, otherGrazes, otherWellbeingTarget, othersOffers } from './arten';
 import { dailyBed } from './beet';
 import { dailyEvents, eveningEscapee, hourlyEscape, layHidden } from './ereignisse';
 import { dailyOrders } from './orders';
@@ -48,7 +49,7 @@ export function advanceHour(s: GameState) {
   hourlyEscape(s);
   switch (s.hour) {
     case 6: morning(s); break;
-    case 8: layEggs(s); break;
+    case 8: layEggs(s); layOthers(s); break;
     case 10: hawkAlert(s); break;
     case 12: runShow(s); break;
     case 14: hawkAttack(s); stallpflichtCheck(s); break;
@@ -98,13 +99,17 @@ function hourly(s: GameState) {
           s.inventory.kuekenstarter = round2(s.inventory.kuekenstarter - need);
           a.food = clamp(a.food + 14);
         }
+      } else if (otherGrazes(s, a)) {
+        if (a.food < 85) a.food = clamp(a.food + 12); // Gänse grasen auf ihrer Weide
       } else if (a.food < 85 && s.feed > 0 && s.equip.feeder) {
         const portion = 0.025 * (BREEDS[a.breed].weightHen / 2);
         s.feed = Math.max(0, s.feed - portion);
         a.food = clamp(a.food + 12);
       }
-      // Trinken
-      if (a.water < 85 && s.water > 0 && s.equip.drinker && !iced) {
+      // Trinken (Enten, Gänse und Wachteln in ihrer Unterkunft)
+      if (otherDrinks(s, a)) {
+        if (a.water < 85) a.water = clamp(a.water + 15);
+      } else if (a.water < 85 && s.water > 0 && s.equip.drinker && !iced) {
         s.water = Math.max(0, s.water - (st === 'kueken' ? 0.02 : 0.06) * (hot ? 1.3 : 1));
         a.water = clamp(a.water + 15);
       }
@@ -124,15 +129,21 @@ function hourly(s: GameState) {
 
     // Wohlbefinden strebt einem Zielwert entgegen
     let target = 80;
-    if (crowd > 1) target -= 25 * Math.min(2, crowd - 1 + 0.5);
-    if (s.cleanliness < 40) target -= 15;
-    if (!a.outside && !night && st !== 'kueken') target -= 15; // eingesperrt
-    if (night && a.outside) target -= 30; // ausgesperrt
-    if (freezing) target -= 30;
-    if (a.food < 40 || a.water < 40) target -= 20;
-    if (a.conditions.some(c => c.id === 'milben')) target -= 15;
-    if (sunny) target -= 10;
-    if (fights) target -= 15;
+    if (speciesOf(a.breed) !== 'huhn' && st !== 'kueken') {
+      // Enten, Gänse und Wachteln: eigene Unterkunft (Becken, Platz, Futter)
+      target = otherWellbeingTarget(s, a);
+      if (a.conditions.some(c => c.id === 'milben')) target -= 15;
+    } else {
+      if (crowd > 1) target -= 25 * Math.min(2, crowd - 1 + 0.5);
+      if (s.cleanliness < 40) target -= 15;
+      if (!a.outside && !night && st !== 'kueken') target -= 15; // eingesperrt
+      if (night && a.outside) target -= 30; // ausgesperrt
+      if (freezing) target -= 30;
+      if (a.food < 40 || a.water < 40) target -= 20;
+      if (a.conditions.some(c => c.id === 'milben')) target -= 15;
+      if (sunny) target -= 10;
+      if (fights) target -= 15;
+    }
     a.wellbeing = clamp(a.wellbeing + Math.sign(target - a.wellbeing) * Math.min(2, Math.abs(target - a.wellbeing)));
 
     if (a.health <= 0) {
@@ -316,6 +327,7 @@ function newDay(s: GameState) {
   randomEvents(s);
   dailyEvents(s);
   dailyBed(s);
+  dailyOthers(s);
   s.events = s.events.filter(e => e.until >= s.day);
   dailyOrders(s);
   visitRequest(s);
@@ -367,6 +379,7 @@ function diseases(s: GameState) {
   // Überbelegung: Krankheiten breiten sich deutlich schneller aus
   const crowdF = crowd > 1 ? 1 + (crowd - 1) * 5 : 1;
   const herbs = herbsActive(s);
+  const snails = duckSnails(s); // Laufenten fressen Schnecken, die Würmer übertragen
   const all = living(s);
 
   for (const a of all) {
@@ -379,7 +392,7 @@ function diseases(s: GameState) {
     }
     // Neue Krankheiten
     let pMilben = 0.02 * (s.cleanliness < 50 ? 2 : 1) * (se === 'sommer' ? 2 : 1) * (has(s, 'sandbad') ? 0.4 : 1) * (s.kieselgurUntil >= s.day ? 0.2 : 1) * mobil * crowdF;
-    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s);
+    let pWurm = 0.01 * wet * (s.cleanliness < 40 ? 1.8 : 1) * mobil * pastureWormFactor(s) * (snails ? 0.6 : 1);
     // Ein gedämmter, zugfreier Stall hebt den Nachteil von Herbst, Winter, Kälte und zugiger Holzkiste auf
     const warm = insulated(s);
     let pSchnupfen = 0.006 * wet * (se === 'herbst' || se === 'winter' ? (warm ? 1 : 2) : 1) * (s.temperature < 3 && !warm ? 1.5 : 1)
@@ -809,7 +822,7 @@ export function refreshOffers(s: GameState) {
   const offers: MarketOffer[] = [];
   const kinds: MarketOffer['kind'][] = ['brutei', 'kueken', 'junghenne', 'junghenne', 'legehenne', 'legehenne', 'hahn'];
   const n = intBetween(s, 7, 9);
-  const breeds = Object.keys(BREEDS) as BreedId[];
+  const breeds = (Object.keys(BREEDS) as BreedId[]).filter(b => speciesOf(b) === 'huhn');
   // Jede Woche fest dabei: Junghenne und Legehenne (Legehybride) sowie ein Hahn und Bruteier
   // in wechselnder Rasse. Der Rest ist Zufall.
   const fixed: [MarketOffer['kind'], BreedId | null][] = [
@@ -828,7 +841,7 @@ export function refreshOffers(s: GameState) {
     }
     offers.push(o);
   }
-  s.offers = offers;
+  s.offers = [...offers, ...othersOffers(s)];
 }
 
 /* ================================================================== */

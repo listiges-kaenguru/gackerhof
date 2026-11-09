@@ -1,7 +1,7 @@
 // Kundenaufträge: Wochentage, neue Aufträge mit Sonderwünschen und Großaufträgen, Stammkunden und verpasste Aufträge.
 // Liefern und Ablehnen stehen in actions.ts.
 import { BREEDS, BROWN_EGG_BREEDS, CUSTOMERS, SOUP_AGE } from './data';
-import { age, flock, living, log, stage, stars } from './helpers';
+import { age, flock, log, stage, stars } from './helpers';
 import { between, chance, intBetween, pick } from './rng';
 import type { BreedId, GameState, Order } from './types';
 
@@ -56,7 +56,7 @@ export function possibleKinds(s: GameState): OrderPlan[] {
   if (f.some(a => a.sex === 'henne' && age(s, a) >= SOUP_AGE)) k.push('suppenhuhn', 'suppenhuhn');
   if (hens.some(a => BROWN_EGG_BREEDS.includes(a.breed))) k.push('braun');
   if (hatchBreeds(s).length) k.push('bruteier');
-  if (living(s).some(a => a.sex === 'hahn' && stage(s, a) !== 'kueken')) k.push('hahn');
+  if (f.some(a => a.sex === 'hahn')) k.push('hahn');
   return k;
 }
 

@@ -37,6 +37,21 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Gemüse reif. Ein Sack Hühnermist als Dünger verdoppelt den Ertrag von 4 auf 8 kg. Frost zerstört, was im Beet steht.
   Gemüse lässt sich verkaufen (**2,50 € je kg**, mit Hofladen 3,75 €, eigene Kategorie „Gemüse“ in den Finanzen) oder an
   die Hühner verfüttern (1 kg je angefangene 5 Tiere: satter und zufriedener). Mist lässt sich weiter verkaufen.
+- **Weitere Geflügelarten:** Laufenten, Pommerngänse und Legewachteln, jeweils in eigener Unterkunft (Landhandel →
+  **Andere Geflügel**): Entenhaus (160 €, 6 Plätze) mit Wasserbecken (90 €), Gänsestall (220 €, 4 Plätze) mit
+  Grasweide (80 €), Wachtelvoliere (140 €, 12 Plätze). Der Geflügelmarkt bietet eine Art erst an, wenn ihre Unterkunft
+  steht (jede Woche Weibchen, Männchen und Bruteier). Mit Unterkunft wird die Szene nach rechts breiter.
+  - Alle trinken in ihrer Unterkunft und fressen am Futterplatz der Hühner mit. Gänse auf der Grasweide grasen tagsüber
+    und brauchen dann kein Futter.
+  - **Laufenten** legen fleißig (Eier 1,6-facher Preis). Das Becken verschmutzt mit 6 % je Ente und Tag; unter 30 %
+    sind die Enten unglücklich und legen nur halb so viel. Enten fressen Schnecken: weniger Würmer bei den Hühnern
+    und ein Viertel mehr Gemüse.
+  - **Gänse** legen fast nur im Frühling (Eier 5-facher Preis). Eine erwachsene Gans ist Wachgans: +10 % Fuchsschutz.
+  - **Wachteln** legen fast täglich ein kleines Ei (0,3-facher Preis) und bleiben immer in der Voliere.
+  - Mit Männchen derselben Art werden Eier zu Bruteiern. Brutdauer im Brutapparat: **Huhn 7, Ente 9, Gans 10,
+    Wachtel 6 Tage**.
+  - Steckbrief, Tierliste, Album und Markt nennen Ente/Erpel, Gans/Ganter, Wachtel/Wachtelhahn. Auf die Geflügelschau
+    und zu Hahn-, Junghennen- und Suppenhuhn-Aufträgen dürfen weiter nur Hühner.
 - Meldungen können Auswahlknöpfe haben. Offene Meldungen aus dem Spielstand erscheinen gleich beim Laden.
 
 ### Geändert
@@ -80,6 +95,10 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Nest, Ausbüxer und Nachbar-Auswahl an.
 - Gemüsebeet in eigenem Modul `src/game/beet.ts` mit Tests (`tests/beet.test.ts`), Coverage 100 %, Mutation Score
   92 % vor den Grenzwert-Tests. Neues optionales Feld `bed`.
+- Weitere Arten in `src/game/arten.ts` mit Tests (`tests/arten.test.ts`, `tests/arten-formeln.test.ts` mit festgelegtem
+  Zufall), Mutation Score 99,6 %. `flock()` meint jetzt nur die Hühner (ohne Küken), `othersOf()` die anderen Arten;
+  die Art ergibt sich aus der Rasse (`BREEDS[…].species`). Neues optionales Feld `pond`. `requires` bei Ausrüstung
+  gilt jetzt für jeden Besitz, nicht nur den Zaun.
 - Ein Ausbüxer steht in der Szene sofort vor dem Zaun, auch in der Pause.
 - Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
   abhängt.
