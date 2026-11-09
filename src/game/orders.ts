@@ -15,7 +15,9 @@ export const BIG_FIRST = 3;
 /** Anteil des Lohns, der bei Großaufträgen schon für Teillieferungen gezahlt wird */
 export const BIG_PARTIAL_SHARE = 0.8;
 export const MISSED_DAYS = 14;
-export const MISSED_POINTS = -0.3;
+export const MISSED_POINTS = -0.2;
+/** Höchstens so viel Hof-Ruf kosten verpasste Aufträge zusammen */
+export const MISSED_MAX = -0.5;
 const MAX_ORDERS = 3;
 
 /** Tag 1 ist ein Montag */
@@ -143,7 +145,7 @@ export function dailyOrders(s: GameState) {
     const c = (s.customers ??= {});
     if (c[o.customer]) c[o.customer] = Math.max(0, c[o.customer] - 2);
     const active = s.orderEffect && s.orderEffect.until >= s.day ? s.orderEffect.points : 0;
-    s.orderEffect = { until: s.day + MISSED_DAYS, points: Math.max(-1, Math.round((active + MISSED_POINTS) * 10) / 10) };
+    s.orderEffect = { until: s.day + MISSED_DAYS, points: Math.max(MISSED_MAX, Math.round((active + MISSED_POINTS) * 10) / 10) };
   }
   s.orders = s.orders.filter(x => x.dueDay >= s.day);
   if (s.orderEffect && s.orderEffect.until < s.day) s.orderEffect = null;

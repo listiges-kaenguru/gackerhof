@@ -5,10 +5,26 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- **Getrennte Ansteckung:** Enten, Gänse und Wachteln in eigener Unterkunft stecken sich nur noch untereinander an,
+  nicht bei den Hühnern und umgekehrt. Die Stallfaktoren der Hühner (zugige Holzkiste, Dämmung, Überbelegung) gelten
+  für sie nicht; Milben und Würmer bekommen sie halb so oft. Gänse und Wachteln sind robust und bekommen in eigener
+  Unterkunft halb so oft Atemwegsinfekte. Ohne Unterkunft und als Küken leben sie weiter mit den Hühnern zusammen.
+- **Eierpreise:** Gänseeier bringen den **6-fachen** (bisher 5-fachen), Wachteleier den **0,4-fachen** (bisher
+  0,3-fachen) Eierpreis.
+- **Verpasste Aufträge** kosten **−0,2 Sterne** (bisher −0,3) für 14 Tage, mehrere zusammen höchstens **−0,5**
+  (bisher −1).
+
 ### Sicherheit
 
 - Entwicklungsabhängigkeiten: `qs` (6.17) und `minimatch` (11) über `overrides` in `package.json` angehoben. Beide kamen
   nur über Stryker ins Projekt und betrafen das ausgelieferte Spiel nicht. `npm audit` meldet keine Lücken mehr.
+
+### Intern
+
+- Nachmessung über ein Spieljahr mit 10 Startwerten in `docs/LANGZEIT.md`, Abschnitt 7: Vorher machten Enten, Gänse
+  und Wachteln deutlich Verlust, und ignorierte Aufträge kosteten fast einen Stern.
 
 ## [0.5.0] – 2026-11-09
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as A from '../src/game/actions';
 import {
-  brutDays, cleanPond, dailyOthers, duckSnails, guardGoose, housed, layOthers, othersOf, speciesCap, speciesOf,
+  brutDays, cleanPond, dailyOthers, diseaseGroup, duckSnails, guardGoose, housed, layOthers, othersOf, speciesCap, speciesOf,
 } from '../src/game/arten';
 import { harvest, sow } from '../src/game/beet';
 import { BREEDS, GOOSE_FOX, POND_BAD, POND_DIRT, SPECIES } from '../src/game/data';
@@ -362,5 +362,74 @@ describe('Männchen anderer Arten sind keine Hähne', () => {
     tier(s, 'sussex', 'hahn', 15);
     checkGoals(s);
     expect(s.goals.find(g => g.id === 'hahn')?.done).toBe(true);
+  });
+});
+
+describe('Getrennte Ansteckung (0.5.1)', () => {
+  it('Ansteckungsgruppen: eigene Unterkunft trennt, ohne Unterkunft und als Küken bei den Hühnern', () => {
+    const s = hof();
+    const h = tier(s, 'hybrid');
+    const e = tier(s, 'laufente');
+    const k = tier(s, 'laufente', 'henne', 2);
+    expect(diseaseGroup(s, h)).toBe('huhn');
+    expect(diseaseGroup(s, e)).toBe('huhn'); // noch kein Entenhaus
+    kaufe(s, 'entenhaus');
+    expect(diseaseGroup(s, e)).toBe('ente');
+    expect(diseaseGroup(s, k)).toBe('huhn'); // Küken in der Kükenstation
+    expect(diseaseGroup(s, tier(s, 'wachtel'))).toBe('huhn');
+  });
+
+  it('kranke Hühner stecken Enten in eigener Unterkunft nicht an', () => {
+    const zaehle = (haus: boolean) => {
+      let n = 0;
+      for (let seed = 1; seed <= 6; seed++) {
+        const s = hof();
+        s.seed = seed;
+        s.day = 40; // Sommer: kaum spontane Infekte
+        if (haus) kaufe(s, 'entenhaus', 'becken');
+        const huehner = Array.from({ length: 6 }, () => tier(s, 'hybrid'));
+        const enten = Array.from({ length: 4 }, () => tier(s, 'laufente'));
+        for (let h = 0; h < 10 * 24; h++) {
+          for (const a of huehner) a.conditions = [{ id: 'schnupfen', severity: 90 }];
+          advanceHour(s);
+          for (const a of [...huehner, ...enten]) Object.assign(a, { food: 100, water: 100, health: 100, dead: false });
+          for (const e of enten) { n += e.conditions.filter(c => c.id === 'schnupfen').length; e.conditions = []; }
+          s.pond = 100;
+        }
+      }
+      return n;
+    };
+    const ohne = zaehle(false);
+    expect(ohne).toBeGreaterThan(20);
+    expect(zaehle(true)).toBeLessThan(ohne * 0.1);
+  });
+});
+
+describe('Gänse und Wachteln robuster (0.5.1)', () => {
+  it('Eierpreise: Gans 6-fach, Wachtel 0,4-fach, Ente unverändert 1,6-fach', () => {
+    expect([BREEDS.gans.eggValue, BREEDS.wachtel.eggValue, BREEDS.laufente.eggValue]).toEqual([6, 0.4, 1.6]);
+  });
+
+  it('in eigener Unterkunft bekommen Gänse und Wachteln deutlich seltener Atemwegsinfekte als Enten', () => {
+    const zaehle = (breed: BreedId, haus: string[]) => {
+      let n = 0;
+      for (let seed = 1; seed <= 8; seed++) {
+        const s = hof();
+        s.seed = seed;
+        s.day = 95; // Winter
+        kaufe(s, ...haus);
+        const tiere = Array.from({ length: 6 }, () => tier(s, breed));
+        for (let h = 0; h < 20 * 24; h++) {
+          advanceHour(s);
+          for (const a of tiere) { n += a.conditions.filter(c => c.id === 'schnupfen').length; a.conditions = []; Object.assign(a, { food: 100, water: 100, health: 100 }); }
+          s.pond = 100;
+        }
+      }
+      return n;
+    };
+    const enten = zaehle('laufente', ['entenhaus', 'becken']);
+    expect(enten).toBeGreaterThan(10);
+    expect(zaehle('gans', ['gaensestall', 'grasweide'])).toBeLessThan(enten * 0.7);
+    expect(zaehle('wachtel', ['voliere'])).toBeLessThan(enten * 0.7);
   });
 });

@@ -161,7 +161,7 @@ describe('Stammkunden', () => {
 });
 
 describe('Verpasste und abgelehnte Aufträge', () => {
-  it('ein verpasster Auftrag kostet 14 Tage Hof-Ruf und Stammkunden-Punkte', () => {
+  it('ein verpasster Auftrag kostet 14 Tage −0,2 Sterne und Stammkunden-Punkte', () => {
     const s = hof();
     tier(s, 'hybrid', 'henne'); // ohne Tiere gibt es keinen Hof-Ruf
     s.day = 20;
@@ -169,9 +169,9 @@ describe('Verpasste und abgelehnte Aufträge', () => {
     s.orders = [auftrag({ dueDay: 19 })];
     dailyOrders(s);
     expect(s.orders.filter(o => o.id === 1)).toEqual([]);
-    expect(s.orderEffect).toEqual({ until: 34, points: -0.3 });
+    expect(s.orderEffect).toEqual({ until: 34, points: -0.2 });
     expect(s.customers['Bäckerei Krause']).toBe(2);
-    expect(starFactors(s).some(f => f.label === 'Verpasste Aufträge' && f.points === -0.3)).toBe(true);
+    expect(starFactors(s).some(f => f.label === 'Verpasste Aufträge' && f.points === -0.2)).toBe(true);
   });
 
   it('am Fälligkeitstag ist der Auftrag noch nicht verpasst', () => {
@@ -183,12 +183,12 @@ describe('Verpasste und abgelehnte Aufträge', () => {
     expect(s.orderEffect ?? null).toBeNull();
   });
 
-  it('mehrere verpasste Aufträge summieren sich, höchstens −1 Stern', () => {
+  it('mehrere verpasste Aufträge summieren sich, höchstens −0,5 Sterne', () => {
     const s = hof();
     s.day = 20;
     s.orders = [1, 2, 3, 4, 5].map(id => auftrag({ id, dueDay: 10 }));
     dailyOrders(s);
-    expect(s.orderEffect).toEqual({ until: 34, points: -1 });
+    expect(s.orderEffect).toEqual({ until: 34, points: -0.5 });
   });
 
   it('nach Ablauf zählt die Strafe nicht mehr', () => {
@@ -256,7 +256,7 @@ describe('Großaufträge', () => {
     s.orders = [auftrag({ big: true, qty: 60, reward: 120, delivered: 30, paid: 48, dueDay: 29 })];
     dailyOrders(s);
     expect(s.money).toBe(0);
-    expect(s.orderEffect?.points).toBe(-0.3);
+    expect(s.orderEffect?.points).toBe(-0.2);
   });
 });
 

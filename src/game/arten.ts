@@ -14,6 +14,14 @@ export { duckSnails, guardGoose, housed, othersOf, speciesCap, speciesOf };
 type Other = Exclude<Species, 'huhn'>;
 interface Result { ok: boolean; msg: string }
 
+/** Ansteckungsgruppe: Arten in eigener Unterkunft bleiben unter sich; ohne Unterkunft und als Küken (Kükenstation)
+ *  leben sie mit den Hühnern zusammen */
+export function diseaseGroup(s: GameState, a: Animal): Species {
+  const sp = speciesOf(a.breed);
+  if (sp === 'huhn' || stage(s, a) === 'kueken' || !has(s, SPECIES[sp].house)) return 'huhn';
+  return sp;
+}
+
 /** Brutdauer im Brutapparat (Spieltage) */
 export const brutDays = (breed: BreedId) => {
   const sp = speciesOf(breed);
