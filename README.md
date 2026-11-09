@@ -23,6 +23,7 @@ Du startest mit wenig Geld und einer leeren Wiese und baust Schritt für Schritt
 - Verkauf von Eiern, Bruteiern, Mist, Gemüse, Tieren und Ausrüstung, dazu Schlachter, Hofladen und kostenpflichtige Entsorgung toter Tiere
 - Kundenaufträge mit Wochentagen, Sonderwünschen (braune Eier, Bruteier, Hähne), Großaufträgen mit Teillieferung und Stammkunden
 - Gemüsebeet: säen, mit Hühnermist düngen, ernten, verkaufen oder verfüttern
+- Laufenten, Gänse und Wachteln in eigenen Unterkünften rechts neben dem Hof (Entenbecken, Grasweide, Voliere)
 - Zufallsereignisse (Dorffest, Lieferengpass, Stallpflicht, Geschenke von Opa Heinz), Kapitel mit Zielen, Tagebuch und Hof-Ruf
 - Ereignisse zum Mitmachen: verstecktes Nest suchen, ausgebüxtes Huhn einfangen, Ärger mit dem Nachbarn wegen des Hahns
 - Kredit in der Not; wer danach zu lange pleite bleibt, muss zurück ins Büro (Game Over mit Bilanz)

@@ -46,4 +46,3 @@ Neue Testergebnisse hier sammeln. Alle Punkte aus dem Test von 1.1.0 sind in [0.
 
 ### Spätere Erweiterungen
 
-- **Weitere Geflügelarten:** Laufenten (Wasserbecken, fressen Schnecken), Gänse (Grasweide, Wachgans gegen Füchse), Wachteln
