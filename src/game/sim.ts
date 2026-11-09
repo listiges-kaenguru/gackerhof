@@ -13,6 +13,7 @@ import {
   season, shade, stage, stars, visitProblems, worstCondition,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
+import { checkBroke } from './pleite';
 import { announceShow, ensureShow, runShow } from './show';
 import { chapterGoals, CHAPTERS, createAnimal, randomVariant, targetWeight } from './state';
 import type { Animal, BreedId, ConditionId, FinanceCat, GameState, HatchEgg, MarketOffer, Order, Season } from './types';
@@ -337,32 +338,7 @@ function newDay(s: GameState) {
   // Nur Todesfälle der letzten 30 Tage zählen für den Hof-Ruf
   s.stats.deathsRecent = s.stats.deathsRecent.filter(x => x > s.day - 30);
 
-  finances(s);
-}
-
-function finances(s: GameState) {
-  if (s.money >= 0) return;
-  const d = diff(s);
-  if (!s.loanUsed) {
-    s.loanUsed = true;
-    if (d.opaLoan) {
-      addMoney(s, 200, 'kredit');
-      s.debt += 200;
-      log(s, '👴 Opa Heinz hilft aus: „Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“ (zinslos)', 'info');
-      s.celebrations.push({ emoji: '👴', title: 'Opa Heinz hilft aus', lines: ['„Dein Konto ist im Minus. Hier sind 200 €. Zahl sie zurück, wenn es wieder läuft.“', 'Der Kredit ist zinslos. Zurückzahlen kannst du unter „Mehr → Finanzen“.', 'Diese Hilfe gibt es nur einmal!'] });
-    } else {
-      addMoney(s, 300, 'kredit');
-      s.debt += 330;
-      log(s, '🏦 Die Bank gibt dir einen Kredit über 300 € (Rückzahlung 330 €).', 'info');
-      s.celebrations.push({ emoji: '🏦', title: 'Bankkredit', lines: ['Dein Konto ist im Minus. Die Bank gibt dir einen Kredit über 300 €.', 'Zurückzuzahlen sind 330 €. Einen weiteren Kredit gibt es nicht.'] });
-    }
-    return;
-  }
-  // Kein Kredit mehr: Spiel vorbei, wenn auch keine Tiere mehr da sind
-  if (living(s).length === 0 && s.money < 0) {
-    s.gameOver = true;
-    log(s, '😢 Kein Geld und keine Tiere mehr. Der Hof muss aufgeben.', 'bad', true);
-  }
+  checkBroke(s);
 }
 
 /* ================================================================== */

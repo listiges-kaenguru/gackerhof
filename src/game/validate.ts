@@ -102,6 +102,8 @@ export function isValidSave(v: unknown, saveVersion: number): v is GameState {
     && list(s.log, logEntry) && optional(s, 'toasts', x => Array.isArray(x))
     && optional(s, 'banners', x => list(x, y => str(y), 100))
     && optional(s, 'celebrations', x => list(x, y => obj(y) && str(y.emoji, 20) && str(y.title, 200) && list(y.lines, z => str(z), 50), 50))
-    && nullOr(x => list(x, y => str(y), 100))(s.report) && bool(s.gameOver);
+    && nullOr(x => list(x, y => str(y), 100))(s.report) && bool(s.gameOver)
+    && optional(s, 'brokeSince', x => int(x)) && optional(s, 'brokeWarned', bool)
+    && optional(s, 'gameOverReason', x => oneOf(x, ['pleite', 'leer']));
   return grund && ausruestung && stall && lager && tiere && markt && spaeter && verlauf;
 }

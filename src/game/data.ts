@@ -47,22 +47,24 @@ export interface DifficultyDef {
   vetFactor: number;
   lastChance: boolean;
   opaLoan: boolean;
+  /** Nach so vielen Tagen am Stück pleite ohne Aussicht ist Schluss */
+  brokeDays: number;
 }
 export const DIFFICULTIES: Record<Difficulty, DifficultyDef> = {
   leicht: {
     name: 'Leicht', emoji: '🌼', desc: 'Mehr Startgeld, weniger Füchse, Krankheiten verlaufen langsam.',
     startMoney: 650, needDecay: 0.7, predator: 0.5, disease: 0.6, priceVolatility: 0.4, sellBonus: 1.15, vetFactor: 0.75,
-    lastChance: true, opaLoan: true,
+    lastChance: true, opaLoan: true, brokeDays: 60,
   },
   mittel: {
     name: 'Mittel', emoji: '🐔', desc: 'Realistisch. So ist das Konzept gedacht.',
     startMoney: 400, needDecay: 1, predator: 1, disease: 1, priceVolatility: 1, sellBonus: 1, vetFactor: 1,
-    lastChance: false, opaLoan: true,
+    lastChance: false, opaLoan: true, brokeDays: 30,
   },
   schwer: {
     name: 'Schwer', emoji: '🦊', desc: 'Wenig Geld, hungrige Füchse, schwankende Preise. Nur Bankkredit.',
     startMoney: 250, needDecay: 1.2, predator: 1.5, disease: 1.4, priceVolatility: 1.8, sellBonus: 1, vetFactor: 1.25,
-    lastChance: false, opaLoan: false,
+    lastChance: false, opaLoan: false, brokeDays: 21,
   },
 };
 /** Von leicht nach schwer */

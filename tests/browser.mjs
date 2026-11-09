@@ -78,7 +78,29 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Game Over: Ein Spielstand, der wegen langer Pleite vorbei ist, zeigt beim Laden die Bilanz „Zurück ins Büro“
+{
+  const s = structuredClone(basis);
+  Object.assign(s, { money: -80, loanUsed: true, brokeSince: 1, gameOver: true, gameOverReason: 'pleite' });
+  const datei = join(dir, 'gameover.json');
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage();
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  const titel = await seite.locator('h2', { hasText: 'Zurück ins Büro' }).waitFor({ timeout: 3000 }).then(() => true, () => false);
+  check('Game Over: Bilanz „Zurück ins Büro“ erscheint', titel);
+  check('Game Over: Grund „zu lange im Minus“ genannt', (await seite.getByText('zu lange im Minus').count()) > 0);
+  await seite.locator('[data-act="newgame-now"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(300);
+  check('Game Over: „Nochmal versuchen“ führt zu einem neuen Hof', (await seite.locator('h2', { hasText: 'Zurück ins Büro' }).count()) === 0);
+  check('Game Over: kein Absturz', absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 4} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);
