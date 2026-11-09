@@ -14,6 +14,21 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
   Zählung von vorn. Wie bisher ist ohne Tiere und Geld sofort Schluss.
 - Der Abschluss-Bildschirm zeigt eine Bilanz: Tage auf dem Hof, verkaufte Eier, geschlüpfte Küken, Pokale und das
   älteste Tier.
+- **Wochentage:** Tag 1 ist ein Montag. Die Kopfzeile zeigt den Wochentag, Aufträge nennen ihre Frist als „heute“,
+  „morgen“, „bis Freitag“ oder „bis Freitag nächster Woche“.
+- **Sonderwünsche bei Aufträgen** (30 % mehr Lohn): braune Eier (nur von Marans, Sussex und Brahma), Bruteier einer
+  bestimmten Rasse (braucht Henne und Hahn dieser Rasse, keine Hybriden) und Hähne (kein Küken). Sie kommen nur, wenn
+  der Hof sie liefern kann.
+- **Stammkunden:** Nach **3 erfüllten Aufträgen** wird ein Kunde Stammkunde. Er meldet sich öfter und zahlt **15 %
+  mehr**.
+- **Großaufträge** ab 3 Sternen, selten: 48–96 Eier mit 10–14 Tagen Frist. Teillieferungen bringen 80 % des Lohns
+  anteilig, den Rest gibt es bei vollständiger Lieferung.
+- **Aufträge ablehnen** kostet nichts.
+
+### Geändert
+
+- **Verpasste Aufträge** kosten jetzt 14 Tage lang 0,3 Sterne Hof-Ruf (mehrere summieren sich bis −1 Stern), und der
+  Kunde verliert 2 Punkte auf dem Weg zum Stammkunden. Bereits Bezahltes aus Teillieferungen bleibt.
 
 ### Behoben
 
@@ -42,6 +57,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - Kredit und Pleite-Regeln in eigenem Modul `src/game/pleite.ts` mit Tests (`tests/pleite.test.ts`, Coverage 100 %,
   Mutation Score 82 %; übrig sind Meldungstexte). Neue optionale Felder im Spielstand: `brokeSince`, `brokeWarned`,
   `gameOverReason`.
+- Kundenaufträge in eigenem Modul `src/game/orders.ts` mit Tests (`tests/auftraege.test.ts`,
+  `tests/auftraege-formeln.test.ts` mit festgelegtem Zufall). Mutation Score 95 %. Neue optionale Felder:
+  `customers`, `orderEffect`, `stats.ordersDone`, bei Aufträgen `brown`, `breed`, `big`, `delivered`, `paid`.
+- Der Frosttest kauft Mardergitter und Volierennetz, damit er nur den Frost prüft und nicht vom Zufall bei Raubtieren
+  abhängt.
 
 ## [0.4.1] – 2026-10-18
 

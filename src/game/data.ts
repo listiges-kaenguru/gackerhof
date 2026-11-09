@@ -504,7 +504,13 @@ export const CUSTOMERS = {
   eier: ['Bäckerei Krause', 'Café Sonnenschein', 'Kita Pusteblume', 'Hotel Seeblick', 'Frau Meier von nebenan'],
   junghenne: ['Familie Schulz', 'Herr Albrecht', 'Schulgarten der Grundschule', 'Familie Nowak'],
   suppenhuhn: ['Gasthaus Zur Linde', 'Oma Gerda', 'Restaurant Hirschen'],
+  braun: ['Bio-Laden Grünkern', 'Feinkost Wagner', 'Hofcafé Lindenblüte'],
+  bruteier: ['Züchterin Frau Berger', 'Kleintierzuchtverein Talheim', 'Herr Lindner (Hobbyzüchter)'],
+  hahn: ['Familie Hofmann', 'Herr Albrecht', 'Ponyhof Sonnenwiese'],
+  gross: ['Dorfgemeinschaft (Erntedankfest)', 'Hotel Seeblick (Hochzeit)', 'Bäckerei Krause (Ostergebäck)', 'Schulfest der Grundschule'],
 };
+/** Rassen, deren Eier als „braune Eier“ gelten (Sonderwunsch) */
+export const BROWN_EGG_BREEDS: BreedId[] = ['marans', 'sussex', 'brahma'];
 /** Ab diesem Alter (Spieltage) gilt eine Henne als Suppenhuhn */
 export const SOUP_AGE = 240;
 export const SELLERS = ['Händler Brandt', 'Frau Lindner', 'Geflügelhof Petersen', 'Herr Yılmaz', 'Familie Kowalski'];

@@ -196,6 +196,10 @@ export function starFactors(s: GameState): StarFactor[] {
       points: s.visitEffect.points,
       tip: `Wirkt noch bis Tag ${s.visitEffect.until}. Hofbesuche gibt es ab 4 Sternen, sie brauchen einen sauberen Stall und gesunde Tiere.`,
     }] : []),
+    ...(s.orderEffect && s.orderEffect.until >= s.day ? [{
+      label: 'Verpasste Aufträge', value: 'Kundschaft verärgert', max: 0, points: s.orderEffect.points,
+      tip: `Wirkt noch bis Tag ${s.orderEffect.until}. Lehne Aufträge lieber ab, die du nicht schaffst, das kostet nichts.`,
+    }] : []),
   ];
 }
 /** Hof-Ruf in Sternen (1–5) */

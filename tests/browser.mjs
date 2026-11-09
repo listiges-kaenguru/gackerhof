@@ -100,7 +100,49 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Aufträge: alle Arten werden angezeigt, Teillieferung und Ablehnen per Klick
+{
+  const s = structuredClone(basis);
+  s.eggs = { hybrid: 10 };
+  s.orders = [
+    { id: 9001, customer: 'Dorfgemeinschaft (Erntedankfest)', kind: 'eier', qty: 48, reward: 60, dueDay: s.day + 12, big: true, delivered: 0, paid: 0 },
+    { id: 9002, customer: 'Bio-Laden Grünkern', kind: 'eier', qty: 6, reward: 9, dueDay: s.day + 3, brown: true },
+    { id: 9003, customer: 'Züchterin Frau Berger', kind: 'bruteier', breed: 'marans', qty: 6, reward: 20, dueDay: s.day + 6 },
+    { id: 9004, customer: 'Familie Hofmann', kind: 'hahn', qty: 1, reward: 25, dueDay: s.day + 8 },
+  ];
+  s.nextId = 9100;
+  s.customers = { 'Familie Hofmann': 3 };
+  const datei = join(dir, 'auftraege.json');
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage();
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(300);
+  await seite.locator('[data-act="open:markt:auftraege"]').first().click({ timeout: 1500 }).catch(async () => {
+    await seite.locator('[data-act="tab:markt"]').click();
+    await seite.locator('[data-act="mtab:auftraege"]').click();
+  });
+  await seite.waitForTimeout(200);
+  const text = await seite.locator('.panel, body').first().innerText();
+  check('Aufträge: alle vier Arten sichtbar', ['48 Eier', '6 braune Eier', '6 Bruteier Marans', '1 Hahn'].every(x => text.includes(x)));
+  check('Aufträge: Stammkunde markiert', text.includes('Stammkunde'));
+  check('Aufträge: Wochentag in der Frist', /[Bb]is (Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)/.test(text));
+  const teil = seite.locator('[data-act="orderPart:9001"]');
+  await teil.click(); await teil.click(); // Bestätigung
+  await seite.waitForTimeout(200);
+  check('Aufträge: Teillieferung gebucht', (await seite.getByText('Geliefert: 10 von 48').count()) > 0);
+  const nein = seite.locator('[data-act="orderNo:9004"]');
+  await nein.click(); await nein.click();
+  await seite.waitForTimeout(200);
+  check('Aufträge: Ablehnen entfernt den Auftrag', (await seite.locator('[data-act="orderNo:9004"]').count()) === 0);
+  check('Aufträge: kein Absturz', absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3 + 4} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 10} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);
