@@ -13,6 +13,8 @@ import {
   lockedOut, marderSafe, maxInside, monthResult, nestCount, outsideAnimals, pastureNow, ratSafe, runCap, season,
   seasonOfDay, sexKnown, stage, stageName, starFactors, stars, storageCap, visitProblems, year,
 } from '../game/helpers';
+import * as E from '../game/ereignisse';
+import { CHOICE_ACTS } from '../game/ereignisse';
 import { BIG_PARTIAL_SHARE, dueText, isRegular, orderWhat, REGULAR_AFTER, weekday } from '../game/orders';
 import { gradeFor, showBasePoints, showCountdown, showProblem } from '../game/show';
 import { advanceMinute, refreshOffers } from '../game/sim';
@@ -96,8 +98,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const scene = new Scene($('.scene-host'));
 
   if (s.day === 1 && s.hour === 7 && !s.log.length) ui.modal = { kind: 'intro' };
-  // Ein Spielstand, der schon vorbei ist, zeigt gleich die Bilanz
+  // Ein Spielstand, der schon vorbei ist, zeigt gleich die Bilanz; offene Meldungen (z. B. eine Entscheidung) ebenso
   if (s.gameOver) ui.modal = { kind: 'gameover' };
+  else if (!ui.modal && s.celebrations.length) ui.modal = { kind: 'celebrate' };
 
   /* ================================================================ */
   /* Rendering                                                         */
@@ -141,6 +144,9 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     // Nachts bei offener Klappe draußen: Der Stall ist voll
     const outNight = isNight(s.hour) && s.doorOpen ? outsideAnimals(s).length : 0;
     if (outNight) out.push({ icon: '🏠', text: `Stall voll: ${outNight} schlafen draußen`, act: 'open:hof', kind: 'bad' });
+    const esc0 = s.escapee ? s.animals.find(a => a.id === s.escapee!.id && !a.dead) : undefined;
+    if (esc0) out.push({ icon: '🏃', text: `${esc0.name} ist ausgebüxt: antippen zum Einfangen`, act: 'catch', kind: 'bad' });
+    if (s.hiddenNest) out.push({ icon: '🔍', text: 'Eine Henne legt in ein Versteck im Auslauf. Such es!', act: 'open:hof', kind: 'warn' });
     const ords = s.orders ?? [];
     if (ords.length) out.push({ icon: '📋', text: `${ords.length} Kundenauftr${ords.length > 1 ? 'äge' : 'ag'}`, act: 'open:markt:auftraege', kind: 'good' });
     if (s.visit && !s.visit.accepted) out.push({ icon: '📩', text: 'Anfrage: Hofbesuch', act: 'open:markt:auftraege', kind: 'good' });
@@ -844,8 +850,12 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         <button class="btn primary big" data-act="modal-ok">Los geht's!</button>`;
     } else if (ui.modal.kind === 'celebrate') {
       const c = s.celebrations[0];
+      // Auswahl: nur bekannte Aktionen (der Spielstand wird beim Laden geprüft, hier zusätzlich abgesichert)
+      const choices = (c?.choices ?? []).filter(x => CHOICE_ACTS.includes(x.act));
       html = c ? `<div class="celebrate"><div class="burst">${c.emoji}</div><h2>${esc(c.title)}</h2>${c.lines.map(l => `<p>${esc(l)}</p>`).join('')}
-        <button class="btn primary big" data-act="modal-ok">${s.celebrations.length > 1 ? 'Weiter' : 'Super!'}</button></div>` : '';
+        ${choices.length
+          ? `<div class="choices">${choices.map(x => `<button class="btn big" data-act="${esc(x.act)}">${esc(x.label)}</button>`).join('')}</div>`
+          : `<button class="btn primary big" data-act="modal-ok">${s.celebrations.length > 1 ? 'Weiter' : 'Super!'}</button>`}</div>` : '';
     } else if (ui.modal.kind === 'report') {
       html = `<div class="opa">🌅</div><h2>Morgenbericht</h2>${(ui.modal.lines ?? []).map(l => `<p>${esc(l)}</p>`).join('')}<button class="btn primary big" data-act="modal-ok">Weiter</button>`;
     } else if (ui.modal.kind === 'gameover') {
@@ -1033,6 +1043,17 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
         if (ui.modal?.kind === 'celebrate') s.celebrations.shift();
         ui.modal = s.celebrations.length ? { kind: 'celebrate' } : null;
         return renderModal();
+      case 'nachbar': {
+        const r = E.neighborChoice(s, a1 as E.NeighborOption);
+        if (r.ok && ui.modal?.kind === 'celebrate') {
+          s.celebrations.shift();
+          ui.modal = s.celebrations.length ? { kind: 'celebrate' } : null;
+          renderModal();
+        }
+        return result(r);
+      }
+      case 'findNest': return result(E.findNest(s));
+      case 'catch': return result(E.catchEscapee(s));
       case 'collect': return result(A.collectEggs(s));
       case 'water': return result(A.refillWater(s));
       case 'feed': return result(A.refillFeed(s, a1 as 'koerner' | 'legemehl' | undefined));

@@ -137,6 +137,8 @@ export interface Celebration {
   emoji: string;
   title: string;
   lines: string[];
+  /** Auswahlknöpfe statt „OK“ (ab 0.5.0); act ist eine feste Aktion aus CHOICE_ACTS */
+  choices?: { act: string; label: string }[];
 }
 
 /** Eintrag im Hühner-Album */
@@ -245,6 +247,12 @@ export interface GameState {
   orders?: Order[];
   /** Erfüllte Aufträge je Kunde; ab REGULAR_AFTER ist er Stammkunde (ab 0.5.0) */
   customers?: Record<string, number>;
+  /** Henne legt in ein Versteck im Auslauf (Szenen-Koordinaten), ab 0.5.0 */
+  hiddenNest?: { henId: number; since: number; eggs: number; x: number; y: number } | null;
+  /** Ausgebüxtes Tier vor dem Zaun */
+  escapee?: { id: number; since: number; x: number; y: number } | null;
+  /** Nachbar und Hahn: offene Beschwerde, Warnung, Ruhe bis, Stall verdunkelt */
+  neighbor?: { pending: boolean; warned: boolean; quietUntil: number; darkened: boolean };
   /** Wirkung verpasster Aufträge auf den Hof-Ruf */
   orderEffect?: { until: number; points: number } | null;
 
