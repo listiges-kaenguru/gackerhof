@@ -5,6 +5,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+## [0.5.1] – 2026-11-09
+
+Feinschliff nach einer Nachmessung über ein Spieljahr: Laufenten lohnen sich jetzt, Gänse tragen sich, und wer
+Kundenaufträge ignoriert, verliert weniger Hof-Ruf. Spielstände aus 0.5.0 und früher lassen sich weiterspielen.
+
 ### Geändert
 
 - **Getrennte Ansteckung:** Enten, Gänse und Wachteln in eigener Unterkunft stecken sich nur noch untereinander an,
@@ -23,6 +28,7 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ### Intern
 
+- `.github/` bleibt aus den Release-Archiven heraus (`export-ignore`).
 - Nachmessung über ein Spieljahr mit 10 Startwerten in `docs/LANGZEIT.md`, Abschnitt 7: Vorher machten Enten, Gänse
   und Wachteln deutlich Verlust, und ignorierte Aufträge kosteten fast einen Stern.
 
