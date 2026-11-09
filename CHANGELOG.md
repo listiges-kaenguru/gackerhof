@@ -5,6 +5,21 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- **Game Over „Zurück ins Büro“:** Wer nach dem Kredit dauerhaft pleite bleibt, muss den Hof aufgeben. Ist das Konto
+  14 Tage am Stück im Minus, warnt Opa Heinz und sagt, wie viele Tage bleiben. Nach **30 Tagen** am Stück im Minus
+  (**Leicht 60, Schwer 21**) ist Schluss, wenn keine legende Henne mehr da ist (Küken, Junghennen und alte Hennen
+  zählen nicht) oder der letzte Monat mit Minus abgeschlossen hat. Kommt das Konto zwischendurch ins Plus, beginnt die
+  Zählung von vorn. Wie bisher ist ohne Tiere und Geld sofort Schluss.
+- Der Abschluss-Bildschirm zeigt eine Bilanz: Tage auf dem Hof, verkaufte Eier, geschlüpfte Küken, Pokale und das
+  älteste Tier.
+
+### Behoben
+
+- Ein Spielstand, der schon zu Ende ist, zeigt beim Laden wieder den Abschluss-Bildschirm, statt still stehen zu
+  bleiben.
+
 ### Intern
 
 - Mutation Testing schneller: `npm run test:mutation` prüft nur noch `validate.ts`, `state.ts` und `actions.ts`, die
@@ -24,6 +39,9 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - Hinweise für Mitwirkende (`CLAUDE.md`, README, CHANGELOG) allgemein formuliert, ohne lokale Pfade, Hoster-Namen und eigene Werkzeuge.; Release-Ablauf vollständig in `CLAUDE.md`.
 - Testskripte nennen in Meldungen und Kommentaren keinen lokalen Pfad mehr, sondern verweisen auf einen Container mit den Testwerkzeugen und die README.
 - Hinweise für Mitwirkende beziehen sich nicht mehr auf andere Projekte; jedes Projekt ist für sich beschrieben.
+- Kredit und Pleite-Regeln in eigenem Modul `src/game/pleite.ts` mit Tests (`tests/pleite.test.ts`, Coverage 100 %,
+  Mutation Score 82 %; übrig sind Meldungstexte). Neue optionale Felder im Spielstand: `brokeSince`, `brokeWarned`,
+  `gameOverReason`.
 
 ## [0.4.1] – 2026-10-18
 

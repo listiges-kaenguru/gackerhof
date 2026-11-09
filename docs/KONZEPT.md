@@ -275,7 +275,7 @@ Ein Hof-Ruf von 1 bis 5 Sternen ergibt sich aus Platz pro Tier, Gesundheit, Ster
 ### 9.4 Balancing-Ziel
 - **Startgeld 400 €.** Eine Minimalausstattung (Holzkiste, Knotengitter, Eimertränke, Trog, Untergrabschutz, Flatterband) kostet ca. 200 €. Für 3 Junghennen und Futter bleibt dann noch etwas übrig, aber kaum Reserve
 - Nach etwa 20–30 Minuten Spielzeit sollte das erste größere Upgrade (z. B. ein Kleintierstall) erreichbar sein
-- Pleite? Wenn das Geld unter 0 € fällt, gibt es einen **Kleinkredit** von Opa Heinz (einmalig, zinslos) und danach einen Bankkredit mit Zinsen. Ein echtes Game Over tritt erst ein, wenn keine Tiere mehr da sind und kein Geld für einen Neustart. Dann folgt eine freundliche Bilanz mit „Nochmal versuchen“
+- Pleite? Wenn das Geld unter 0 € fällt, gibt es einen **Kleinkredit** von Opa Heinz (einmalig, zinslos) und danach einen Bankkredit mit Zinsen. Ist der Kredit verbraucht und das Konto weiter im Minus, warnt Opa Heinz nach 14 Tagen. Nach 30 Tagen am Stück im Minus (Leicht 60, Schwer 21) ist Schluss, wenn keine legende Henne mehr da ist oder der letzte Monat im Minus lag; ohne Tiere und Geld sofort. Dann geht es „zurück ins Büro“, mit einer freundlichen Bilanz und „Nochmal versuchen“
 
 ### 9.5 Schwierigkeitsgrade
 Der Schwierigkeitsgrad wird beim Start eines neuen Hofs gewählt. Während des Spiels kann man ihn nur **herabsetzen**, nicht erhöhen.

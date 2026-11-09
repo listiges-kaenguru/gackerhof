@@ -281,5 +281,11 @@ export interface GameState {
   celebrations: Celebration[];
   /** Morgenbericht: wird nach einer Nacht mit Vorfällen angezeigt */
   report: string[] | null;
+  /** Erster Tag der laufenden Pleite (Konto im Minus, Kredit verbraucht), ab 0.5.0 */
+  brokeSince?: number;
+  /** Opa Heinz hat in dieser Pleite schon gewarnt */
+  brokeWarned?: boolean;
   gameOver: boolean;
+  /** Warum das Spiel vorbei ist: zu lange pleite oder keine Tiere und kein Geld */
+  gameOverReason?: 'pleite' | 'leer';
 }

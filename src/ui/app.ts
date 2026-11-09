@@ -95,6 +95,8 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
   const scene = new Scene($('.scene-host'));
 
   if (s.day === 1 && s.hour === 7 && !s.log.length) ui.modal = { kind: 'intro' };
+  // Ein Spielstand, der schon vorbei ist, zeigt gleich die Bilanz
+  if (s.gameOver) ui.modal = { kind: 'gameover' };
 
   /* ================================================================ */
   /* Rendering                                                         */
@@ -833,10 +835,21 @@ export function startApp(root: HTMLElement, initial: GameState, onNewGame: () =>
     } else if (ui.modal.kind === 'report') {
       html = `<div class="opa">🌅</div><h2>Morgenbericht</h2>${(ui.modal.lines ?? []).map(l => `<p>${esc(l)}</p>`).join('')}<button class="btn primary big" data-act="modal-ok">Weiter</button>`;
     } else if (ui.modal.kind === 'gameover') {
-      html = `<div class="opa">😢</div><h2>Der Hof muss aufgeben</h2>
-        <p>Kein Geld und keine Tiere mehr. Nach ${s.day} Tagen ist Schluss.</p>
-        <p>${num(s.stats.eggsSold)} Eier verkauft · ${num(s.stats.hatched)} Küken geschlüpft.</p>
-        <p>Opa Heinz meint: „Kopf hoch! Jeder fängt mal klein an. Nächstes Mal klappt's.“</p>
+      const oldest = living(s).sort((a, b) => age(s, b) - age(s, a))[0];
+      const why = s.gameOverReason === 'pleite'
+        ? `Dein Konto war zu lange im Minus, und es war keine Besserung in Sicht. Nach ${num(s.day)} Tagen ist Schluss.`
+        : `Kein Geld und keine Tiere mehr. Nach ${num(s.day)} Tagen ist Schluss.`;
+      html = `<div class="opa">💼</div><h2>Zurück ins Büro</h2>
+        <p>${why}</p>
+        <p>Montag früh, 7:45 Uhr: Kaffee aus dem Automaten, 214 ungelesene Mails und ein Meeting über die Planung des nächsten Meetings. Kein Gackern weit und breit.</p>
+        <ul class="steps">
+          <li>📅 ${num(s.day)} Tage auf dem Hof</li>
+          <li>🥚 ${num(s.stats.eggsSold)} Eier verkauft</li>
+          <li>🐣 ${num(s.stats.hatched)} Küken geschlüpft</li>
+          ${s.trophies?.length ? `<li>🏆 ${num(s.trophies.length)} Pokal${s.trophies.length > 1 ? 'e' : ''}</li>` : ''}
+          ${oldest ? `<li>🐔 ${esc(oldest.name)} war mit ${ageText(s, oldest)} bis zuletzt dabei</li>` : ''}
+        </ul>
+        <p>Opa Heinz meint: „Kopf hoch! Jeder fängt mal klein an. Der Hof wartet auf dich.“</p>
         <button class="btn primary big" data-act="newgame-now">Nochmal versuchen</button>`;
     } else if (ui.modal.kind === 'help') {
       html = `<h2>So funktioniert's</h2>
