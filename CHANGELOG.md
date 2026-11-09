@@ -16,6 +16,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 - **Verpasste Aufträge** kosten **−0,2 Sterne** (bisher −0,3) für 14 Tage, mehrere zusammen höchstens **−0,5**
   (bisher −1).
 
+### Sicherheit
+
+- Entwicklungsabhängigkeiten: `qs` (6.17) und `minimatch` (11) über `overrides` in `package.json` angehoben. Beide kamen
+  nur über Stryker ins Projekt und betrafen das ausgelieferte Spiel nicht. `npm audit` meldet keine Lücken mehr.
+
 ### Intern
 
 - Nachmessung über ein Spieljahr mit 10 Startwerten in `docs/LANGZEIT.md`, Abschnitt 7: Vorher machten Enten, Gänse
