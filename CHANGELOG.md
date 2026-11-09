@@ -5,6 +5,11 @@ Die Versionsnummer zeigt das Spiel unter **Mehr** ganz unten an.
 
 ## [Unveröffentlicht]
 
+### Sicherheit
+
+- Entwicklungsabhängigkeiten: `qs` (6.17) und `minimatch` (11) über `overrides` in `package.json` angehoben. Beide kamen
+  nur über Stryker ins Projekt und betrafen das ausgelieferte Spiel nicht. `npm audit` meldet keine Lücken mehr.
+
 ## [0.5.0] – 2026-11-09
 
 Mehr Spiel für den späteren Hof, weiterhin ein Prototyp: Kapitel 4 und 5, Laufenten, Gänse und Wachteln,
