@@ -43,6 +43,8 @@ const GOAL_ACT: Record<string, string> = {
   zaun: 'open:shop:gehege', stall: 'open:shop:stall', traenke: 'open:shop:wasser', futter: 'open:shop:futter',
   huehner3: 'open:markt', eier10: 'open:markt:verkaufen', hahn: 'open:markt', schlupf: 'open:lager', aufzucht: 'open:tiere',
   fuchs50: 'open:shop:fuchs', hofladen: 'open:shop:ausbau', sterne3: 'open:hof', eier150: 'open:markt:verkaufen', tiere10: 'open:markt',
+  rassen3: 'open:markt', schau: 'open:markt:schau', sehrgut: 'open:markt:schau', album8: 'album',
+  tiere25: 'open:markt', sterne4: 'open:hof', art: 'open:shop:arten', eier1000: 'open:markt:verkaufen', auftraege10: 'open:markt:auftraege',
 };
 /** Tastenkürzel für Hof-Aktionen */
 const KEY_ACTS: Record<string, string> = { e: 'collect', w: 'water', f: 'feed', k: 'door', m: 'clean', l: 'lure' };

@@ -258,7 +258,29 @@ for (const [name, aendern] of FAELLE) {
   await seite.close();
 }
 
+// Kapitel: alter Stand nach Kapitel 3 (ohne Ziele) zeigt Kapitel 4; nach Kapitel 5 läuft der Hof weiter
+for (const [kapitel, erwartet] of [[4, 'Rassezucht'], [6, null]]) {
+  const s = structuredClone(basis);
+  s.chapter = kapitel;
+  s.goals = [];
+  const datei = join(dir, `kapitel${kapitel}.json`);
+  writeFileSync(datei, JSON.stringify(s));
+  const seite = await browser.newPage({ viewport: { width: 1366, height: 800 } });
+  const absturz = [];
+  seite.on('pageerror', e => absturz.push(e.message));
+  await seite.goto(`http://127.0.0.1:${PORT}/`);
+  await seite.setInputFiles('input[data-start-import]', datei);
+  await seite.locator('[data-start="import-ok"]').click({ timeout: 1500 }).catch(() => {});
+  await seite.waitForTimeout(400);
+  if (erwartet) {
+    check(`Kapitel ${kapitel}: „${erwartet}“ mit Zielen sichtbar`, (await seite.getByText(erwartet).count()) > 0
+      && (await seite.getByText('3 Hühnerrassen gleichzeitig halten').count()) > 0);
+  }
+  check(`Kapitel ${kapitel}: kein Absturz`, absturz.length === 0, absturz[0]?.slice(0, 120));
+  await seite.close();
+}
+
 await browser.close();
 await server.close();
-console.log(`${FAELLE.length * 3 + 30} Prüfungen, ${fehler} fehlgeschlagen`);
+console.log(`${FAELLE.length * 3 + 33} Prüfungen, ${fehler} fehlgeschlagen`);
 process.exit(fehler ? 1 : 0);

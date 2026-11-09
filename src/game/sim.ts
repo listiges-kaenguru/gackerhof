@@ -1,7 +1,7 @@
 // Die Simulation läuft in Spielstunden. advanceHour() ist der einzige Taktgeber.
 import {
   ADVICE_PAUSE, AGE, BREEDS, CONDITIONS, FEED_SUPPLIES, FINANCE_CATS, ITEM, SEASON_LAY, SEASON_LAY_LIGHT,
-  SEASON_NAMES, SELLERS, SHED_SPOIL, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
+  SEASON_NAMES, SELLERS, SHED_SPOIL, SHOW_GRADES, SUPPLIES, VISIT_BAD, VISIT_CHANCE, VISIT_GOOD, VISIT_GROUPS, VISIT_HOUR,
   VISIT_MIN_STARS,
 } from './data';
 import { registerAlbum } from './album';
@@ -10,7 +10,7 @@ import {
   drinkerCap, eggUnitPrice, euro, eventActive, feederCap, flock, foxProtection, freezes, frozen, has, hawkProtection,
   herbsActive, ICE_FREE_HOURS, immune, insulated, isNight, isSenior, lightActive, living, lockedOut, log, marderSafe,
   maxInside, minuteOfDay, monthResult, outsideAnimals, outTime, pastureWormFactor, plot, ratSafe, roostArrival, round2,
-  season, shade, speciesOf, stage, stars, visitProblems, worstCondition, duckSnails,
+  season, shade, speciesOf, stage, stars, visitProblems, worstCondition, duckSnails, othersOf,
 } from './helpers';
 import { between, chance, intBetween, pick, rand } from './rng';
 import { dailyOthers, layOthers, otherDrinks, otherGrazes, otherWellbeingTarget, othersOffers } from './arten';
@@ -862,7 +862,18 @@ const GOAL_TESTS: Record<string, (s: GameState) => boolean> = {
   sterne3: s => stars(s) >= 3 && flock(s).length >= 3,
   eier150: s => s.stats.eggsSold >= 150,
   tiere10: s => living(s).length >= 10,
+  rassen3: s => new Set(flock(s).filter(a => BREEDS[a.breed].showBreed).map(a => a.breed)).size >= 3,
+  schau: s => (s.lastShow?.results.length ?? 0) > 0,
+  sehrgut: s => (s.lastShow?.results ?? []).some(r => r.points >= SHOW_VERY_GOOD),
+  album8: s => Object.keys(s.album ?? {}).length >= 8,
+  tiere25: s => living(s).length >= 25,
+  sterne4: s => stars(s) >= 4 && flock(s).length >= 3,
+  art: s => othersOf(s).length >= 1,
+  eier1000: s => s.stats.eggsSold >= 1000,
+  auftraege10: s => (s.stats.ordersDone ?? 0) >= 10,
 };
+/** „sehr gut“ auf der Geflügelschau */
+const SHOW_VERY_GOOD = SHOW_GRADES.find(g => g.name === 'sehr gut')!.min;
 
 export function checkGoals(s: GameState) {
   let changed = false;
@@ -890,7 +901,10 @@ export function checkGoals(s: GameState) {
         `„${ch.title}“: alle Ziele erreicht.`,
         `👴 Opa Heinz: „Donnerwetter, ich bin stolz auf dich! Hier, ${ch.reward} € für deinen Hof.“`,
         `💰 +${ch.reward} € wurden deinem Konto gutgeschrieben.`,
-        ...(next ? [`📖 Weiter geht's mit Kapitel ${s.chapter}: „${next.title}“`, ...next.goals.map(([, t]) => `⬜ ${t}`)] : ['🎉 Das waren alle Kapitel dieser Version!']),
+        ...(next ? [`📖 Weiter geht's mit Kapitel ${s.chapter}: „${next.title}“`, ...next.goals.map(([, t]) => `⬜ ${t}`)] : [
+          '🎉 Du hast den großen Hof geschafft! Das waren alle Kapitel.',
+          'Dein Hof läuft natürlich weiter: Sammle Pokale, füll das Album und mach deine Stammkunden glücklich.',
+        ]),
       ],
     });
   }

@@ -98,6 +98,21 @@ export const CHAPTERS: Record<number, { title: string; reward: number; goals: [s
       ['tiere10', '10 Tiere gleichzeitig halten'],
     ],
   },
+  4: {
+    title: 'Rassezucht', reward: 300,
+    goals: [
+      ['rassen3', '3 Hühnerrassen gleichzeitig halten (ohne Legehybriden)'], ['schau', 'An einer Geflügelschau teilnehmen'],
+      ['sehrgut', 'Ein Tier mit „sehr gut“ bewerten lassen'], ['album8', '8 Einträge im Hühner-Album sammeln'],
+    ],
+  },
+  5: {
+    title: 'Der große Hof', reward: 500,
+    goals: [
+      ['tiere25', '25 Tiere gleichzeitig halten'], ['sterne4', '4 Sterne Hof-Ruf erreichen'],
+      ['art', 'Eine weitere Geflügelart halten (Enten, Gänse oder Wachteln)'], ['eier1000', '1.000 Eier verkaufen'],
+      ['auftraege10', '10 Kundenaufträge erfüllen'],
+    ],
+  },
 };
 export function chapterGoals(ch: number): Goal[] {
   const c = CHAPTERS[ch];
@@ -182,6 +197,8 @@ function migrate(s: GameState): GameState {
   s.toasts = [];
   s.banners ??= [];
   s.celebrations ??= [];
+  // 0.5.0: Wer Kapitel 3 schon geschafft hatte, stand ohne Ziele da – jetzt geht es mit Kapitel 4 weiter
+  if (!s.goals.length && CHAPTERS[s.chapter]) s.goals = chapterGoals(s.chapter);
   // 0.3.0: Weide, Stalllicht, Album, Geflügelschau, Tutorial
   s.pasture ??= [100, 100];
   s.pastureSide ??= 0;
